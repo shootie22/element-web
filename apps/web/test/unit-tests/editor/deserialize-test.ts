@@ -126,6 +126,21 @@ describe("editor/deserialize", function () {
             expect(parts[1]).toStrictEqual({ type: "newline", text: "\n" });
             expect(parts[2]).toStrictEqual({ type: "plain", text: "world" });
         });
+        it("custom emoticon images", function () {
+            const html =
+                'hello <img data-mx-emoticon src="https://example.test/party.gif" alt="Party" title="party" height="32" /> world';
+            const parts = normalize(parseEvent(htmlMessage(html), createPartCreator()));
+            expect(parts).toStrictEqual([
+                { type: "plain", text: "hello " },
+                {
+                    type: "custom-emoji",
+                    text: ":party:",
+                    shortcode: "party",
+                    imgSrc: "https://example.test/party.gif",
+                },
+                { type: "plain", text: " world" },
+            ]);
+        });
         it("multiple lines mixing paragraphs and line breaks", function () {
             const html = "<p>hello<br>warm</p><p>world</p>";
             const parts = normalize(parseEvent(htmlMessage(html), createPartCreator()));

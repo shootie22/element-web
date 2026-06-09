@@ -15,6 +15,7 @@ import { type Part, type PartCreator, Type } from "./parts";
 import SdkConfig from "../SdkConfig";
 import { textToHtmlRainbow } from "../utils/colour";
 import { stripPlainReply } from "../utils/Reply";
+import { mediaFromMxc } from "../customisations/Media";
 
 const LIST_TYPES = ["UL", "OL", "LI"];
 
@@ -85,7 +86,13 @@ function parseLink(n: Node, pc: PartCreator, opts: IParseOptions): Part[] {
 function parseImage(n: Node, pc: PartCreator, opts: IParseOptions): Part[] {
     const image = n as HTMLImageElement;
     if (image.hasAttribute("data-mx-emoticon")) {
-        return pc.plainWithEmoji(`:${image.title || image.alt}:`);
+        const shortcode = (image.title || image.alt).replace(/^:/, "").replace(/:$/, "");
+        const src = image.getAttribute("src") || "";
+        const imgSrc = src.startsWith("mxc://") ? mediaFromMxc(src).srcHttp : src;
+        if (shortcode && imgSrc) {
+            return [pc.customEmoji(shortcode, imgSrc)];
+        }
+        return pc.plainWithEmoji(`:${shortcode}:`);
     }
     const { alt, src } = image;
     return pc.plainWithEmoji(`![${escape(alt)}](${src})`);

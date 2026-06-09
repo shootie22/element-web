@@ -33,6 +33,7 @@ import NotifProvider from "../../../../../src/autocomplete/NotifProvider";
 import DMRoomMap from "../../../../../src/utils/DMRoomMap";
 import { ScopedRoomContextProvider } from "../../../../../src/contexts/ScopedRoomContext.tsx";
 import type { RoomContextType } from "../../../../../src/contexts/RoomContext.ts";
+import { ROOM_IMAGE_PACK_EVENT } from "../../../../../src/image-packs";
 
 describe("<EditMessageComposer/>", () => {
     const userId = "@alice:server.org";
@@ -243,6 +244,54 @@ describe("<EditMessageComposer/>", () => {
                 "m.new_content": {
                     "body": "✨sparkles✨",
                     "msgtype": "m.emote",
+                    "m.mentions": {},
+                },
+                "m.relates_to": {
+                    event_id: editedEvent.getId(),
+                    rel_type: "m.replace",
+                },
+                "m.mentions": {},
+            });
+        });
+
+        it("preserves custom inline emoji formatting", () => {
+            const partCreator = createPartCreator();
+            const model = new EditorModel(
+                [partCreator.customEmoji("party", "http://this.is.a.url/server/party")],
+                partCreator,
+            );
+            room.currentState.setStateEvents([
+                mkEvent({
+                    type: ROOM_IMAGE_PACK_EVENT,
+                    room: room.roomId,
+                    user: userId,
+                    skey: "",
+                    content: {
+                        images: {
+                            party: {
+                                url: "mxc://server/party",
+                                body: "Party",
+                            },
+                        },
+                    },
+                    event: true,
+                }),
+            ]);
+
+            const content = createEditContent(model, editedEvent, undefined, room);
+
+            expect(content).toEqual({
+                "body": "* :party:",
+                "msgtype": "m.text",
+                "format": "org.matrix.custom.html",
+                "formatted_body":
+                    '* <img data-mx-emoticon src="mxc://server/party" alt="Party" title="party" height="32" />',
+                "m.new_content": {
+                    "body": ":party:",
+                    "msgtype": "m.text",
+                    "format": "org.matrix.custom.html",
+                    "formatted_body":
+                        '<img data-mx-emoticon src="mxc://server/party" alt="Party" title="party" height="32" />',
                     "m.mentions": {},
                 },
                 "m.relates_to": {

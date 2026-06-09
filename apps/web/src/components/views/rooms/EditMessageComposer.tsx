@@ -46,12 +46,14 @@ import type DocumentOffset from "../../../editor/offset";
 import { attachMentions, attachRelation } from "../../../utils/messages";
 import { filterBoolean } from "../../../utils/arrays";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
+import { htmlWithEmoticonShortcodes, shortcodeToEmoticonHtml } from "../../../image-pack-html";
 
 // exported for tests
 export function createEditContent(
     model: EditorModel,
     editedEvent: MatrixEvent,
     replyToEvent?: MatrixEvent,
+    room?: Room,
 ): RoomMessageEventContent {
     const isEmote = containsEmote(model);
     if (isEmote) {
@@ -69,9 +71,19 @@ export function createEditContent(
         "m.new_content": newContent,
     };
 
-    const formattedBody = htmlSerializeIfNeeded(model, {
+    let formattedBody = htmlSerializeIfNeeded(model, {
         useMarkdown: SettingsStore.getValue("MessageComposerInput.useMarkdown"),
     });
+    if (room) {
+        if (formattedBody) {
+            formattedBody = htmlWithEmoticonShortcodes(room.client, room, formattedBody);
+        } else {
+            const customEmoticonBody = shortcodeToEmoticonHtml(room.client, room, body);
+            if (customEmoticonBody.includes("data-mx-emoticon")) {
+                formattedBody = customEmoticonBody;
+            }
+        }
+    }
     if (formattedBody) {
         newContent.format = "org.matrix.custom.html";
         newContent.formatted_body = formattedBody;
@@ -111,7 +123,7 @@ class EditMessageComposer extends React.Component<IEditMessageComposerProps, ISt
 
         this.replyToEvent = ev.replyEventId ? this.context.room?.findEventById(ev.replyEventId) : undefined;
 
-        const editContent = createEditContent(this.model, ev, this.replyToEvent);
+        const editContent = createEditContent(this.model, ev, this.replyToEvent, this.context.room);
         this.state = {
             saveDisabled: !isRestored || !this.isContentModified(editContent["m.new_content"]!),
         };
@@ -292,7 +304,7 @@ class EditMessageComposer extends React.Component<IEditMessageComposerProps, ISt
             const position = this.model.positionForOffset(caret.offset, caret.atNodeEnd);
             this.editorRef.current.replaceEmoticon(position, REGEX_EMOTICON);
         }
-        const editContent = createEditContent(this.model, editedEvent, this.replyToEvent);
+        const editContent = createEditContent(this.model, editedEvent, this.replyToEvent, this.getRoom());
         const newContent = editContent["m.new_content"]!;
 
         let shouldSend = true;
