@@ -948,7 +948,8 @@
         "quick_reactions": "Quick Reactions"
     },
     "emoji_picker": {
-        "cancel_search_label": "Cancel search"
+        "cancel_search_label": "Cancel search",
+        "react_with_text": "React with \"%(reaction)s\""
     },
     "image_packs": {
         "add_mxc": "Add MXC",

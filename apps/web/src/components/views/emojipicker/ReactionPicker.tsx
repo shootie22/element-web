@@ -22,6 +22,7 @@ import {
 import { type ReactionEventContent } from "matrix-js-sdk/src/types";
 
 import EmojiPicker from "./EmojiPicker";
+import { type ICustomEmojiData } from "./Emoji";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
@@ -153,10 +154,14 @@ class ReactionPicker extends React.Component<IProps, IState> {
     };
 
     private onChooseCustomReaction = (entry: ImagePackEntry): void => {
-        this.onChoose(entry.url, entry.shortcode);
+        this.onChooseReaction(entry.url, entry.shortcode);
     };
 
-    private onChoose = (reaction: string, shortcode?: string): boolean => {
+    private onChooseEmoji = (reaction: string, customEmoji?: ICustomEmojiData): boolean => {
+        return this.onChooseReaction(reaction, customEmoji?.shortcode);
+    };
+
+    private onChooseReaction = (reaction: string, shortcode?: string): boolean => {
         this.componentWillUnmount();
         this.props.onFinished();
         const myReactions = this.getReactions();
@@ -223,10 +228,11 @@ class ReactionPicker extends React.Component<IProps, IState> {
                     </div>
                 )}
                 <EmojiPicker
-                    onChoose={this.onChoose}
+                    onChoose={this.onChooseEmoji}
                     isEmojiDisabled={this.isEmojiDisabled}
                     onFinished={this.props.onFinished}
                     selectedEmojis={this.state.selectedEmojis}
+                    allowTextReaction
                 />
             </>
         );

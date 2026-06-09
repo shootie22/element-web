@@ -109,6 +109,31 @@ Please see LICENSE files in the repository root for full details.
     }
 }
 
+.mx_EmojiPicker_textReaction {
+    margin: 0 8px 8px;
+    padding: 8px 12px;
+    border: 1px solid $input-border-color;
+    border-radius: 4px;
+    background-color: $background;
+    color: $primary-content;
+    font: var(--cpd-font-body-md-regular);
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover,
+    &:focus {
+        background-color: $focus-bg-color;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+}
+
 .mx_EmojiPicker_category {
     padding: 0 12px;
     display: flex;

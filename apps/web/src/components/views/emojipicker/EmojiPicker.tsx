@@ -42,6 +42,7 @@ interface IProps {
     onFinished(): void;
     isEmojiDisabled?: (unicode: string) => boolean;
     customEmoji?: ICustomEmojiData[];
+    allowTextReaction?: boolean;
 }
 
 interface IState {
@@ -311,8 +312,12 @@ class EmojiPicker extends React.Component<IProps, IState> {
         const btn = this.scrollRef.current?.containerRef.current?.querySelector<HTMLButtonElement>(
             '.mx_EmojiPicker_item_wrapper [tabindex="0"]',
         );
-        btn?.click();
-        this.props.onFinished();
+        if (btn) {
+            btn.click();
+            this.props.onFinished();
+        } else {
+            this.onChooseTextReaction();
+        }
     };
 
     private onHoverEmoji = (emoji: IEmoji): void => {
@@ -338,6 +343,13 @@ class EmojiPicker extends React.Component<IProps, IState> {
         }
     };
 
+    private onChooseTextReaction = (): void => {
+        const reaction = this.state.filter.trim();
+        if (reaction && !this.props.isEmojiDisabled?.(reaction)) {
+            this.props.onChoose(reaction);
+        }
+    };
+
     private static categoryHeightForEmojiCount(count: number): number {
         if (count === 0) {
             return 0;
@@ -358,6 +370,8 @@ class EmojiPicker extends React.Component<IProps, IState> {
             >
                 {({ onKeyDownHandler }) => {
                     let heightBefore = 0;
+                    const textReaction = this.state.filter.trim();
+                    const showTextReaction = this.props.allowTextReaction && textReaction;
                     return (
                         <section
                             className="mx_EmojiPicker"
@@ -372,6 +386,16 @@ class EmojiPicker extends React.Component<IProps, IState> {
                                 onEnter={this.onEnterFilter}
                                 onKeyDown={onKeyDownHandler}
                             />
+                            {showTextReaction && (
+                                <button
+                                    type="button"
+                                    className="mx_EmojiPicker_textReaction"
+                                    onClick={this.onChooseTextReaction}
+                                    disabled={this.props.isEmojiDisabled?.(textReaction)}
+                                >
+                                    {_t("emoji_picker|react_with_text", { reaction: textReaction })}
+                                </button>
+                            )}
                             <AutoHideScrollbar
                                 id="mx_EmojiPicker_body"
                                 className={classNames("mx_EmojiPicker_body", {
