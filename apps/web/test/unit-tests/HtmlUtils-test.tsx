@@ -315,6 +315,75 @@ describe("bodyToNode", () => {
         expect(cli.mxcUrlToHttp).toHaveBeenCalledTimes(mediaIsVisible ? 1 : 0);
     });
 
+    it("should render inline emoticons from thumbnails when gif autoplay is disabled", () => {
+        jest.spyOn(SettingsStore, "getValue").mockImplementation((settingName: string) => {
+            if (settingName === "autoplayGifs") return false;
+            return null;
+        });
+        const cli = getMockClientWithEventEmitter({
+            mxcUrlToHttp: jest
+                .fn()
+                .mockImplementation((mxc: string, width?: number) =>
+                    width ? `https://example.org/thumbnail/${mxc}` : `https://example.org/download/${mxc}`,
+                ),
+        });
+        const { formattedBody } = bodyToNode(
+            {
+                body: ":party:",
+                format: "org.matrix.custom.html",
+                formatted_body: '<img data-mx-emoticon src="mxc://server/animated" alt=":party:" height="32">',
+                msgtype: "m.text",
+            },
+            [],
+            {
+                mediaIsVisible: true,
+            },
+        );
+
+        expect(formattedBody).toContain('src="https://example.org/thumbnail/mxc://server/animated"');
+        expect(formattedBody).not.toContain("https://example.org/download/");
+        // eslint-disable-next-line no-restricted-properties
+        expect(cli.mxcUrlToHttp).toHaveBeenCalledWith("mxc://server/animated", 32, 32, "scale", false, true);
+    });
+
+    it("should render inline emoticons from source media when gif autoplay is enabled", () => {
+        jest.spyOn(SettingsStore, "getValue").mockImplementation((settingName: string) => {
+            if (settingName === "autoplayGifs") return true;
+            return null;
+        });
+        const cli = getMockClientWithEventEmitter({
+            mxcUrlToHttp: jest
+                .fn()
+                .mockImplementation((mxc: string, width?: number) =>
+                    width ? `https://example.org/thumbnail/${mxc}` : `https://example.org/download/${mxc}`,
+                ),
+        });
+        const { formattedBody } = bodyToNode(
+            {
+                body: ":party:",
+                format: "org.matrix.custom.html",
+                formatted_body: '<img data-mx-emoticon src="mxc://server/animated" alt=":party:" height="32">',
+                msgtype: "m.text",
+            },
+            [],
+            {
+                mediaIsVisible: true,
+            },
+        );
+
+        expect(formattedBody).toContain('src="https://example.org/download/mxc://server/animated"');
+        expect(formattedBody).not.toContain("https://example.org/thumbnail/");
+        // eslint-disable-next-line no-restricted-properties
+        expect(cli.mxcUrlToHttp).toHaveBeenCalledWith(
+            "mxc://server/animated",
+            undefined,
+            undefined,
+            undefined,
+            false,
+            true,
+        );
+    });
+
     afterEach(() => {
         jest.resetAllMocks();
     });

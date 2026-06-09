@@ -14,10 +14,14 @@ import {
 import { type ReactionsRowButtonTooltipViewModel } from "../../../src/viewmodels/room/timeline/event-tile/reactions/ReactionsRowButtonTooltipViewModel";
 import { createTestClient, mkEvent, mkStubRoom } from "../../test-utils";
 import dis from "../../../src/dispatcher/dispatcher";
+import SettingsStore from "../../../src/settings/SettingsStore";
 
 jest.mock("../../../src/dispatcher/dispatcher");
 jest.mock("../../../src/customisations/Media", () => ({
-    mediaFromMxc: jest.fn(() => ({ srcHttp: "https://example.org/_matrix/media/reaction.png" })),
+    mediaFromMxc: jest.fn(() => ({
+        srcHttp: "https://example.org/_matrix/media/reaction.gif",
+        getThumbnailOfSourceHttp: jest.fn(() => "https://example.org/_matrix/media/reaction-thumbnail.png"),
+    })),
 }));
 
 describe("ReactionsRowButtonViewModel", () => {
@@ -59,6 +63,10 @@ describe("ReactionsRowButtonViewModel", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        jest.spyOn(SettingsStore, "getValue").mockImplementation((settingName: string) => {
+            if (settingName === "autoplayGifs") return false;
+            return undefined;
+        });
         client = createTestClient();
         room = mkStubRoom("!room:example.org", "Test Room", client);
         jest.spyOn(client, "getRoom").mockReturnValue(room);
@@ -104,7 +112,11 @@ describe("ReactionsRowButtonViewModel", () => {
         expect(vm.getSnapshot().count).toBe(2);
     });
 
-    it("renders custom reaction images with shortcode labels when enabled", () => {
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it("renders custom reaction images as thumbnails when gif autoplay is disabled", () => {
         const reactionEvent = createReactionEvent("@alice:example.org", "mxc://example.org/reaction");
         reactionEvent.getContent()["shortcode"] = "party";
 
@@ -117,10 +129,32 @@ describe("ReactionsRowButtonViewModel", () => {
         );
 
         expect(vm.getSnapshot()).toMatchObject({
-            imageSrc: "https://example.org/_matrix/media/reaction.png",
+            imageSrc: "https://example.org/_matrix/media/reaction-thumbnail.png",
+            imageHoverSrc: "https://example.org/_matrix/media/reaction.gif",
             imageAlt: "party",
         });
         expect(getAriaLabel(vm)).toContain("reacted with party");
+    });
+
+    it("renders custom reaction image sources when gif autoplay is enabled", () => {
+        jest.spyOn(SettingsStore, "getValue").mockImplementation((settingName: string) => {
+            if (settingName === "autoplayGifs") return true;
+            return undefined;
+        });
+        const reactionEvent = createReactionEvent("@alice:example.org", "mxc://example.org/reaction");
+
+        const vm = new ReactionsRowButtonViewModel(
+            createProps({
+                content: "mxc://example.org/reaction",
+                reactionEvents: [reactionEvent],
+                customReactionImagesEnabled: true,
+            }),
+        );
+
+        expect(vm.getSnapshot()).toMatchObject({
+            imageSrc: "https://example.org/_matrix/media/reaction.gif",
+            imageHoverSrc: undefined,
+        });
     });
 
     it("updates selected state with myReactionEvent without touching tooltip props", () => {

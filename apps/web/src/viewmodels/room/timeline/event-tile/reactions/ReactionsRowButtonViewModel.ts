@@ -16,6 +16,7 @@ import { mediaFromMxc } from "../../../../../customisations/Media";
 import { _t } from "../../../../../languageHandler";
 import { formatList } from "../../../../../utils/FormattingUtils";
 import dis from "../../../../../dispatcher/dispatcher";
+import SettingsStore from "../../../../../settings/SettingsStore";
 import { ReactionsRowButtonTooltipViewModel } from "./ReactionsRowButtonTooltipViewModel";
 import { REACTION_SHORTCODE_KEY } from "./reactionShortcode";
 
@@ -108,11 +109,17 @@ export class ReactionsRowButtonViewModel
         }
 
         let imageSrc: string | undefined;
+        let imageHoverSrc: string | undefined;
         let imageAlt: string | undefined;
         if (customReactionImagesEnabled && content.startsWith("mxc://")) {
-            const resolved = mediaFromMxc(content).srcHttp;
+            const media = mediaFromMxc(content);
+            const src = media.srcHttp ?? undefined;
+            const thumbnail = media.getThumbnailOfSourceHttp(32, 32) ?? undefined;
+            const autoplayGifs = SettingsStore.getValue("autoplayGifs") as boolean;
+            const resolved = autoplayGifs ? src : (thumbnail ?? src);
             if (resolved) {
                 imageSrc = resolved;
+                imageHoverSrc = !autoplayGifs && src && src !== resolved ? src : undefined;
                 imageAlt = customReactionName || _t("timeline|reactions|custom_reaction_fallback_label");
             }
         }
@@ -125,6 +132,7 @@ export class ReactionsRowButtonViewModel
             isSelected: !!myReactionEvent,
             isDisabled: !!disabled,
             imageSrc,
+            imageHoverSrc,
             imageAlt,
             tooltipVm,
         };
@@ -143,6 +151,10 @@ export class ReactionsRowButtonViewModel
         super(props, ReactionsRowButtonViewModel.computeSnapshot(props, tooltipVm));
         this.tooltipVm = tooltipVm;
         this.disposables.track(tooltipVm);
+        const autoplayGifsWatcherRef = SettingsStore.watchSetting("autoplayGifs", null, () => {
+            this.setSnapshot(ReactionsRowButtonViewModel.computeSnapshot(this.props, this.tooltipVm));
+        });
+        this.disposables.track(() => SettingsStore.unwatchSetting(autoplayGifsWatcherRef));
     }
 
     private setSnapshot(nextSnapshot: ReactionsRowButtonViewSnapshot): void {
@@ -156,6 +168,7 @@ export class ReactionsRowButtonViewModel
             nextSnapshot.isSelected === currentSnapshot.isSelected &&
             nextSnapshot.isDisabled === currentSnapshot.isDisabled &&
             nextSnapshot.imageSrc === currentSnapshot.imageSrc &&
+            nextSnapshot.imageHoverSrc === currentSnapshot.imageHoverSrc &&
             nextSnapshot.imageAlt === currentSnapshot.imageAlt
         ) {
             return;

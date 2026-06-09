@@ -20,6 +20,7 @@ import { getHttpUriForMxc, User } from "matrix-js-sdk/src/matrix";
 
 import { ELEMENT_URL_PATTERN } from "./linkify-matrix";
 import { mediaFromMxc } from "./customisations/Media";
+import SettingsStore from "./settings/SettingsStore";
 import {
     parsePermalink,
     tryTransformEntityToPermalink,
@@ -93,7 +94,9 @@ export const transformTags: NonNullable<IOptions["transformTags"]> = {
         if (requestedHeight) {
             attribs.style += "height: 100%;";
         }
-        attribs.src = mediaFromMxc(src).getThumbnailOfSourceHttp(width, height)!;
+        const media = mediaFromMxc(src);
+        const autoplayGifs = SettingsStore.getValue("autoplayGifs") as boolean;
+        attribs.src = (isEmoticon && autoplayGifs ? media.srcHttp : media.getThumbnailOfSourceHttp(width, height))!;
         return { tagName, attribs };
     },
     "code": function (tagName: string, attribs: sanitizeHtml.Attributes) {
