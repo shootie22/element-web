@@ -447,9 +447,19 @@ export class CustomEmojiPart extends BasePart implements IBasePart {
         container.setAttribute("contentEditable", "false");
         container.className = "mx_CustomEmoji";
         container.setAttribute("data-mx-emoticon", "");
-        const safeUrl = this.imgSrc.replace(/['"]/g, "");
-        container.style.backgroundImage = `url('${safeUrl}')`;
+        container.setAttribute("title", this.shortcode);
+
+        const image = document.createElement("img");
+        image.className = "mx_CustomEmoji_image";
+        image.setAttribute("data-mx-emoticon", "");
+        image.src = this.imgSrc;
+        image.alt = this.text;
+        image.title = this.shortcode;
+        image.height = 32;
+        container.appendChild(image);
+
         const hiddenText = document.createElement("span");
+        hiddenText.className = "mx_CustomEmoji_hiddenText";
         hiddenText.style.display = "none";
         hiddenText.appendChild(document.createTextNode(this.text));
         container.appendChild(hiddenText);
@@ -457,10 +467,39 @@ export class CustomEmojiPart extends BasePart implements IBasePart {
     }
 
     public updateDOMNode(node: HTMLElement): void {
-        const safeUrl = this.imgSrc.replace(/['"]/g, "");
-        const newBg = `url('${safeUrl}')`;
-        if (node.style.backgroundImage !== newBg) {
-            node.style.backgroundImage = newBg;
+        if (node.getAttribute("title") !== this.shortcode) {
+            node.setAttribute("title", this.shortcode);
+        }
+
+        let image = node.querySelector<HTMLImageElement>("img.mx_CustomEmoji_image");
+        if (!image) {
+            image = document.createElement("img");
+            image.className = "mx_CustomEmoji_image";
+            image.setAttribute("data-mx-emoticon", "");
+            node.prepend(image);
+        }
+        if (image.src !== this.imgSrc) {
+            image.src = this.imgSrc;
+        }
+        if (image.alt !== this.text) {
+            image.alt = this.text;
+        }
+        if (image.title !== this.shortcode) {
+            image.title = this.shortcode;
+        }
+        if (image.height !== 32) {
+            image.height = 32;
+        }
+
+        let hiddenText = node.querySelector<HTMLElement>(".mx_CustomEmoji_hiddenText");
+        if (!hiddenText) {
+            hiddenText = document.createElement("span");
+            hiddenText.className = "mx_CustomEmoji_hiddenText";
+            hiddenText.style.display = "none";
+            node.appendChild(hiddenText);
+        }
+        if (hiddenText.textContent !== this.text) {
+            hiddenText.textContent = this.text;
         }
     }
 
@@ -468,6 +507,7 @@ export class CustomEmojiPart extends BasePart implements IBasePart {
         return (
             node instanceof HTMLElement &&
             node.tagName === "SPAN" &&
+            node.className === "mx_CustomEmoji" &&
             node.hasAttribute("data-mx-emoticon") &&
             node.contentEditable === "false"
         );
