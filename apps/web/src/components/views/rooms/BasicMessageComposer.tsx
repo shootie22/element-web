@@ -401,8 +401,11 @@ export default class BasicMessageEditor extends React.Component<IProps, IState> 
         this.onCutCopy(event, "cut");
     };
 
+    private pasteHandled = false;
+
     private onPasteHandler = (event: Event | SyntheticEvent, data: DataTransfer): boolean | undefined => {
         event.preventDefault(); // we always handle the paste ourselves
+        if (this.pasteHandled) return true;
         if (!this.editorRef.current) return;
         if (this.props.onPaste?.(event, data, this.props.model)) {
             // to prevent double handling, allow props.onPaste to skip internal onPaste
@@ -436,7 +439,9 @@ export default class BasicMessageEditor extends React.Component<IProps, IState> 
     };
 
     private onPaste = (event: ClipboardEvent<HTMLDivElement>): boolean | undefined => {
-        return this.onPasteHandler(event, event.clipboardData);
+        const result = this.onPasteHandler(event, event.clipboardData);
+        this.pasteHandled = false;
+        return result;
     };
 
     private onBeforeInput = (event: InputEvent): void => {
@@ -447,6 +452,9 @@ export default class BasicMessageEditor extends React.Component<IProps, IState> 
 
         if (event.inputType === "insertFromPaste" && event.dataTransfer) {
             this.onPasteHandler(event, event.dataTransfer);
+            this.pasteHandled = true;
+        } else {
+            this.pasteHandled = false;
         }
     };
 
