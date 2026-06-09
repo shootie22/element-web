@@ -103,6 +103,10 @@ export default class AutocompleteWrapperModel {
             case "command":
                 // command needs special handling for auto complete, but also renders as plain texts
                 return [(this.partCreator as CommandPartCreator).command(text)];
+            case "custom-emoji": {
+                const shortcode = text.replace(/^:/, "").replace(/:$/, "");
+                return [this.partCreator.customEmoji(shortcode, completionId || "")];
+            }
             default:
                 // used for emoji and other plain text completion replacement
                 return this.partCreator.plainWithEmoji(text);

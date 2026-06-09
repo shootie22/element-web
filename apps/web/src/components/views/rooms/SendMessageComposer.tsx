@@ -193,8 +193,8 @@ export class SendMessageComposer extends React.Component<ISendMessageComposerPro
         const threadChanged = replyingToThread && differentEventTarget;
         if (threadChanged) {
             const partCreator = new CommandPartCreator(this.props.room, this.props.mxClient);
-            const parts = this.restoreStoredEditorState(partCreator) || [];
-            this.model.reset(parts);
+            const restored = this.restoreStoredEditorState(partCreator);
+            this.model.reset(restored ? restored.map((p) => p.serialize()) : []);
             this.editorRef.current?.focus();
         }
     }

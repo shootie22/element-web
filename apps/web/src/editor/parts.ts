@@ -33,7 +33,14 @@ interface ISerializedPillPart {
     resourceId?: string;
 }
 
-export type SerializedPart = ISerializedPart | ISerializedPillPart;
+interface ISerializedCustomEmojiPart {
+    type: Type.CustomEmoji;
+    text: string;
+    shortcode: string;
+    imgSrc: string;
+}
+
+export type SerializedPart = ISerializedPart | ISerializedPillPart | ISerializedCustomEmojiPart;
 
 export enum Type {
     Plain = "plain",
@@ -44,11 +51,12 @@ export enum Type {
     RoomPill = "room-pill",
     AtRoomPill = "at-room-pill",
     PillCandidate = "pill-candidate",
+    CustomEmoji = "custom-emoji",
 }
 
 interface IBasePart {
     text: string;
-    type: Type.Plain | Type.Newline | Type.Emoji;
+    type: Type.Plain | Type.Newline | Type.Emoji | Type.CustomEmoji;
     canEdit: boolean;
     acceptsCaret: boolean;
 
@@ -417,6 +425,76 @@ export class EmojiPart extends BasePart implements IBasePart {
     }
 }
 
+export class CustomEmojiPart extends BasePart implements IBasePart {
+    public constructor(
+        text: string,
+        public shortcode: string,
+        public imgSrc: string,
+    ) {
+        super(text);
+    }
+
+    protected acceptsInsertion(chr: string, offset: number): boolean {
+        return false;
+    }
+
+    protected acceptsRemoval(position: number, chr: string): boolean {
+        return false;
+    }
+
+    public toDOMNode(): Node {
+        const container = document.createElement("span");
+        container.setAttribute("contentEditable", "false");
+        container.className = "mx_CustomEmoji";
+        container.setAttribute("data-mx-emoticon", "");
+        const safeUrl = this.imgSrc.replace(/['"]/g, "");
+        container.style.backgroundImage = `url('${safeUrl}')`;
+        const hiddenText = document.createElement("span");
+        hiddenText.style.display = "none";
+        hiddenText.appendChild(document.createTextNode(this.text));
+        container.appendChild(hiddenText);
+        return container;
+    }
+
+    public updateDOMNode(node: HTMLElement): void {
+        const safeUrl = this.imgSrc.replace(/['"]/g, "");
+        const newBg = `url('${safeUrl}')`;
+        if (node.style.backgroundImage !== newBg) {
+            node.style.backgroundImage = newBg;
+        }
+    }
+
+    public canUpdateDOMNode(node: HTMLElement): boolean {
+        return (
+            node instanceof HTMLElement &&
+            node.tagName === "SPAN" &&
+            node.hasAttribute("data-mx-emoticon") &&
+            node.contentEditable === "false"
+        );
+    }
+
+    public get type(): IBasePart["type"] {
+        return Type.CustomEmoji;
+    }
+
+    public get canEdit(): boolean {
+        return false;
+    }
+
+    public get acceptsCaret(): boolean {
+        return true;
+    }
+
+    public serialize(): ISerializedCustomEmojiPart {
+        return {
+            type: Type.CustomEmoji,
+            text: this.text,
+            shortcode: this.shortcode,
+            imgSrc: this.imgSrc,
+        };
+    }
+}
+
 class RoomPillPart extends PillPart {
     public constructor(
         resourceId: string,
@@ -606,6 +684,8 @@ export class PartCreator {
                 return part.resourceId ? this.roomPill(part.resourceId) : undefined;
             case Type.UserPill:
                 return part.resourceId ? this.userPill(part.text, part.resourceId) : undefined;
+            case Type.CustomEmoji:
+                return this.customEmoji(part.shortcode, part.imgSrc);
         }
     }
 
@@ -619,6 +699,10 @@ export class PartCreator {
 
     public emoji(text: string): EmojiPart {
         return new EmojiPart(text);
+    }
+
+    public customEmoji(shortcode: string, imgSrc: string): CustomEmojiPart {
+        return new CustomEmojiPart(`:${shortcode}:`, shortcode, imgSrc);
     }
 
     public pillCandidate(text: string): PillCandidatePart {

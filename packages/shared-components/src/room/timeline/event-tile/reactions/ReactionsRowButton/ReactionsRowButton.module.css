@@ -35,9 +35,10 @@
     padding-right: var(--cpd-space-1x);
 }
 
+
+
 img.reactionsRowButtonContent {
-    vertical-align: middle;
-    padding-right: 0;
+    vertical-align: center;
 }
 
 .reactionsRowButtonCount {

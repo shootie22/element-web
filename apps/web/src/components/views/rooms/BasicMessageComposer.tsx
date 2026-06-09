@@ -43,7 +43,10 @@ import { ALTERNATE_KEY_NAME, KeyBindingAction } from "../../../accessibility/Key
 import { _t } from "../../../languageHandler";
 import { SdkContextClass } from "../../../contexts/SDKContext";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
+import { getImagePackEntries } from "../../../image-packs";
 import { Landmark, LandmarkNavigation } from "../../../accessibility/LandmarkNavigation";
+
+const CUSTOM_EMOJI_REGEX = /:([a-zA-Z0-9-_]+):$/;
 
 // matches emoticons which follow the start of a line or whitespace
 const REGEX_EMOTICON_WHITESPACE = new RegExp("(?:^|\\s)(" + EMOTICON_REGEX.source + ")\\s|:^$");
@@ -202,6 +205,28 @@ export default class BasicMessageEditor extends React.Component<IProps, IState> 
                 // this returns the amount of added/removed characters during the replace
                 // so the caret position can be adjusted.
                 return range.replace([partCreator.emoji(data.unicode)]);
+            }
+        }
+    }
+
+    private replaceCustomEmoji(documentPosition: DocumentPosition): number | undefined {
+        const { model } = this.props;
+        const range = model.startRange(documentPosition);
+        let n = 50;
+        range.expandBackwardsWhile((index, offset) => {
+            const part = model.parts[index];
+            n -= 1;
+            return n >= 0 && [Type.Plain, Type.PillCandidate].includes(part.type);
+        });
+        const match = range.text.match(CUSTOM_EMOJI_REGEX);
+        if (match?.[1]) {
+            const shortcode = match[1];
+            const entries = getImagePackEntries(MatrixClientPeg.safeGet(), this.props.room, "emoticon");
+            const entry = entries.find((e) => e.shortcode === shortcode);
+            if (entry && entry.httpUrl && match.index !== undefined) {
+                const { partCreator } = model;
+                range.moveStartForwards(match.index);
+                return range.replace([partCreator.customEmoji(shortcode, entry.httpUrl)]);
             }
         }
     }
@@ -709,6 +734,7 @@ export default class BasicMessageEditor extends React.Component<IProps, IState> 
     private transform = (documentPosition: DocumentPosition): void => {
         const shouldReplace = SettingsStore.getValue("MessageComposerInput.autoReplaceEmoji");
         if (shouldReplace) this.replaceEmoticon(documentPosition, REGEX_EMOTICON_WHITESPACE);
+        this.replaceCustomEmoji(documentPosition);
     };
 
     public componentWillUnmount(): void {

@@ -180,7 +180,9 @@ export default class EmojiProvider extends AutocompleteProvider {
             .filter((entry) => customEntryMatches(entry, query))
             .slice(0, LIMIT)
             .map((entry) => ({
+                type: "custom-emoji" as const,
                 completion: `:${entry.shortcode}:`,
+                completionId: entry.httpUrl ?? undefined,
                 component: (
                     <PillCompletion title={`:${entry.shortcode}:`} subtitle={entry.label}>
                         {entry.httpUrl && <img className="mx_Autocomplete_CustomEmoji" src={entry.httpUrl} alt="" />}

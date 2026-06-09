@@ -27,6 +27,7 @@ export function mdSerialize(model: EditorModel): string {
             case Type.Command:
             case Type.PillCandidate:
             case Type.AtRoomPill:
+            case Type.CustomEmoji:
                 return html + part.text;
             case Type.RoomPill: {
                 const url = makeGenericPermalink(part.resourceId, true);
@@ -173,6 +174,7 @@ export function textSerialize(model: EditorModel): string {
             case Type.Command:
             case Type.PillCandidate:
             case Type.AtRoomPill:
+            case Type.CustomEmoji:
                 return text + part.text;
             case Type.RoomPill:
                 // Here we use the resourceId for compatibility with non-rich text clients
