@@ -521,10 +521,6 @@ export class CustomEmojiPart extends BasePart implements IBasePart {
         return false;
     }
 
-    public get acceptsCaret(): boolean {
-        return true;
-    }
-
     public serialize(): ISerializedCustomEmojiPart {
         return {
             type: Type.CustomEmoji,

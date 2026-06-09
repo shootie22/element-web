@@ -164,5 +164,23 @@ describe("editor/caret: DOM position for caret", function () {
             expect(nodeIndex).toBe(4);
             expect(offset).toBe(0);
         });
+        it("positions before a custom emoji as before the atomic image", function () {
+            const pc = createPartCreator();
+            const model = new EditorModel([pc.customEmoji("party", "https://example.org/party.gif")], pc);
+            const { offset, lineIndex, nodeIndex } = getLineAndNodePosition(model, { index: 0, offset: 0 });
+            expect(lineIndex).toBe(0);
+            // presumed nodes on line are (caret, custom emoji, caret)
+            expect(nodeIndex).toBe(0);
+            expect(offset).toBe(0);
+        });
+        it("positions after a custom emoji as after the atomic image", function () {
+            const pc = createPartCreator();
+            const model = new EditorModel([pc.customEmoji("party", "https://example.org/party.gif")], pc);
+            const { offset, lineIndex, nodeIndex } = getLineAndNodePosition(model, { index: 0, offset: 7 });
+            expect(lineIndex).toBe(0);
+            // presumed nodes on line are (caret, custom emoji, caret)
+            expect(nodeIndex).toBe(2);
+            expect(offset).toBe(0);
+        });
     });
 });

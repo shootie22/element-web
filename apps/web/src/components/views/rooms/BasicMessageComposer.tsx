@@ -333,10 +333,12 @@ export default class BasicMessageEditor extends React.Component<IProps, IState> 
 
     private onCutCopy = (event: ClipboardEvent, type: string): void => {
         const selection = document.getSelection()!;
-        const text = selection.toString();
-        if (text && this.editorRef.current) {
+        if (this.editorRef.current) {
             const { model } = this.props;
             const range = getRangeForSelection(this.editorRef.current, model, selection);
+            if (range.length === 0) return;
+
+            const text = range.text;
             const selectedParts = range.parts.map((p) => p.serialize());
             event.clipboardData.setData("application/x-element-composer", JSON.stringify(selectedParts));
             event.clipboardData.setData("text/plain", text); // so plain copy/paste works
