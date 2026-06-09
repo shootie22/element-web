@@ -36,10 +36,8 @@
 }
 
 img.reactionsRowButtonContent {
-    display: flex;
+    vertical-align: middle;
     padding-right: 0;
-    justify-content: center;
-    align-items: center;
 }
 
 .reactionsRowButtonCount {
