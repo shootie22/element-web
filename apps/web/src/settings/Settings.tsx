@@ -224,6 +224,7 @@ export interface Settings {
     "feature_location_share_live": IFeature;
     "feature_dynamic_room_predecessors": IFeature;
     "feature_render_reaction_images": IFeature;
+    "feature_legacy_stickerpicker": IFeature;
     "feature_new_room_list": IFeature;
     "feature_retention": IFeature;
     "feature_room_list_sections": IFeature;
@@ -654,6 +655,15 @@ export const SETTINGS: Settings = {
         labsGroup: LabGroup.Messaging,
         displayName: _td("labs|render_reaction_images"),
         description: _td("labs|render_reaction_images_description"),
+        supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG_PRIORITISED,
+        supportedLevelsAreOrdered: true,
+        default: false,
+    },
+    "feature_legacy_stickerpicker": {
+        isFeature: true,
+        labsGroup: LabGroup.Messaging,
+        displayName: _td("labs|legacy_stickerpicker"),
+        description: _td("labs|legacy_stickerpicker_description"),
         supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG_PRIORITISED,
         supportedLevelsAreOrdered: true,
         default: false,

@@ -12,6 +12,7 @@ import {
     AdminIcon,
     AdvancedSettingsIcon,
     SettingsSolidIcon,
+    StickerIcon,
     VisibilityOnIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
 
@@ -28,10 +29,12 @@ import AdvancedRoomSettingsTab from "../settings/tabs/room/AdvancedRoomSettingsT
 import RolesRoomSettingsTab from "../settings/tabs/room/RolesRoomSettingsTab";
 import { Action } from "../../../dispatcher/actions";
 import { type NonEmptyArray } from "../../../@types/common";
+import { ImagePackSettings } from "../settings/ImagePackSettings";
 
 export enum SpaceSettingsTab {
     General = "SPACE_GENERAL_TAB",
     Visibility = "SPACE_VISIBILITY_TAB",
+    ImagePacks = "SPACE_IMAGE_PACKS_TAB",
     Roles = "SPACE_ROLES_TAB",
     Advanced = "SPACE_ADVANCED_TAB",
 }
@@ -62,6 +65,12 @@ const SpaceSettingsDialog: React.FC<IProps> = ({ matrixClient: cli, space, onFin
                 _td("room_settings|visibility|title"),
                 <VisibilityOnIcon />,
                 <SpaceSettingsVisibilityTab matrixClient={cli} space={space} closeSettingsFn={onFinished} />,
+            ),
+            new Tab(
+                SpaceSettingsTab.ImagePacks,
+                _td("image_packs|title"),
+                <StickerIcon />,
+                <ImagePackSettings mode="room" room={space} />,
             ),
             new Tab(
                 SpaceSettingsTab.Roles,

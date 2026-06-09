@@ -19,6 +19,7 @@ import {
     VoiceCallIcon,
     NotificationsIcon,
     AdvancedSettingsIcon,
+    StickerIcon,
     TreeIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
 
@@ -43,6 +44,7 @@ import { PollHistoryTab } from "../settings/tabs/room/PollHistoryTab";
 import ErrorBoundary from "../elements/ErrorBoundary";
 import { PeopleRoomSettingsTab } from "../settings/tabs/room/PeopleRoomSettingsTab";
 import { SDKContext, type SdkContextClass } from "../../../contexts/SDKContext";
+import { ImagePackSettings } from "../settings/ImagePackSettings";
 
 export const enum RoomSettingsTab {
     General = "ROOM_GENERAL_TAB",
@@ -51,6 +53,7 @@ export const enum RoomSettingsTab {
     Security = "ROOM_SECURITY_TAB",
     Roles = "ROOM_ROLES_TAB",
     Notifications = "ROOM_NOTIFICATIONS_TAB",
+    ImagePacks = "ROOM_IMAGE_PACKS_TAB",
     Bridges = "ROOM_BRIDGES_TAB",
     Advanced = "ROOM_ADVANCED_TAB",
     PollHistory = "ROOM_POLL_HISTORY_TAB",
@@ -195,6 +198,15 @@ class RoomSettingsDialog extends React.Component<IProps, IState> {
                     closeSettingsFn={() => this.props.onFinished(true)}
                 />,
                 "RoomSettingsNotifications",
+            ),
+        );
+        tabs.push(
+            new Tab(
+                RoomSettingsTab.ImagePacks,
+                _td("image_packs|title"),
+                <StickerIcon />,
+                <ImagePackSettings mode="room" room={this.state.room} />,
+                undefined,
             ),
         );
 

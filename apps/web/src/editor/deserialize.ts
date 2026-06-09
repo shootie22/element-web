@@ -83,7 +83,11 @@ function parseLink(n: Node, pc: PartCreator, opts: IParseOptions): Part[] {
 }
 
 function parseImage(n: Node, pc: PartCreator, opts: IParseOptions): Part[] {
-    const { alt, src } = n as HTMLImageElement;
+    const image = n as HTMLImageElement;
+    if (image.hasAttribute("data-mx-emoticon")) {
+        return pc.plainWithEmoji(`:${image.title || image.alt}:`);
+    }
+    const { alt, src } = image;
     return pc.plainWithEmoji(`![${escape(alt)}](${src})`);
 }
 

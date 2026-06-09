@@ -66,6 +66,7 @@ import { getBlobSafeMimeType } from "../../../utils/blobs";
 import { EMOJI_REGEX } from "../../../HtmlUtils";
 import { attachMentions, attachRelation } from "../../../utils/messages";
 import { type RoomUploadViewModel, useRoomUploadViewModel } from "../../../viewmodels/room/RoomUploadViewModel";
+import { htmlWithEmoticonShortcodes, shortcodeToEmoticonHtml } from "../../../image-pack-html";
 
 // The prefix used when persisting editor drafts to localstorage.
 export const EDITOR_STATE_STORAGE_PREFIX = "mx_cider_state_";
@@ -76,6 +77,7 @@ export function createMessageContent(
     model: EditorModel,
     replyToEvent: MatrixEvent | undefined,
     relation: IEventRelation | undefined,
+    room?: Room,
 ): RoomMessageEventContent {
     const isEmote = containsEmote(model);
     if (isEmote) {
@@ -92,9 +94,19 @@ export function createMessageContent(
         msgtype: isEmote ? MsgType.Emote : MsgType.Text,
         body: body,
     };
-    const formattedBody = htmlSerializeIfNeeded(model, {
+    let formattedBody = htmlSerializeIfNeeded(model, {
         useMarkdown: SettingsStore.getValue("MessageComposerInput.useMarkdown"),
     });
+    if (room) {
+        if (formattedBody) {
+            formattedBody = htmlWithEmoticonShortcodes(room.client, room, formattedBody);
+        } else {
+            const customEmoticonBody = shortcodeToEmoticonHtml(room.client, room, body);
+            if (customEmoticonBody.includes("data-mx-emoticon")) {
+                formattedBody = customEmoticonBody;
+            }
+        }
+    }
     if (formattedBody) {
         content.format = "org.matrix.custom.html";
         content.formatted_body = formattedBody;
@@ -418,6 +430,7 @@ export class SendMessageComposer extends React.Component<ISendMessageComposerPro
                     model,
                     replyToEvent,
                     this.props.relation,
+                    this.props.room,
                 );
             }
             // don't bother sending an empty message

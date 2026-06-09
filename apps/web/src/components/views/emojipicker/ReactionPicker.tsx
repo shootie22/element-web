@@ -9,6 +9,7 @@ Please see LICENSE files in the repository root for full details.
 
 import React from "react";
 import { type MatrixEvent, EventType, RelationType, type Relations, RelationsEvent } from "matrix-js-sdk/src/matrix";
+import { type ReactionEventContent } from "matrix-js-sdk/src/types";
 
 import EmojiPicker from "./EmojiPicker";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
@@ -16,6 +17,9 @@ import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import RoomContext from "../../../contexts/RoomContext";
 import { type FocusComposerPayload } from "../../../dispatcher/payloads/FocusComposerPayload";
+import { getImagePackEntries, type ImagePackEntry } from "../../../image-packs";
+import AccessibleButton from "../elements/AccessibleButton";
+import { REACTION_SHORTCODE_KEY } from "../../../viewmodels/room/timeline/event-tile/reactions/reactionShortcode";
 
 interface IProps {
     mxEvent: MatrixEvent;
@@ -26,6 +30,8 @@ interface IProps {
 interface IState {
     selectedEmojis: Set<string>;
 }
+
+type CustomReactionEventContent = ReactionEventContent & Record<"shortcode" | "com.beeper.reaction.shortcode", string>;
 
 class ReactionPicker extends React.Component<IProps, IState> {
     public static contextType = RoomContext;
@@ -85,7 +91,11 @@ class ReactionPicker extends React.Component<IProps, IState> {
         });
     };
 
-    private onChoose = (reaction: string): boolean => {
+    private onChooseCustomReaction = (entry: ImagePackEntry): void => {
+        this.onChoose(entry.url, entry.shortcode);
+    };
+
+    private onChoose = (reaction: string, shortcode?: string): boolean => {
         this.componentWillUnmount();
         this.props.onFinished();
         const myReactions = this.getReactions();
@@ -100,12 +110,20 @@ class ReactionPicker extends React.Component<IProps, IState> {
             // Tell the emoji picker not to bump this in the more frequently used list.
             return false;
         } else {
-            MatrixClientPeg.safeGet().sendEvent(this.props.mxEvent.getRoomId()!, EventType.Reaction, {
+            const content: ReactionEventContent | CustomReactionEventContent = {
                 "m.relates_to": {
                     rel_type: RelationType.Annotation,
                     event_id: this.props.mxEvent.getId()!,
                     key: reaction,
                 },
+            };
+            if (shortcode) {
+                const customContent = content as CustomReactionEventContent;
+                customContent[REACTION_SHORTCODE_KEY.name] = shortcode;
+                customContent[REACTION_SHORTCODE_KEY.altName] = shortcode;
+            }
+            MatrixClientPeg.safeGet().sendEvent(this.props.mxEvent.getRoomId()!, EventType.Reaction, {
+                ...content,
             });
             dis.dispatch({ action: "message_sent" });
             dis.dispatch<FocusComposerPayload>({
@@ -124,13 +142,32 @@ class ReactionPicker extends React.Component<IProps, IState> {
     };
 
     public render(): React.ReactNode {
+        const room = MatrixClientPeg.safeGet().getRoom(this.props.mxEvent.getRoomId());
+        const customReactions = getImagePackEntries(MatrixClientPeg.safeGet(), room, "emoticon");
         return (
-            <EmojiPicker
-                onChoose={this.onChoose}
-                isEmojiDisabled={this.isEmojiDisabled}
-                onFinished={this.props.onFinished}
-                selectedEmojis={this.state.selectedEmojis}
-            />
+            <>
+                {customReactions.length > 0 && (
+                    <div className="mx_ReactionPicker_custom" aria-label="Custom reactions">
+                        {customReactions.slice(0, 32).map((entry) => (
+                            <AccessibleButton
+                                key={`${entry.pack.id}:${entry.shortcode}:${entry.url}`}
+                                className="mx_ReactionPicker_customItem"
+                                onClick={() => this.onChooseCustomReaction(entry)}
+                                title={`${entry.shortcode} · ${entry.label}`}
+                                disabled={!!this.getReactions()[entry.url] && !this.context.canSelfRedact}
+                            >
+                                {entry.httpUrl && <img src={entry.httpUrl} alt="" />}
+                            </AccessibleButton>
+                        ))}
+                    </div>
+                )}
+                <EmojiPicker
+                    onChoose={this.onChoose}
+                    isEmojiDisabled={this.isEmojiDisabled}
+                    onFinished={this.props.onFinished}
+                    selectedEmojis={this.state.selectedEmojis}
+                />
+            </>
         );
     }
 }

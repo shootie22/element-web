@@ -26,6 +26,8 @@ import type ScalarAuthClient from "../../../ScalarAuthClient";
 import GenericElementContextMenu from "../context_menus/GenericElementContextMenu";
 import RightPanelStore from "../../../stores/right-panel/RightPanelStore";
 import { UPDATE_EVENT } from "../../../stores/AsyncStore";
+import SettingsStore from "../../../settings/SettingsStore";
+import { ImagePackStickerPicker } from "./ImagePackStickerPicker";
 
 // This should be below the dialog level (4000), but above the rest of the UI (1000-2000).
 // We sit in a context menu, so this should be given to the context menu.
@@ -46,6 +48,7 @@ interface IState {
     imError: string | null;
     stickerpickerWidget: UserWidget | null;
     widgetId: string | null;
+    showLegacyPicker: boolean;
 }
 
 export default class Stickerpicker extends React.PureComponent<IProps, IState> {
@@ -70,6 +73,7 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
             imError: null,
             stickerpickerWidget: null,
             widgetId: null,
+            showLegacyPicker: false,
         };
     }
 
@@ -232,7 +236,28 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
         }
     }
 
+    private openLegacyPicker = (): void => {
+        this.setState({ showLegacyPicker: true });
+    };
+
     public getStickerpickerContent(): JSX.Element {
+        const showLegacyButton = SettingsStore.getValue("feature_legacy_stickerpicker");
+        if (!this.state.showLegacyPicker) {
+            return (
+                <ImagePackStickerPicker
+                    room={this.props.room}
+                    threadId={this.props.threadId}
+                    showLegacyButton={showLegacyButton}
+                    onFinished={this.onFinished}
+                    onOpenLegacy={this.openLegacyPicker}
+                />
+            );
+        }
+
+        return this.getLegacyStickerpickerContent();
+    }
+
+    private getLegacyStickerpickerContent(): JSX.Element {
         // Handle integration manager errors
         if (this.state.imError) {
             return this.errorStickerpickerContent();
@@ -322,6 +347,9 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
         if (this.props.isStickerPickerOpen) {
             this.props.setStickerPickerOpen(false);
         }
+        if (this.state.showLegacyPicker) {
+            this.setState({ showLegacyPicker: false });
+        }
     };
 
     /**
@@ -336,12 +364,14 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
 
     public render(): React.ReactNode {
         if (!this.props.isStickerPickerOpen) return null;
+        const width = this.state.showLegacyPicker ? this.popoverWidth : 340;
+        const height = this.state.showLegacyPicker ? this.popoverHeight : 380;
 
         return (
             <ContextMenu
                 chevronFace={ChevronFace.Bottom}
-                menuWidth={this.popoverWidth}
-                menuHeight={this.popoverHeight}
+                menuWidth={width}
+                menuHeight={height}
                 onFinished={this.onFinished}
                 menuPaddingTop={0}
                 menuPaddingLeft={0}

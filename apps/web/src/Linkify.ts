@@ -78,11 +78,15 @@ export const transformTags: NonNullable<IOptions["transformTags"]> = {
 
         const requestedWidth = Number(attribs.width);
         const requestedHeight = Number(attribs.height);
-        const width = Math.min(requestedWidth || 800, 800);
-        const height = Math.min(requestedHeight || 600, 600);
+        const isEmoticon = typeof attribs["data-mx-emoticon"] !== "undefined";
+        const width = isEmoticon ? Math.min(requestedWidth || 32, 64) : Math.min(requestedWidth || 800, 800);
+        const height = isEmoticon ? Math.min(requestedHeight || 32, 64) : Math.min(requestedHeight || 600, 600);
         // specify width/height as max values instead of absolute ones to allow object-fit to do its thing
         // we only allow our own styles for this tag so overwrite the attribute
         attribs.style = `max-width: ${width}px; max-height: ${height}px;`;
+        if (isEmoticon) {
+            attribs.style += "vertical-align: middle;";
+        }
         if (requestedWidth) {
             attribs.style += "width: 100%;";
         }
@@ -194,7 +198,7 @@ export const sanitizeHtmlParams: IOptions = {
         div: ["data-mx-maths"],
         a: ["href", "name", "target", "rel"], // remote target: custom to matrix
         // img tags also accept width/height, we just map those to max-width & max-height during transformation
-        img: ["src", "alt", "title", "style"],
+        img: ["src", "alt", "title", "style", "height", "width", "data-mx-emoticon"],
         ol: ["start"],
         code: ["class"], // We don't actually allow all classes, we filter them in transformTags
     },

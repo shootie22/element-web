@@ -16,6 +16,7 @@ import type { DeviceClientInformation } from "../utils/device/types.ts";
 import type { UserWidget } from "../utils/WidgetUtils-types.ts";
 import { type MediaPreviewConfig } from "./media_preview.ts";
 import { type INVITE_RULES_ACCOUNT_DATA_TYPE, type InviteConfigAccountData } from "./invite-rules.ts";
+import type { ImagePackContent, ImagePackRoomsContent } from "../image-packs.ts";
 
 // Extend Matrix JS SDK types via Typescript declaration merging to support unspecced event fields and types
 declare module "matrix-js-sdk/src/types" {
@@ -44,6 +45,8 @@ declare module "matrix-js-sdk/src/types" {
         // Element custom state events
         "im.vector.web.settings": Record<string, any>;
         "org.matrix.room.preview_urls": { disable: boolean };
+        "m.room.image_pack": ImagePackContent;
+        "im.ponies.room_emotes": ImagePackContent;
 
         // XXX unspecced usages of `m.room.*` events
         "m.room.plumbing": {
@@ -74,6 +77,10 @@ declare module "matrix-js-sdk/src/types" {
         "im.vector.setting.integration_provisioning": { enabled: boolean };
         "im.vector.riot.breadcrumb_rooms": { rooms: string[] };
         "im.vector.web.settings": Record<string, any>;
+        "m.image_pack": ImagePackContent;
+        "im.ponies.user_emotes": ImagePackContent;
+        "m.image_pack.rooms": ImagePackRoomsContent;
+        "im.ponies.emote_rooms": ImagePackRoomsContent;
 
         // URL preview account data event
         "org.matrix.preview_urls": { disable: boolean };

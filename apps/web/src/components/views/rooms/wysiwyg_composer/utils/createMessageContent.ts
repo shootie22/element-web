@@ -7,7 +7,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import { richToPlain, plainToRich } from "@vector-im/matrix-wysiwyg";
-import { type IContent, type IEventRelation, MatrixEvent, MsgType } from "matrix-js-sdk/src/matrix";
+import { type IContent, type IEventRelation, MatrixEvent, MsgType, type Room } from "matrix-js-sdk/src/matrix";
 import {
     type ReplacementEvent,
     type RoomMessageEventContent,
@@ -18,6 +18,7 @@ import SettingsStore from "../../../../../settings/SettingsStore";
 import { parsePermalink } from "../../../../../utils/permalinks/Permalinks";
 import { addReplyToMessageContent } from "../../../../../utils/Reply";
 import { isNotNull } from "../../../../../Typeguards";
+import { htmlWithEmoticonShortcodes } from "../../../../../image-pack-html";
 
 export const EMOTE_PREFIX = "/me ";
 
@@ -35,6 +36,7 @@ interface CreateMessageContentParams {
     relation?: IEventRelation;
     replyToEvent?: MatrixEvent;
     editedEvent?: MatrixEvent;
+    room?: Room;
 }
 
 const isMatrixEvent = (e: MatrixEvent | undefined): e is MatrixEvent => e instanceof MatrixEvent;
@@ -42,7 +44,7 @@ const isMatrixEvent = (e: MatrixEvent | undefined): e is MatrixEvent => e instan
 export async function createMessageContent(
     message: string,
     isHTML: boolean,
-    { relation, replyToEvent, editedEvent }: CreateMessageContentParams,
+    { relation, replyToEvent, editedEvent, room }: CreateMessageContentParams,
 ): Promise<RoomMessageEventContent> {
     const isEditing = isMatrixEvent(editedEvent);
 
@@ -71,7 +73,10 @@ export async function createMessageContent(
     // TODO markdown support
 
     const isMarkdownEnabled = SettingsStore.getValue("MessageComposerInput.useMarkdown");
-    const formattedBody = isHTML ? message : isMarkdownEnabled ? await plainToRich(message, true) : null;
+    let formattedBody = isHTML ? message : isMarkdownEnabled ? await plainToRich(message, true) : null;
+    if (formattedBody && room) {
+        formattedBody = htmlWithEmoticonShortcodes(room.client, room, formattedBody);
+    }
 
     if (formattedBody) {
         content.format = "org.matrix.custom.html";

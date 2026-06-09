@@ -949,6 +949,23 @@
     "emoji_picker": {
         "cancel_search_label": "Cancel search"
     },
+    "image_packs": {
+        "add_mxc": "Add MXC",
+        "attribution": "Attribution",
+        "avatar_url": "Pack avatar MXC URL",
+        "favorite_rooms": "Favorite pack rooms",
+        "favorite_this_room": "Use this room as a global favorite image pack",
+        "images": "Images",
+        "invalid_mxc": "Image pack media must use mxc:// URLs.",
+        "invalid_shortcode": "Shortcodes can only contain letters, numbers, hyphens, and underscores, and must be %(maxBytes)s bytes or fewer.",
+        "room_read_only": "You can view this room's pack, but you do not have permission to edit it.",
+        "shortcode": "Shortcode",
+        "title": "Emojis & Stickers",
+        "too_large": "This image pack is too large to save.",
+        "usage_emoticon": "Use as custom emoji",
+        "usage_sticker": "Use as stickers",
+        "visibility_warning": "Image-pack media is uploaded unencrypted and can be seen by homeservers, including in encrypted rooms."
+    },
     "empty_room": "Empty room",
     "empty_room_was_name": "Empty room (was %(oldName)s)",
     "encryption": {
@@ -1574,6 +1591,8 @@
         "jump_to_date": "Jump to date (adds /jumptodate and jump to date headers)",
         "jump_to_date_msc_support": "Requires your server to support MSC3030",
         "latex_maths": "Render LaTeX maths in messages",
+        "legacy_stickerpicker": "Enable legacy sticker picker",
+        "legacy_stickerpicker_description": "Shows the old widget-based sticker picker as a secondary debug option.",
         "leave_beta": "Leave the beta",
         "leave_beta_reload": "Leaving the beta will reload %(brand)s.",
         "location_share_live": "Live Location Sharing",
@@ -3293,7 +3312,9 @@
     },
     "stickers": {
         "empty": "You don't currently have any stickerpacks enabled",
-        "empty_add_prompt": "Add some now"
+        "empty_add_prompt": "Add some now",
+        "native_empty": "No stickers found",
+        "open_legacy_picker": "Open legacy sticker picker"
     },
     "terms": {
         "column_document": "Document",

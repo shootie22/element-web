@@ -25,6 +25,7 @@ import SettingsStore from "../settings/SettingsStore";
 import { type TimelineRenderingType } from "../contexts/RoomContext";
 import * as recent from "../emojipicker/recent";
 import { filterBoolean } from "../utils/arrays";
+import { getImagePackEntries, type ImagePackEntry } from "../image-packs";
 
 const LIMIT = 20;
 
@@ -72,9 +73,11 @@ export default class EmojiProvider extends AutocompleteProvider {
     public matcher: QueryMatcher<ISortedEmoji>;
     public nameMatcher: QueryMatcher<ISortedEmoji>;
     private readonly recentlyUsed: Emoji[];
+    private readonly room: Room;
 
     public constructor(room: Room, renderingType?: TimelineRenderingType) {
         super({ commandRegex: EMOJI_REGEX, renderingType });
+        this.room = room;
         this.matcher = new QueryMatcher<ISortedEmoji>(SORTED_EMOJI, {
             keys: [],
             funcs: [(o) => o.emoji.shortcodes.map((s) => `:${s}:`)],
@@ -154,7 +157,9 @@ export default class EmojiProvider extends AutocompleteProvider {
             completions = recentlyUsedAutocomplete.concat(completions);
             completions = uniqBy(completions, "emoji");
 
-            return completions.map((c) => ({
+            const customCompletions = this.getCustomEmojiCompletions(matchedString, range!);
+
+            return customCompletions.concat(completions.map((c) => ({
                 completion: c.emoji.unicode,
                 component: (
                     <PillCompletion title={`:${c.emoji.shortcodes[0]}:`} aria-label={c.emoji.unicode}>
@@ -162,9 +167,27 @@ export default class EmojiProvider extends AutocompleteProvider {
                     </PillCompletion>
                 ),
                 range: range!,
-            }));
+            })));
         }
         return [];
+    }
+
+    private getCustomEmojiCompletions(matchedString: string, range: ISelectionRange): ICompletion[] {
+        const query = colonsTrimmed(matchedString).toLowerCase();
+        if (!query) return [];
+
+        return getImagePackEntries(this.room.client, this.room, "emoticon")
+            .filter((entry) => customEntryMatches(entry, query))
+            .slice(0, LIMIT)
+            .map((entry) => ({
+                completion: `:${entry.shortcode}:`,
+                component: (
+                    <PillCompletion title={`:${entry.shortcode}:`} subtitle={entry.label}>
+                        {entry.httpUrl && <img className="mx_Autocomplete_CustomEmoji" src={entry.httpUrl} alt="" />}
+                    </PillCompletion>
+                ),
+                range,
+            }));
     }
 
     public getName(): string {
@@ -182,4 +205,12 @@ export default class EmojiProvider extends AutocompleteProvider {
             </div>
         );
     }
+}
+
+function customEntryMatches(entry: ImagePackEntry, query: string): boolean {
+    return (
+        entry.shortcode.toLowerCase().includes(query) ||
+        (entry.body || "").toLowerCase().includes(query) ||
+        entry.label.toLowerCase().includes(query)
+    );
 }

@@ -215,3 +215,33 @@ Please see LICENSE files in the repository root for full details.
 .mx_EmojiPicker_quick_header .mx_EmojiPicker_name {
     margin-right: 4px;
 }
+
+.mx_ReactionPicker_custom {
+    width: 340px;
+    max-height: 92px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    padding: 8px;
+    border-bottom: 1px solid $message-action-bar-border-color;
+    background: $background;
+}
+
+.mx_ReactionPicker_customItem {
+    width: 36px;
+    height: 36px;
+    padding: 4px;
+    border-radius: 4px;
+
+    &:hover,
+    &:focus {
+        background-color: $focus-bg-color;
+    }
+
+    img {
+        width: 28px;
+        height: 28px;
+        object-fit: contain;
+    }
+}

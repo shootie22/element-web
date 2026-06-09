@@ -23,6 +23,7 @@ import LockIcon from "@vector-im/compound-design-tokens/assets/web/icons/lock";
 import LabsIcon from "@vector-im/compound-design-tokens/assets/web/icons/labs";
 import BlockIcon from "@vector-im/compound-design-tokens/assets/web/icons/block";
 import HelpIcon from "@vector-im/compound-design-tokens/assets/web/icons/help";
+import { StickerIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import TabbedView, { Tab, useActiveTabWithDefault } from "../../structures/TabbedView";
 import { _t, _td } from "../../../languageHandler";
@@ -48,6 +49,7 @@ import { useSettingValue } from "../../../hooks/useSettings";
 import { NoChange, useEventEmitterAsyncState, type AsyncStateCallbackResult } from "../../../hooks/useEventEmitter";
 import { ToastContext, useActiveToast } from "../../../contexts/ToastContext";
 import { EncryptionUserSettingsTab, type State } from "../settings/tabs/user/EncryptionUserSettingsTab";
+import { ImagePackSettings } from "../settings/ImagePackSettings";
 
 interface IProps {
     initialTabId?: UserTab;
@@ -76,6 +78,8 @@ function titleForTabID(tabId: UserTab): React.ReactNode {
             return _t("settings|notifications|dialog_title", undefined, subs);
         case UserTab.Preferences:
             return _t("settings|preferences|dialog_title", undefined, subs);
+        case UserTab.ImagePacks:
+            return _t("image_packs|title");
         case UserTab.Keyboard:
             return _t("settings|keyboard|dialog_title", undefined, subs);
         case UserTab.Sidebar:
@@ -168,6 +172,15 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
                 <PreferencesIcon />,
                 <PreferencesUserSettingsTab closeSettingsFn={props.onFinished} />,
                 "UserSettingsPreferences",
+            ),
+        );
+        tabs.push(
+            new Tab(
+                UserTab.ImagePacks,
+                _td("image_packs|title"),
+                <StickerIcon />,
+                <ImagePackSettings mode="account" />,
+                undefined,
             ),
         );
         tabs.push(
