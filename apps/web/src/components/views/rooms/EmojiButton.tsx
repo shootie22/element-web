@@ -13,6 +13,7 @@ import { ReactionIcon } from "@vector-im/compound-design-tokens/assets/web/icons
 import { _t } from "../../../languageHandler";
 import ContextMenu, { aboveLeftOf, type MenuProps, useContextMenu } from "../../structures/ContextMenu";
 import EmojiPicker from "../emojipicker/EmojiPicker";
+import { type ICustomEmojiData } from "../emojipicker/Emoji";
 import { CollapsibleButton } from "./CollapsibleButton";
 import { OverflowMenuContext } from "./MessageComposerButtons";
 import RoomContext from "../../../contexts/RoomContext";
@@ -21,7 +22,7 @@ import { getImagePackEntries } from "../../../image-packs";
 import { useImagePackRoomUpdate } from "../../../hooks/useImagePackUpdate";
 
 interface IEmojiButtonProps {
-    addEmoji: (unicode: string) => boolean;
+    addEmoji: (unicode: string, customEmoji?: ICustomEmojiData) => boolean;
     menuPosition?: MenuProps;
     className?: string;
 }

@@ -38,7 +38,7 @@ const ZERO_WIDTH_JOINER = "\u200D";
 
 interface IProps {
     selectedEmojis?: Set<string>;
-    onChoose(unicode: string): boolean;
+    onChoose(unicode: string, customEmoji?: ICustomEmojiData): boolean;
     onFinished(): void;
     isEmojiDisabled?: (unicode: string) => boolean;
     customEmoji?: ICustomEmojiData[];
@@ -94,7 +94,9 @@ class EmojiPicker extends React.Component<IProps, IState> {
 
         const categoryConfig: Pick<ICategory, "id" | "name" | "emoji">[] = [
             { id: "recent", name: _t("emoji|category_frequently_used"), emoji: "🕒" },
-            ...(hasCustomEmoji ? [{ id: "custom" as CategoryKey, name: _t("emoji|category_custom"), emoji: "📦" }] : []),
+            ...(hasCustomEmoji
+                ? [{ id: "custom" as CategoryKey, name: _t("emoji|category_custom"), emoji: "📦" }]
+                : []),
             { id: "people", name: _t("emoji|category_smileys_people"), emoji: "😀" },
             { id: "nature", name: _t("emoji|category_animals_nature"), emoji: "🐕" },
             { id: "foods", name: _t("emoji|category_food_drink"), emoji: "🍎" },
@@ -328,7 +330,7 @@ class EmojiPicker extends React.Component<IProps, IState> {
     private onClickEmoji = (ev: ButtonEvent, emoji: IEmoji): void => {
         const custom = "imgSrc" in emoji ? (emoji as unknown as ICustomEmojiData) : undefined;
         const value = custom ? `:${custom.shortcode}:` : emoji.unicode;
-        if (this.props.onChoose(value) !== false && !custom) {
+        if (this.props.onChoose(value, custom) !== false && !custom) {
             recent.add(emoji.unicode);
         }
         if ((ev as React.KeyboardEvent).key === Key.ENTER) {

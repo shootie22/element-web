@@ -455,6 +455,7 @@ export class CustomEmojiPart extends BasePart implements IBasePart {
         image.src = this.imgSrc;
         image.alt = this.text;
         image.title = this.shortcode;
+        image.width = 32;
         image.height = 32;
         container.appendChild(image);
 
@@ -486,6 +487,9 @@ export class CustomEmojiPart extends BasePart implements IBasePart {
         }
         if (image.title !== this.shortcode) {
             image.title = this.shortcode;
+        }
+        if (image.width !== 32) {
+            image.width = 32;
         }
         if (image.height !== 32) {
             image.height = 32;

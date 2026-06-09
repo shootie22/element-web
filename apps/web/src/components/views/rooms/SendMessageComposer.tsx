@@ -564,7 +564,12 @@ export class SendMessageComposer extends React.Component<ISendMessageComposerPro
                 if (payload.timelineRenderingType !== this.context.timelineRenderingType) break;
                 if (payload.composerType !== ComposerType.Send) break;
 
-                if (payload.userId) {
+                if ("customEmoji" in payload) {
+                    this.editorRef.current?.insertCustomEmoji(
+                        payload.customEmoji.shortcode,
+                        payload.customEmoji.imgSrc,
+                    );
+                } else if (payload.userId) {
                     this.editorRef.current?.insertMention(payload.userId);
                 } else if (payload.event) {
                     this.editorRef.current?.insertQuotedMessage(payload.event);

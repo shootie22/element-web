@@ -39,6 +39,7 @@ import type ResizeNotifier from "../../../utils/ResizeNotifier";
 import { E2EStatus } from "../../../utils/ShieldUtils";
 import SendMessageComposer, { type SendMessageComposer as SendMessageComposerClass } from "./SendMessageComposer";
 import { type ComposerInsertPayload } from "../../../dispatcher/payloads/ComposerInsertPayload";
+import { type ICustomEmojiData } from "../emojipicker/Emoji";
 import { Action } from "../../../dispatcher/actions";
 import type EditorModel from "../../../editor/model";
 import UIStore, { UI_EVENTS } from "../../../stores/UIStore";
@@ -381,10 +382,17 @@ export class MessageComposer extends React.Component<IProps, IState> {
         }
     };
 
-    private addEmoji = (emoji: string): boolean => {
+    private addEmoji = (emoji: string, customEmoji?: ICustomEmojiData): boolean => {
         dis.dispatch<ComposerInsertPayload>({
             action: Action.ComposerInsert,
-            text: emoji,
+            ...(customEmoji?.imgSrc
+                ? {
+                      customEmoji: {
+                          shortcode: customEmoji.shortcode,
+                          imgSrc: customEmoji.imgSrc,
+                      },
+                  }
+                : { text: emoji }),
             timelineRenderingType: this.context.timelineRenderingType,
         });
         return true;

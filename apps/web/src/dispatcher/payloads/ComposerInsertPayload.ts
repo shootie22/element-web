@@ -29,4 +29,14 @@ interface IComposerInsertPlaintextPayload extends IBaseComposerInsertPayload {
     text: string;
 }
 
-export type ComposerInsertPayload = IComposerInsertMentionPayload | IComposerInsertPlaintextPayload;
+interface IComposerInsertCustomEmojiPayload extends IBaseComposerInsertPayload {
+    customEmoji: {
+        shortcode: string;
+        imgSrc: string;
+    };
+}
+
+export type ComposerInsertPayload =
+    | IComposerInsertMentionPayload
+    | IComposerInsertPlaintextPayload
+    | IComposerInsertCustomEmojiPayload;

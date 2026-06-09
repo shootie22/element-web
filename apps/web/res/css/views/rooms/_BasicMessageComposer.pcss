@@ -96,13 +96,18 @@ Please see LICENSE files in the repository root for full details.
         }
 
         span.mx_CustomEmoji {
-            display: inline;
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            line-height: 32px;
             vertical-align: middle;
             user-select: all;
 
             img.mx_CustomEmoji_image {
-                max-width: 32px;
-                max-height: 32px;
+                display: block;
+                width: 32px;
+                height: 32px;
+                object-fit: contain;
                 vertical-align: middle;
             }
         }
