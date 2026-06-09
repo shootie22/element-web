@@ -21,6 +21,15 @@ export const IMAGE_PACK_SHORTCODE_REGEX = /^[a-zA-Z0-9-_]+$/;
 export const IMAGE_PACK_SHORTCODE_MAX_BYTES = 100;
 export const IMAGE_PACK_MAX_EVENT_BYTES = 65000;
 
+const IMAGE_PACK_EVENT_TYPES = new Set<string>([
+    ROOM_IMAGE_PACK_EVENT,
+    ROOM_IMAGE_PACK_EVENT_UNSTABLE,
+    ACCOUNT_IMAGE_PACK_EVENT,
+    ACCOUNT_IMAGE_PACK_EVENT_UNSTABLE,
+    IMAGE_PACK_ROOMS_EVENT,
+    IMAGE_PACK_ROOMS_EVENT_UNSTABLE,
+]);
+
 export type ImagePackUsage = "emoticon" | "sticker";
 
 export interface ImagePackMetadata {
@@ -74,6 +83,10 @@ export interface ImagePackEntry extends ImagePackImage {
     pack: ImagePack;
     label: string;
     httpUrl?: string;
+}
+
+export function isImagePackEventType(eventType: string): boolean {
+    return IMAGE_PACK_EVENT_TYPES.has(eventType);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

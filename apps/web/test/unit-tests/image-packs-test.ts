@@ -10,6 +10,7 @@ import {
     ACCOUNT_IMAGE_PACK_EVENT_UNSTABLE,
     IMAGE_PACK_ROOMS_EVENT,
     IMAGE_PACK_ROOMS_EVENT_UNSTABLE,
+    isImagePackEventType,
     isValidImagePackShortcode,
     packToContent,
     parseImagePackContent,
@@ -72,6 +73,16 @@ describe("image-packs", () => {
         expect(isValidImagePackShortcode("cat-party_2")).toBe(true);
         expect(isValidImagePackShortcode("cat party")).toBe(false);
         expect(isValidImagePackShortcode("a".repeat(101))).toBe(false);
+    });
+
+    it("recognises image pack update event types", () => {
+        expect(isImagePackEventType(ROOM_IMAGE_PACK_EVENT)).toBe(true);
+        expect(isImagePackEventType(ROOM_IMAGE_PACK_EVENT_UNSTABLE)).toBe(true);
+        expect(isImagePackEventType(ACCOUNT_IMAGE_PACK_EVENT)).toBe(true);
+        expect(isImagePackEventType(ACCOUNT_IMAGE_PACK_EVENT_UNSTABLE)).toBe(true);
+        expect(isImagePackEventType(IMAGE_PACK_ROOMS_EVENT)).toBe(true);
+        expect(isImagePackEventType(IMAGE_PACK_ROOMS_EVENT_UNSTABLE)).toBe(true);
+        expect(isImagePackEventType("m.room.message")).toBe(false);
     });
 
     it("serializes pack content and checks event size", () => {

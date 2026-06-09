@@ -8,7 +8,17 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React from "react";
-import { type MatrixEvent, EventType, RelationType, type Relations, RelationsEvent } from "matrix-js-sdk/src/matrix";
+import {
+    ClientEvent,
+    type MatrixClient,
+    type MatrixEvent,
+    EventType,
+    RelationType,
+    type Relations,
+    RelationsEvent,
+    type Room,
+    RoomStateEvent,
+} from "matrix-js-sdk/src/matrix";
 import { type ReactionEventContent } from "matrix-js-sdk/src/types";
 
 import EmojiPicker from "./EmojiPicker";
@@ -17,7 +27,12 @@ import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import RoomContext from "../../../contexts/RoomContext";
 import { type FocusComposerPayload } from "../../../dispatcher/payloads/FocusComposerPayload";
-import { getImagePackEntries, type ImagePackEntry } from "../../../image-packs";
+import {
+    getFavoriteImagePackRoomIds,
+    getImagePackEntries,
+    isImagePackEventType,
+    type ImagePackEntry,
+} from "../../../image-packs";
 import AccessibleButton from "../elements/AccessibleButton";
 import { REACTION_SHORTCODE_KEY } from "../../../viewmodels/room/timeline/event-tile/reactions/reactionShortcode";
 
@@ -36,6 +51,7 @@ type CustomReactionEventContent = ReactionEventContent & Record<"shortcode" | "c
 class ReactionPicker extends React.Component<IProps, IState> {
     public static contextType = RoomContext;
     declare public context: React.ContextType<typeof RoomContext>;
+    private imagePackUpdateClient?: MatrixClient;
 
     public constructor(props: IProps) {
         super(props);
@@ -47,12 +63,19 @@ class ReactionPicker extends React.Component<IProps, IState> {
 
     public componentDidMount(): void {
         this.addListeners();
+        this.addImagePackListeners();
     }
 
     public componentDidUpdate(prevProps: IProps): void {
         if (prevProps.reactions !== this.props.reactions) {
+            this.removeListeners(prevProps.reactions);
             this.addListeners();
             this.onReactionsChange();
+        }
+
+        if (prevProps.mxEvent.getRoomId() !== this.props.mxEvent.getRoomId()) {
+            this.removeImagePackListeners();
+            this.addImagePackListeners();
         }
     }
 
@@ -64,12 +87,37 @@ class ReactionPicker extends React.Component<IProps, IState> {
         }
     }
 
-    public componentWillUnmount(): void {
-        if (this.props.reactions) {
-            this.props.reactions.removeListener(RelationsEvent.Add, this.onReactionsChange);
-            this.props.reactions.removeListener(RelationsEvent.Remove, this.onReactionsChange);
-            this.props.reactions.removeListener(RelationsEvent.Redaction, this.onReactionsChange);
+    private removeListeners(reactions: Relations | null | undefined = this.props.reactions): void {
+        if (reactions) {
+            reactions.removeListener(RelationsEvent.Add, this.onReactionsChange);
+            reactions.removeListener(RelationsEvent.Remove, this.onReactionsChange);
+            reactions.removeListener(RelationsEvent.Redaction, this.onReactionsChange);
         }
+    }
+
+    private addImagePackListeners(): void {
+        const client = MatrixClientPeg.safeGet();
+        if (this.imagePackUpdateClient === client) return;
+
+        this.removeImagePackListeners();
+        this.imagePackUpdateClient = client;
+        client.on(ClientEvent.AccountData, this.onImagePackEvent);
+        client.on(RoomStateEvent.Events, this.onImagePackEvent);
+        client.on(ClientEvent.Room, this.onImagePackRoom);
+    }
+
+    private removeImagePackListeners(): void {
+        if (!this.imagePackUpdateClient) return;
+
+        this.imagePackUpdateClient.removeListener(ClientEvent.AccountData, this.onImagePackEvent);
+        this.imagePackUpdateClient.removeListener(RoomStateEvent.Events, this.onImagePackEvent);
+        this.imagePackUpdateClient.removeListener(ClientEvent.Room, this.onImagePackRoom);
+        this.imagePackUpdateClient = undefined;
+    }
+
+    public componentWillUnmount(): void {
+        this.removeListeners();
+        this.removeImagePackListeners();
     }
 
     private getReactions(): Record<string, string> {
@@ -89,6 +137,19 @@ class ReactionPicker extends React.Component<IProps, IState> {
         this.setState({
             selectedEmojis: new Set(Object.keys(this.getReactions())),
         });
+    };
+
+    private onImagePackEvent = (event: MatrixEvent): void => {
+        if (isImagePackEventType(event.getType())) {
+            this.forceUpdate();
+        }
+    };
+
+    private onImagePackRoom = (room: Room): void => {
+        const client = MatrixClientPeg.safeGet();
+        if (getFavoriteImagePackRoomIds(client).includes(room.roomId)) {
+            this.forceUpdate();
+        }
     };
 
     private onChooseCustomReaction = (entry: ImagePackEntry): void => {

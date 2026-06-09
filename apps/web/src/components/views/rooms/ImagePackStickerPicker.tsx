@@ -5,14 +5,15 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, useEffect, useMemo, useState } from "react";
-import { ClientEvent, RoomStateEvent, type MatrixEvent, type Room } from "matrix-js-sdk/src/matrix";
+import React, { type JSX, useMemo, useState } from "react";
+import { type Room } from "matrix-js-sdk/src/matrix";
 import { SearchIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import { _t } from "../../../languageHandler";
 import AccessibleButton from "../elements/AccessibleButton";
 import dis from "../../../dispatcher/dispatcher";
 import { getImagePackEntries, type ImagePackEntry } from "../../../image-packs";
+import { useImagePackRoomUpdate } from "../../../hooks/useImagePackUpdate";
 
 interface Props {
     room: Room;
@@ -32,28 +33,6 @@ function entryMatchesFilter(entry: ImagePackEntry, filter: string): boolean {
     );
 }
 
-function useImagePackUpdate(room: Room): number {
-    const [version, setVersion] = useState(0);
-
-    useEffect(() => {
-        const bump = (): void => setVersion((current) => current + 1);
-        const onState = (event: MatrixEvent): void => {
-            if (event.getType().includes("image_pack") || event.getType().includes("emotes")) {
-                bump();
-            }
-        };
-
-        room.client.on(ClientEvent.AccountData, bump);
-        room.client.on(RoomStateEvent.Events, onState);
-        return () => {
-            room.client.removeListener(ClientEvent.AccountData, bump);
-            room.client.removeListener(RoomStateEvent.Events, onState);
-        };
-    }, [room]);
-
-    return version;
-}
-
 export function ImagePackStickerPicker({
     room,
     threadId,
@@ -62,7 +41,7 @@ export function ImagePackStickerPicker({
     onOpenLegacy,
 }: Props): JSX.Element {
     const [filter, setFilter] = useState("");
-    useImagePackUpdate(room);
+    useImagePackRoomUpdate(room);
     const entries = getImagePackEntries(room.client, room, "sticker");
     const filteredEntries = useMemo(
         () => entries.filter((entry) => entryMatchesFilter(entry, filter.trim())),
@@ -113,9 +92,7 @@ export function ImagePackStickerPicker({
                         ))}
                     </div>
                 ) : (
-                    <div className="mx_ImagePackStickerPicker_empty">
-                        {_t("stickers|native_empty")}
-                    </div>
+                    <div className="mx_ImagePackStickerPicker_empty">{_t("stickers|native_empty")}</div>
                 )}
             </div>
             {showLegacyButton && (
