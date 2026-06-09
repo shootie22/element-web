@@ -47,6 +47,7 @@ import { getImagePackEntries } from "../../../image-packs";
 import { Landmark, LandmarkNavigation } from "../../../accessibility/LandmarkNavigation";
 
 const CUSTOM_EMOJI_REGEX = /:([a-zA-Z0-9-_]+):$/;
+const CUSTOM_EMOJI_REGEX_GLOBAL = /:([a-zA-Z0-9-_]+):/g;
 
 // matches emoticons which follow the start of a line or whitespace
 const REGEX_EMOTICON_WHITESPACE = new RegExp("(?:^|\\s)(" + EMOTICON_REGEX.source + ")\\s|:^$");
@@ -231,6 +232,47 @@ export default class BasicMessageEditor extends React.Component<IProps, IState> 
         }
     }
 
+    private replaceCustomEmojiInParts(parts: Part[]): Part[] {
+        const { model } = this.props;
+        const entries = getImagePackEntries(MatrixClientPeg.safeGet(), this.props.room, "emoticon");
+        if (!entries.length) return parts;
+
+        const result: Part[] = [];
+        for (const part of parts) {
+            if (part.type !== Type.Plain) {
+                result.push(part);
+                continue;
+            }
+
+            const text = part.text;
+            let lastIndex = 0;
+            let hasMatch = false;
+
+            for (const match of text.matchAll(CUSTOM_EMOJI_REGEX_GLOBAL)) {
+                const shortcode = match[1];
+                const entry = entries.find((e) => e.shortcode === shortcode);
+                if (!entry?.httpUrl) continue;
+
+                hasMatch = true;
+                if (match.index > lastIndex) {
+                    result.push(model.partCreator.plain(text.slice(lastIndex, match.index)));
+                }
+                result.push(model.partCreator.customEmoji(shortcode, entry.httpUrl));
+                lastIndex = match.index + match[0].length;
+            }
+
+            if (hasMatch) {
+                if (lastIndex < text.length) {
+                    result.push(model.partCreator.plain(text.slice(lastIndex)));
+                }
+            } else {
+                result.push(part);
+            }
+        }
+
+        return result;
+    }
+
     private updateEditorState = (selection?: Caret, inputType?: string, diff?: IDiff): void => {
         if (!this.editorRef.current) return;
         renderModel(this.editorRef.current, this.props.model);
@@ -377,7 +419,9 @@ export default class BasicMessageEditor extends React.Component<IProps, IState> 
             const serializedTextParts = JSON.parse(partsText);
             parts = serializedTextParts.map((p: SerializedPart) => partCreator.deserializePart(p));
         } else {
-            parts = parsePlainTextMessage(plainText, partCreator, { shouldEscape: false });
+            parts = this.replaceCustomEmojiInParts(
+                parsePlainTextMessage(plainText, partCreator, { shouldEscape: false }),
+            );
         }
 
         this.modifiedFlag = true;
