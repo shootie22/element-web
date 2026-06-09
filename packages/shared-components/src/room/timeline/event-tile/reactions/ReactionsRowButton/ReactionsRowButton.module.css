@@ -35,6 +35,13 @@
     padding-right: var(--cpd-space-1x);
 }
 
+img.reactionsRowButtonContent {
+    display: flex;
+    padding-right: 0;
+    justify-content: center;
+    align-items: center;
+}
+
 .reactionsRowButtonCount {
     white-space: nowrap;
 }
