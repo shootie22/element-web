@@ -3829,6 +3829,7 @@
         "title": "Upload files",
         "title_progress": "Upload files (%(current)s of %(total)s)",
         "upload_all_button": "Upload all",
+        "caption_placeholder": "Add a caption",
         "upload_n_others_button": {
             "one": "Upload %(count)s other file",
             "other": "Upload %(count)s other files"

@@ -19,11 +19,12 @@ interface IProps {
     file: File;
     currentIndex: number;
     totalFiles: number;
-    onFinished: (uploadConfirmed: boolean, uploadAll?: boolean) => void;
+    onFinished: (uploadConfirmed: boolean, uploadAll?: boolean, caption?: string) => void;
 }
 
 interface IState {
     objectUrl?: string;
+    caption: string;
 }
 
 export default class UploadConfirmDialog extends React.Component<IProps, IState> {
@@ -35,7 +36,9 @@ export default class UploadConfirmDialog extends React.Component<IProps, IState>
     public constructor(props: IProps) {
         super(props);
 
-        this.state = {};
+        this.state = {
+            caption: "",
+        };
     }
 
     public componentDidMount(): void {
@@ -58,11 +61,15 @@ export default class UploadConfirmDialog extends React.Component<IProps, IState>
     };
 
     private onUploadClick = (): void => {
-        this.props.onFinished(true);
+        this.props.onFinished(true, undefined, this.state.caption);
     };
 
     private onUploadAllClick = (): void => {
-        this.props.onFinished(true, true);
+        this.props.onFinished(true, true, this.state.caption);
+    };
+
+    private onCaptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+        this.setState({ caption: e.target.value });
     };
 
     public render(): React.ReactNode {
@@ -125,6 +132,13 @@ export default class UploadConfirmDialog extends React.Component<IProps, IState>
                             </div>
                         </div>
                     </div>
+                    <textarea
+                        className="mx_UploadConfirmDialog_caption"
+                        placeholder={_t("upload_file|caption_placeholder")}
+                        value={this.state.caption}
+                        onChange={this.onCaptionChange}
+                        rows={2}
+                    />
                 </div>
 
                 <DialogButtons
