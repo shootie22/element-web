@@ -7,7 +7,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import classNames from "classnames";
-import React, { type JSX, useContext } from "react";
+import React, { type JSX, useContext, useMemo } from "react";
 import { ReactionIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import { _t } from "../../../languageHandler";
@@ -15,6 +15,9 @@ import ContextMenu, { aboveLeftOf, type MenuProps, useContextMenu } from "../../
 import EmojiPicker from "../emojipicker/EmojiPicker";
 import { CollapsibleButton } from "./CollapsibleButton";
 import { OverflowMenuContext } from "./MessageComposerButtons";
+import RoomContext from "../../../contexts/RoomContext";
+import { MatrixClientPeg } from "../../../MatrixClientPeg";
+import { getImagePackEntries } from "../../../image-packs";
 
 interface IEmojiButtonProps {
     addEmoji: (unicode: string) => boolean;
@@ -24,7 +27,17 @@ interface IEmojiButtonProps {
 
 export function EmojiButton({ addEmoji, menuPosition, className }: IEmojiButtonProps): JSX.Element {
     const overflowMenuCloser = useContext(OverflowMenuContext);
+    const roomContext = useContext(RoomContext);
     const [menuDisplayed, button, openMenu, closeMenu] = useContextMenu();
+
+    const customEmoji = useMemo(() => {
+        if (!roomContext.room) return undefined;
+        return getImagePackEntries(MatrixClientPeg.safeGet(), roomContext.room, "emoticon").map((e) => ({
+            shortcode: e.shortcode,
+            label: e.body || e.shortcode,
+            imgSrc: e.httpUrl,
+        }));
+    }, [roomContext.room, menuDisplayed]);
 
     let contextMenu: React.ReactElement | null = null;
     if (menuDisplayed && button.current) {
@@ -36,7 +49,7 @@ export function EmojiButton({ addEmoji, menuPosition, className }: IEmojiButtonP
 
         contextMenu = (
             <ContextMenu {...position} onFinished={onFinished} managed={false} focusLock>
-                <EmojiPicker onChoose={addEmoji} onFinished={onFinished} />
+                <EmojiPicker onChoose={addEmoji} onFinished={onFinished} customEmoji={customEmoji} />
             </ContextMenu>
         );
     }

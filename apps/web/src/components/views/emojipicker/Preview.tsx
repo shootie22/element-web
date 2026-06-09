@@ -11,7 +11,7 @@ import React from "react";
 import { type Emoji } from "@matrix-org/emojibase-bindings";
 
 interface IProps {
-    emoji: Emoji;
+    emoji: Emoji & { imgSrc?: string };
 }
 
 class Preview extends React.PureComponent<IProps> {
@@ -20,11 +20,14 @@ class Preview extends React.PureComponent<IProps> {
             unicode,
             label,
             shortcodes: [shortcode],
+            imgSrc,
         } = this.props.emoji;
 
         return (
             <div className="mx_EmojiPicker_footer mx_EmojiPicker_preview">
-                <div className="mx_EmojiPicker_preview_emoji">{unicode}</div>
+                <div className="mx_EmojiPicker_preview_emoji">
+                    {imgSrc ? <img src={imgSrc} alt="" /> : unicode}
+                </div>
                 <div className="mx_EmojiPicker_preview_text">
                     <div className="mx_EmojiPicker_name mx_EmojiPicker_preview_name">{label}</div>
                     <div className="mx_EmojiPicker_shortcode">{shortcode}</div>

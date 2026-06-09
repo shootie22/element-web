@@ -19,6 +19,7 @@ import Search from "./Search";
 import Preview from "./Preview";
 import QuickReactions from "./QuickReactions";
 import Category, { type CategoryKey, type ICategory } from "./Category";
+import { type ICustomEmojiData } from "./Emoji";
 import { filterBoolean } from "../../../utils/arrays";
 import {
     type IAction as RovingAction,
@@ -40,6 +41,7 @@ interface IProps {
     onChoose(unicode: string): boolean;
     onFinished(): void;
     isEmojiDisabled?: (unicode: string) => boolean;
+    customEmoji?: ICustomEmojiData[];
 }
 
 interface IState {
@@ -78,10 +80,21 @@ class EmojiPicker extends React.Component<IProps, IState> {
             ...DATA_BY_CATEGORY,
         };
 
+        if (props.customEmoji?.length) {
+            this.memoizedDataByCategory.custom = props.customEmoji.map((e) => ({
+                ...e,
+                shortcodes: [e.shortcode],
+                hexcode: e.shortcode,
+                unicode: `:${e.shortcode}:`,
+            })) as unknown as IEmoji[];
+        }
+
         const hasRecentlyUsed = this.recentlyUsed.length > 0;
+        const hasCustomEmoji = !!props.customEmoji?.length;
 
         const categoryConfig: Pick<ICategory, "id" | "name" | "emoji">[] = [
             { id: "recent", name: _t("emoji|category_frequently_used"), emoji: "🕒" },
+            ...(hasCustomEmoji ? [{ id: "custom" as CategoryKey, name: _t("emoji|category_custom"), emoji: "📦" }] : []),
             { id: "people", name: _t("emoji|category_smileys_people"), emoji: "😀" },
             { id: "nature", name: _t("emoji|category_animals_nature"), emoji: "🐕" },
             { id: "foods", name: _t("emoji|category_food_drink"), emoji: "🍎" },
@@ -280,12 +293,12 @@ class EmojiPicker extends React.Component<IProps, IState> {
             filter = filter.split(ZERO_WIDTH_JOINER, 2)[0];
         }
         return (
-            emoji.label.toLowerCase().includes(filter) ||
+            emoji.label?.toLowerCase().includes(filter) ||
             (Array.isArray(emoji.emoticon)
                 ? emoji.emoticon.some((x) => x.includes(filter))
                 : emoji.emoticon?.includes(filter)) ||
-            emoji.shortcodes.some((x) => x.toLowerCase().includes(filter)) ||
-            emoji.unicode.split(ZERO_WIDTH_JOINER).includes(filter)
+            emoji.shortcodes?.some((x) => x.toLowerCase().includes(filter)) ||
+            emoji.unicode?.split(ZERO_WIDTH_JOINER).includes(filter)
         );
     };
 
@@ -313,7 +326,9 @@ class EmojiPicker extends React.Component<IProps, IState> {
     };
 
     private onClickEmoji = (ev: ButtonEvent, emoji: IEmoji): void => {
-        if (this.props.onChoose(emoji.unicode) !== false) {
+        const custom = "imgSrc" in emoji ? (emoji as unknown as ICustomEmojiData) : undefined;
+        const value = custom ? `:${custom.shortcode}:` : emoji.unicode;
+        if (this.props.onChoose(value) !== false && !custom) {
             recent.add(emoji.unicode);
         }
         if ((ev as React.KeyboardEvent).key === Key.ENTER) {
