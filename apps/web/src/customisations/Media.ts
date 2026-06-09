@@ -8,10 +8,12 @@
 
 import { type MatrixClient, parseErrorResponse, type ResizeMethod } from "matrix-js-sdk/src/matrix";
 import { type MediaEventContent } from "matrix-js-sdk/src/types";
+import { getHttpUriForMxc } from "matrix-js-sdk/src/content-repo";
 
 import type { MediaCustomisations, Media } from "@element-hq/element-web-module-api";
 import { MatrixClientPeg } from "../MatrixClientPeg";
 import { type IPreparedMedia, prepEventContentAsMedia } from "./models/IMediaEventContent";
+import SettingsStore from "../settings/SettingsStore";
 import { UserFriendlyError } from "../languageHandler";
 
 // Populate this class with the details of your customisations when copying it.
@@ -86,6 +88,29 @@ class MediaImplementation implements Media {
         return this.client.mxcUrlToHttp(this.thumbnailMxc!, undefined, undefined, undefined, false, true);
     }
 
+    private mxcUrlToHttp(
+        mxcUrl: string,
+        width?: number,
+        height?: number,
+        resizeMethod?: string,
+        allowDirectLinks?: boolean,
+        allowRedirects?: boolean,
+        useAuthentication?: boolean,
+    ): string | null {
+        const animated = SettingsStore.getValue("autoplayGifs") || undefined;
+        return getHttpUriForMxc(
+            this.client.baseUrl,
+            mxcUrl,
+            width,
+            height,
+            resizeMethod,
+            allowDirectLinks,
+            allowRedirects,
+            useAuthentication,
+            animated,
+        ) || null;
+    }
+
     /**
      * Gets the HTTP URL for the thumbnail media with the requested characteristics, if a thumbnail
      * is recorded for this media. Returns null/undefined otherwise.
@@ -99,8 +124,7 @@ class MediaImplementation implements Media {
         // scale using the device pixel ratio to keep images clear
         width = Math.floor(width * window.devicePixelRatio);
         height = Math.floor(height * window.devicePixelRatio);
-        // eslint-disable-next-line no-restricted-properties
-        return this.client.mxcUrlToHttp(this.thumbnailMxc!, width, height, mode, false, true);
+        return this.mxcUrlToHttp(this.thumbnailMxc!, width, height, mode, false, true);
     }
 
     /**
@@ -114,8 +138,7 @@ class MediaImplementation implements Media {
         // scale using the device pixel ratio to keep images clear
         width = Math.floor(width * window.devicePixelRatio);
         height = Math.floor(height * window.devicePixelRatio);
-        // eslint-disable-next-line no-restricted-properties
-        return this.client.mxcUrlToHttp(this.srcMxc, width, height, mode, false, true);
+        return this.mxcUrlToHttp(this.srcMxc, width, height, mode, false, true);
     }
 
     /**
