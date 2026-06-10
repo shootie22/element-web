@@ -22,6 +22,10 @@ export default function TweaksUserSettingsTab(): React.ReactNode {
                     <SettingsFlag name="MessageComposerInput.showStickersButton" level={SettingLevel.ACCOUNT} />
                     <SettingsFlag name="Tweaks.accentEmojiStickerButtons" level={SettingLevel.ACCOUNT} />
                     <SettingsFlag name="Tweaks.resizableEmojiStickerPickers" level={SettingLevel.ACCOUNT} />
+                    <SettingsFlag
+                        name="Tweaks.mixCustomEmojisWithFrequentlyUsed"
+                        level={SettingLevel.ACCOUNT}
+                    />
                 </SettingsSubsection>
 
                 <SettingsSubsection heading={_t("settings|tweaks|animated_media_heading")} formWrap>

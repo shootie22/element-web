@@ -21,6 +21,7 @@ import QuickReactions from "./QuickReactions";
 import Category, { type CategoryKey, type ICategory } from "./Category";
 import { type ICustomEmojiData } from "./Emoji";
 import { filterBoolean } from "../../../utils/arrays";
+import SettingsStore from "../../../settings/SettingsStore";
 import {
     type IAction as RovingAction,
     type IState as RovingState,
@@ -82,13 +83,19 @@ class EmojiPicker extends React.Component<IProps, IState> {
         const customEmojiByRecentKey = new Map(
             customEmoji.map((emoji) => [EmojiPicker.recentKeyForCustomEmoji(emoji), emoji]),
         );
+        const mixCustomEmojisWithFrequentlyUsed =
+            SettingsStore.getValue("Tweaks.mixCustomEmojisWithFrequentlyUsed") !== false;
         // Convert recent emoji characters to emoji data, removing unknowns and duplicates.
         this.recentlyUsed = EmojiPicker.dedupeEmoji(
             filterBoolean(
                 recent
                     .get()
                     .map((emoji) =>
-                        recent.isCustomEmojiKey(emoji) ? customEmojiByRecentKey.get(emoji) : getEmojiFromUnicode(emoji),
+                        recent.isCustomEmojiKey(emoji)
+                            ? mixCustomEmojisWithFrequentlyUsed
+                                ? customEmojiByRecentKey.get(emoji)
+                                : undefined
+                            : getEmojiFromUnicode(emoji),
                     ),
             ) as PickerEmoji[],
         );
@@ -148,8 +155,8 @@ class EmojiPicker extends React.Component<IProps, IState> {
         } as PickerEmoji;
     }
 
-    private static recentKeyForCustomEmoji(emoji: ICustomEmojiData): string {
-        return emoji.recentKey ?? recent.customEmojiKey(emoji.shortcode, emoji.imgSrc);
+    private static recentKeyForCustomEmoji(emoji: ICustomEmojiData | PickerEmoji): string {
+        return emoji.recentKey ?? recent.customEmojiKey(emoji.shortcode!, emoji.imgSrc);
     }
 
     private static dedupeEmoji(emojis: PickerEmoji[]): PickerEmoji[] {

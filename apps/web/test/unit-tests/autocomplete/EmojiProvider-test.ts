@@ -11,6 +11,10 @@ import { mkStubRoom } from "../../test-utils/test-utils";
 import { add } from "../../../src/emojipicker/recent";
 import { stubClient } from "../../test-utils";
 import { MatrixClientPeg } from "../../../src/MatrixClientPeg";
+import SettingsStore from "../../../src/settings/SettingsStore";
+import { SettingLevel } from "../../../src/settings/SettingLevel";
+import * as imagePacks from "../../../src/image-packs";
+import * as recent from "../../../src/emojipicker/recent";
 
 const EMOJI_SHORTCODES = [
     ":+1",
@@ -90,5 +94,32 @@ describe("EmojiProvider", function () {
         expect((completionsList[0]?.component?.props as CompletionComponentProps).title).toEqual(":heart:");
         expect((completionsList[1]?.component?.props as CompletionComponentProps).title).toEqual(":heartpulse:");
         expect((completionsList[2]?.component?.props as CompletionComponentProps).title).toEqual(":heart_eyes:");
+    });
+
+    it("mixes recently used custom emojis into autocomplete when enabled", async function () {
+        const recentKey = recent.customEmojiKey("party", "mxc://example.org/party");
+        SettingsStore.setValue("recent_emoji", null, SettingLevel.ACCOUNT, [{ emoji: recentKey, total: 3 }]);
+        SettingsStore.setValue("Tweaks.mixCustomEmojisWithFrequentlyUsed", null, SettingLevel.ACCOUNT, true);
+        jest.spyOn(imagePacks, "getImagePackEntries").mockReturnValue([
+            {
+                shortcode: "panda",
+                url: "mxc://example.org/panda",
+                httpUrl: "https://example.org/panda.gif",
+                label: "Panda",
+                pack: { id: "pack", source: "room", metadata: {}, images: [] },
+            },
+            {
+                shortcode: "party",
+                url: "mxc://example.org/party",
+                httpUrl: "https://example.org/party.gif",
+                label: "Party",
+                pack: { id: "pack", source: "room", metadata: {}, images: [] },
+            },
+        ] as unknown as imagePacks.ImagePackEntry[]);
+
+        const ep = new EmojiProvider(testRoom);
+        const completionsList = await ep.getCompletions(":pa", { beginning: true, start: 0, end: 3 });
+
+        expect((completionsList[0]?.component?.props as CompletionComponentProps).title).toEqual(":party:");
     });
 });

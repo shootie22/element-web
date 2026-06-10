@@ -157,19 +157,74 @@ export default class EmojiProvider extends AutocompleteProvider {
             completions = recentlyUsedAutocomplete.concat(completions);
             completions = uniqBy(completions, "emoji");
 
+            const recentCustomCompletions = this.getRecentlyUsedCustomEmojiCompletions(matchedString, range!);
             const customCompletions = this.getCustomEmojiCompletions(matchedString, range!);
 
-            return customCompletions.concat(completions.map((c) => ({
-                completion: c.emoji.unicode,
-                component: (
-                    <PillCompletion title={`:${c.emoji.shortcodes[0]}:`} aria-label={c.emoji.unicode}>
-                        <span>{c.emoji.unicode}</span>
-                    </PillCompletion>
-                ),
-                range: range!,
-            })));
+            return uniqBy(
+                [
+                    ...recentCustomCompletions,
+                    ...customCompletions,
+                    ...completions.map(
+                        (c): ICompletion => ({
+                            completion: c.emoji.unicode,
+                            component: (
+                                <PillCompletion title={`:${c.emoji.shortcodes[0]}:`} aria-label={c.emoji.unicode}>
+                                    <span>{c.emoji.unicode}</span>
+                                </PillCompletion>
+                            ),
+                            range: range!,
+                        }),
+                    ),
+                ],
+                (completion) => `${completion.type ?? "emoji"}:${completion.completion}:${completion.completionId ?? ""}`,
+            );
         }
         return [];
+    }
+
+    private getRecentlyUsedCustomEmojiCompletions(matchedString: string, range: ISelectionRange): ICompletion[] {
+        if (!SettingsStore.getValue("Tweaks.mixCustomEmojisWithFrequentlyUsed")) {
+            return [];
+        }
+
+        const query = colonsTrimmed(matchedString).toLowerCase();
+        if (!query) return [];
+
+        const customEntries = getImagePackEntries(this.room.client, this.room, "emoticon");
+        const customByKey = new Map(customEntries.map((entry) => [recent.customEmojiKey(entry.shortcode, entry.url), entry]));
+        const seen = new Set<string>();
+
+        return recent
+            .get()
+            .filter(recent.isCustomEmojiKey)
+            .flatMap((key) => {
+                const entry = customByKey.get(key);
+                if (!entry || !customEntryMatches(entry, query)) {
+                    return [];
+                }
+
+                const dedupeKey = `${entry.shortcode}:${entry.httpUrl ?? entry.url}`;
+                if (seen.has(dedupeKey)) {
+                    return [];
+                }
+                seen.add(dedupeKey);
+
+                return [
+                    {
+                        type: "custom-emoji" as const,
+                        completion: `:${entry.shortcode}:`,
+                        completionId: entry.httpUrl ?? undefined,
+                        component: (
+                            <PillCompletion title={`:${entry.shortcode}:`} subtitle={entry.label}>
+                                {entry.httpUrl && (
+                                    <img className="mx_Autocomplete_CustomEmoji" src={entry.httpUrl} alt="" />
+                                )}
+                            </PillCompletion>
+                        ),
+                        range,
+                    },
+                ];
+            });
     }
 
     private getCustomEmojiCompletions(matchedString: string, range: ISelectionRange): ICompletion[] {

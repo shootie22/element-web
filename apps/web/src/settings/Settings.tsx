@@ -251,6 +251,7 @@ export interface Settings {
     "MessageComposerInput.insertTrailingColon": IBaseSetting<boolean>;
     "Tweaks.accentEmojiStickerButtons": IBaseSetting<boolean>;
     "Tweaks.resizableEmojiStickerPickers": IBaseSetting<boolean>;
+    "Tweaks.mixCustomEmojisWithFrequentlyUsed": IBaseSetting<boolean>;
     "Tweaks.playAnimatedReactionImagesOnHover": IBaseSetting<boolean>;
     "Tweaks.playAnimatedStickersOnHover": IBaseSetting<boolean>;
     "Tweaks.showQuickReactionsOnHover": IBaseSetting<boolean>;
@@ -758,6 +759,11 @@ export const SETTINGS: Settings = {
     "Tweaks.resizableEmojiStickerPickers": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|tweaks|resizable_emoji_sticker_pickers"),
+        default: true,
+    },
+    "Tweaks.mixCustomEmojisWithFrequentlyUsed": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|mix_custom_emojis_with_frequently_used"),
         default: true,
     },
     "Tweaks.playAnimatedReactionImagesOnHover": {

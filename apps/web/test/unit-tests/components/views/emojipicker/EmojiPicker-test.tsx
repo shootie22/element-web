@@ -159,6 +159,34 @@ describe("EmojiPicker", function () {
         expect(container.querySelector('[data-category-id="recent"] img[alt="Party"]')).toBeInTheDocument();
     });
 
+    it("should exclude custom emojis from the recent category when mixing is disabled", () => {
+        const recentKey = recent.customEmojiKey("party", "mxc://example.org/party");
+        SettingsStore.setValue("recent_emoji", null, SettingLevel.ACCOUNT, [
+            { emoji: "😀", total: 4 },
+            { emoji: recentKey, total: 3 },
+        ]);
+        SettingsStore.setValue("Tweaks.mixCustomEmojisWithFrequentlyUsed", null, SettingLevel.ACCOUNT, false);
+
+        const { container } = render(
+            <EmojiPicker
+                onChoose={(str: string) => false}
+                onFinished={jest.fn()}
+                customEmoji={[
+                    {
+                        shortcode: "party",
+                        label: "Party",
+                        imgSrc: "https://example.org/party.gif",
+                        recentKey,
+                    },
+                ]}
+            />,
+        );
+
+        expect(container.querySelector('[data-category-id="recent"]')).toHaveTextContent("😀");
+        expect(container.querySelector('[data-category-id="recent"]')).not.toHaveTextContent("Party");
+        expect(container.querySelector('[data-category-id="custom"] img[alt="Party"]')).toBeInTheDocument();
+    });
+
     it("should add custom emojis to recent emojis when selected", async () => {
         const recentKey = recent.customEmojiKey("party", "mxc://example.org/party");
         const onChoose = jest.fn().mockReturnValue(true);

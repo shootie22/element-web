@@ -2817,9 +2817,13 @@
             "composer_heading": "Composer",
             "dialog_title": "<strong>Settings:</strong> Tweaks",
             "emoji_stickers_heading": "Emoji & stickers",
+            "mix_custom_emojis_with_frequently_used": "Mix custom emojis into frequently used emoji lists",
             "play_animated_reaction_images_on_hover": "Only animate GIF reactions on hover",
             "play_animated_stickers_on_hover": "Only animate stickers on hover",
             "resizable_emoji_sticker_pickers": "Resizable emoji and sticker pickers",
+            "reactions_heading": "Reactions",
+            "show_quick_reactions_on_context_menu": "Show quick reactions in message menu",
+            "show_quick_reactions_on_hover": "Show quick reactions on hover",
             "timeline_heading": "Timeline",
             "title": "Tweaks"
         },
