@@ -299,6 +299,7 @@ export interface Settings {
     "showMediaEventIds": IBaseSetting<{ [eventId: string]: boolean }>;
     "SpotlightSearch.recentSearches": IBaseSetting<string[]>;
     "SpotlightSearch.showNsfwPublicRooms": IBaseSetting<boolean>;
+    "show_quick_reactions": IBaseSetting<boolean>;
     "room_directory_servers": IBaseSetting<string[]>;
     "integrationProvisioning": IBaseSetting<boolean>;
     "allowedWidgets": IBaseSetting<{ [eventId: string]: boolean }>;
@@ -1104,6 +1105,11 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|show_nsfw_content"),
         default: false,
+    },
+    "show_quick_reactions": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|preferences|show_quick_reactions"),
+        default: true,
     },
     "room_directory_servers": {
         supportedLevels: [SettingLevel.ACCOUNT],
