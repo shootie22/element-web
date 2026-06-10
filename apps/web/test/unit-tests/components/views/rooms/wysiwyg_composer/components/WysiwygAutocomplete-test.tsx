@@ -36,6 +36,16 @@ const mockCompletion: ICompletion[] = [
     },
 ];
 
+const mockCustomEmojiCompletion: ICompletion[] = [
+    {
+        type: "custom-emoji",
+        completion: ":party:",
+        completionId: "https://example.org/party.gif",
+        range: { start: 0, end: 6 },
+        component: <div>:party:</div>,
+    },
+];
+
 const constructMockProvider = (data: ICompletion[]) =>
     ({
         getCompletions: jest.fn().mockImplementation(async () => data),
@@ -67,6 +77,7 @@ describe("WysiwygAutocomplete", () => {
     const mockHandleCommand = jest.fn();
     const mockHandleAtRoomMention = jest.fn();
     const mockHandleEmoji = jest.fn();
+    const mockHandleCustomEmojiReplacement = jest.fn();
 
     const renderComponent = (props: Partial<React.ComponentProps<typeof WysiwygAutocomplete>> = {}) => {
         const mockClient = stubClient();
@@ -83,6 +94,7 @@ describe("WysiwygAutocomplete", () => {
                         handleCommand={mockHandleCommand}
                         handleAtRoomMention={mockHandleAtRoomMention}
                         handleEmoji={mockHandleEmoji}
+                        handleCustomEmojiReplacement={mockHandleCustomEmojiReplacement}
                         {...props}
                     />
                 </ScopedRoomContextProvider>
@@ -126,5 +138,26 @@ describe("WysiwygAutocomplete", () => {
 
         // and that they are the mock completions
         mockCompletion.forEach(({ completion }) => expect(screen.getByText(completion)).toBeInTheDocument());
+    });
+
+    it("replaces a custom emoji autocomplete suggestion", async () => {
+        getCompletionsSpy.mockResolvedValueOnce([
+            {
+                completions: mockCustomEmojiCompletion,
+                provider: constructMockProvider(mockCustomEmojiCompletion),
+                command: { command: ["truthy"] as RegExpExecArray },
+            },
+        ]);
+
+        renderComponent({ suggestion: { keyChar: ":", text: "part", type: "emoji" } });
+
+        await waitFor(() => {
+            expect(screen.getByText(":party:")).toBeInTheDocument();
+        });
+
+        autocompleteRef.current?.onConfirmCompletion();
+
+        expect(mockHandleCustomEmojiReplacement).toHaveBeenCalledWith("party", "https://example.org/party.gif");
+        expect(mockHandleEmoji).not.toHaveBeenCalledWith(":party:");
     });
 });

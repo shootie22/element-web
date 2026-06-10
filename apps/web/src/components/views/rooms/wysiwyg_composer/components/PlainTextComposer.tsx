@@ -98,7 +98,7 @@ export function PlainTextComposer({
                 handleCommand={handleCommand}
                 handleAtRoomMention={handleAtRoomMention}
                 handleEmoji={handleEmoji}
-                handleCustomEmoji={handleCustomEmoji}
+                handleCustomEmojiReplacement={handleCustomEmoji}
             />
             <Editor
                 ref={editorRef}

@@ -47,9 +47,9 @@ interface WysiwygAutocompleteProps {
 
     /**
      * This handler will be called with custom emoji metadata on clicking
-     * a custom emoji in the autocomplete list or pressing enter on a selected item
+     * a custom emoji in the autocomplete list or pressing enter on a selected item.
      */
-    handleCustomEmoji?: (shortcode: string, imgSrc: string) => void;
+    handleCustomEmojiReplacement?: (shortcode: string, imgSrc: string) => void;
 
     ref?: Ref<Autocomplete>;
 }
@@ -67,7 +67,7 @@ const WysiwygAutocomplete = ({
     handleCommand,
     handleAtRoomMention,
     handleEmoji,
-    handleCustomEmoji,
+    handleCustomEmojiReplacement,
     ref,
 }: WysiwygAutocompleteProps): JSX.Element | null => {
     const { room } = useScopedRoomContext("room");
@@ -107,7 +107,7 @@ const WysiwygAutocomplete = ({
             }
             case "custom-emoji": {
                 if (completion.completionId) {
-                    handleCustomEmoji?.(
+                    handleCustomEmojiReplacement?.(
                         completion.completion.replace(/^:/, "").replace(/:$/, ""),
                         completion.completionId,
                     );
