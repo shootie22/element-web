@@ -11,9 +11,11 @@ import { ActionBarView } from "@element-hq/web-shared-components";
 
 import type ReplyChain from "../../elements/ReplyChain";
 import ReactionPicker from "../../emojipicker/ReactionPicker";
+import { QuickReactionsBar } from "../../emojipicker/QuickReactionsBar";
 import MessageContextMenu from "../../context_menus/MessageContextMenu";
 import ContextMenu, { aboveLeftOf } from "../../../structures/ContextMenu";
 import RoomContext from "../../../../contexts/RoomContext";
+import SettingsStore from "../../../../settings/SettingsStore";
 import { CardContext } from "../../right_panel/context";
 import { type RoomPermalinkCreator } from "../../../../utils/permalinks/Permalinks";
 import { type EventTileViewModel } from "../../../../viewmodels/room/timeline/event-tile/EventTileViewModel";
@@ -159,9 +161,38 @@ export function ActionBarAdapter({
     const eventTileOps = tile?.getEventTileOps ? tile.getEventTileOps() : undefined;
     const collapseReplyChain = replyChain?.canCollapse() ? replyChain.collapse : undefined;
 
+    const showQuickReactions =
+        roomContext.canReact && SettingsStore.getValue("show_quick_reactions");
+
     return (
         <>
-            <ActionBarView vm={vm} className="mx_MessageActionBar" />
+            <div
+                className="mx_MessageActionBar"
+                style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "var(--cpd-space-0-5x)",
+                    borderRadius: 8,
+                    backgroundColor: "var(--cpd-color-bg-canvas-default)",
+                    border: "var(--cpd-border-width-1) solid var(--cpd-color-border-disabled)",
+                }}
+            >
+                <QuickReactionsBar mxEvent={mxEvent} reactions={reactions} />
+                {showQuickReactions && (
+                    <span
+                        aria-hidden="true"
+                        style={{
+                            color: "var(--cpd-color-border-interactive-secondary)",
+                            fontSize: 16,
+                            lineHeight: 1,
+                            userSelect: "none",
+                        }}
+                    >
+                        |
+                    </span>
+                )}
+                <ActionBarView vm={vm} />
+            </div>
             {optionsMenuAnchorRect ? (
                 <MessageContextMenu
                     {...aboveLeftOf(optionsMenuAnchorRect)}
