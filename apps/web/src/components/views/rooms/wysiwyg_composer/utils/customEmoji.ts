@@ -14,9 +14,14 @@ export interface ComposerCustomEmoji {
 
 const CUSTOM_EMOJI_SHORTCODE_REGEX = /:([a-zA-Z0-9-_]+):$/;
 const CUSTOM_EMOJI_SHORTCODE_REGEX_GLOBAL = /:([a-zA-Z0-9-_]+):/g;
+const CARET_PLACEHOLDER = "\u200B";
 
 export function customEmojiText(shortcode: string): string {
     return `:${shortcode}:`;
+}
+
+export function stripCustomEmojiCaretPlaceholders(value: string): string {
+    return value.replaceAll(CARET_PLACEHOLDER, "");
 }
 
 export function createCustomEmojiElement(doc: Document, { shortcode, imgSrc }: ComposerCustomEmoji): HTMLSpanElement {
@@ -78,13 +83,21 @@ function ensureTrailingBr(editor: HTMLElement): void {
 function setCaretAfter(node: Node): void {
     const doc = node.ownerDocument ?? document;
     let caretNode = node.nextSibling;
+    let caretOffset = 0;
+
     if (caretNode?.nodeType !== Node.TEXT_NODE) {
-        caretNode = doc.createTextNode("");
+        caretNode = doc.createTextNode(CARET_PLACEHOLDER);
         node.parentNode?.insertBefore(caretNode, node.nextSibling);
+        caretOffset = CARET_PLACEHOLDER.length;
+    } else if (caretNode.textContent === "") {
+        caretNode.textContent = CARET_PLACEHOLDER;
+        caretOffset = CARET_PLACEHOLDER.length;
+    } else if (caretNode.textContent?.startsWith(CARET_PLACEHOLDER)) {
+        caretOffset = CARET_PLACEHOLDER.length;
     }
 
     const range = document.createRange();
-    range.setStart(caretNode, 0);
+    range.setStart(caretNode, caretOffset);
     range.collapse(true);
     const selection = document.getSelection();
     selection?.removeAllRanges();
@@ -290,7 +303,7 @@ export function replaceCustomEmojiHtmlWithShortcodes(html: string): string {
         }
     }
 
-    return document.body.innerHTML;
+    return stripCustomEmojiCaretPlaceholders(document.body.innerHTML);
 }
 
 export function clipboardTextWithCustomEmojiShortcodes(data: DataTransfer | null): string | null {

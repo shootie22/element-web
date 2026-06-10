@@ -13,8 +13,11 @@ import {
     insertTextAtSelection,
     replaceCustomEmojiHtmlWithShortcodes,
     replaceLastCustomEmojiShortcode,
+    stripCustomEmojiCaretPlaceholders,
 } from "../../../../../../../src/components/views/rooms/wysiwyg_composer/utils/customEmoji";
 import { type ImagePackEntry } from "../../../../../../../src/image-packs";
+
+const caretPlaceholder = "\u200B";
 
 const partyEntry = {
     shortcode: "party",
@@ -54,7 +57,51 @@ describe("customEmoji", () => {
         expect(editor.textContent).toBe("hello :party:");
         expect(editor.querySelector("span.mx_CustomEmoji")).not.toBeNull();
         expect(editor.lastChild).toBeInstanceOf(HTMLBRElement);
-        expect(editor.textContent).not.toContain("\u200B");
+        expect(editor.textContent).toContain(caretPlaceholder);
+
+        editor.remove();
+    });
+
+    it("keeps the caret in an invisible text node after inserting custom emoji", () => {
+        const editor = document.createElement("div");
+        document.body.appendChild(editor);
+
+        insertCustomEmojiAtSelection(editor, {
+            shortcode: "party",
+            imgSrc: "https://example.org/party.gif",
+        });
+
+        const selection = document.getSelection();
+        expect(selection?.anchorNode?.textContent).toBe(caretPlaceholder);
+        expect(selection?.anchorOffset).toBe(1);
+        expect(editor.childNodes[0]).toBe(editor.querySelector("span.mx_CustomEmoji"));
+
+        editor.remove();
+    });
+
+    it("can place the caret between adjacent custom emojis", () => {
+        const editor = document.createElement("div");
+        document.body.appendChild(editor);
+
+        insertCustomEmojiAtSelection(editor, {
+            shortcode: "party",
+            imgSrc: "https://example.org/party.gif",
+        });
+        insertCustomEmojiAtSelection(editor, {
+            shortcode: "wave",
+            imgSrc: "https://example.org/wave.gif",
+        });
+
+        const range = document.createRange();
+        range.setStart(editor.childNodes[1], 1);
+        range.collapse(true);
+        document.getSelection()?.removeAllRanges();
+        document.getSelection()?.addRange(range);
+
+        const selection = document.getSelection();
+        expect(editor.querySelectorAll("span.mx_CustomEmoji")).toHaveLength(2);
+        expect(selection?.anchorNode?.textContent).toBe(caretPlaceholder);
+        expect(selection?.anchorOffset).toBe(1);
 
         editor.remove();
     });
@@ -135,9 +182,14 @@ describe("customEmoji", () => {
             '<img class="mx_CustomEmoji_image" data-mx-emoticon src="https://example.org/party.gif" alt=":party:" title="party">',
             '<span class="mx_CustomEmoji_hiddenText" style="display: none;">:party:</span>',
             "</span>",
+            caretPlaceholder,
         ].join("");
 
         expect(replaceCustomEmojiHtmlWithShortcodes(html)).toBe("hello :party:");
+    });
+
+    it("strips custom emoji caret placeholders from composer content", () => {
+        expect(stripCustomEmojiCaretPlaceholders(`hello${caretPlaceholder}:party:`)).toBe("hello:party:");
     });
 
     it("extracts custom emoji shortcode text from clipboard HTML", () => {
