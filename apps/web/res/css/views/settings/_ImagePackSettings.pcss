@@ -1,25 +1,193 @@
-.mx_ImagePackSettings_image,
-.mx_ImagePackSettings_add {
+.mx_ImagePackSettings_header {
     display: grid;
-    grid-template-columns: 64px minmax(120px, 1fr) minmax(140px, 1.4fr) minmax(120px, 1fr) auto;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.mx_ImagePackSettings_avatar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.mx_ImagePackSettings_avatarActions,
+.mx_ImagePackSettings_tileActions,
+.mx_ImagePackSettings_saveBar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mx_ImagePackSettings_avatarActions .mx_AccessibleButton,
+.mx_ImagePackSettings_tileActions .mx_AccessibleButton,
+.mx_ImagePackSettings_dropzone .mx_AccessibleButton {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.mx_ImagePackSettings_metadata {
+    display: grid;
+    gap: 12px;
+}
+
+.mx_ImagePackSettings_usageToggles {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.mx_ImagePackSettings_advanced {
+    margin-top: 4px;
+
+    summary {
+        cursor: pointer;
+        color: var(--cpd-color-text-secondary);
+        font: var(--cpd-font-body-sm-regular);
+    }
+
+    .mx_Field {
+        margin-top: 8px;
+    }
+}
+
+.mx_ImagePackSettings_globalRooms {
+    display: grid;
+    gap: 8px;
+}
+
+.mx_ImagePackSettings_globalRoom {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--cpd-color-border-interactive-secondary);
+    border-radius: 8px;
+}
+
+.mx_ImagePackSettings_globalRoomName {
+    font: var(--cpd-font-body-md-semibold);
+}
+
+.mx_ImagePackSettings_globalRoomId {
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+}
+
+.mx_ImagePackSettings_addRoom {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
     align-items: center;
-    margin-bottom: 8px;
+    margin-top: 8px;
+}
+
+.mx_ImagePackSettings_dropzone {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    padding: 16px;
+    border: 1px dashed var(--cpd-color-border-interactive-primary);
+    border-radius: 8px;
+    background: var(--cpd-color-bg-subtle-secondary);
+    margin-bottom: 16px;
+}
+
+.mx_ImagePackSettings_dropzoneBusy {
+    opacity: 0.7;
+}
+
+.mx_ImagePackSettings_dropzoneTitle {
+    font: var(--cpd-font-body-md-semibold);
+}
+
+.mx_ImagePackSettings_dropzoneDescription,
+.mx_ImagePackSettings_empty {
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-sm-regular);
+}
+
+.mx_ImagePackSettings_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.mx_ImagePackSettings_tile {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--cpd-color-border-interactive-secondary);
+    border-radius: 8px;
+    background: var(--cpd-color-bg-canvas-default);
+}
+
+.mx_ImagePackSettings_tileInvalid {
+    border-color: var(--cpd-color-border-critical-subtle);
+}
+
+.mx_ImagePackSettings_tilePreview {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--cpd-color-bg-subtle-secondary);
+    border-radius: 8px;
 
     img {
-        width: 56px;
-        height: 56px;
+        max-width: 56px;
+        max-height: 56px;
         object-fit: contain;
     }
 }
 
+.mx_ImagePackSettings_missingPreview {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: var(--cpd-color-bg-subtle-primary);
+}
+
+.mx_ImagePackSettings_tileFields {
+    display: grid;
+    gap: 8px;
+}
+
+.mx_ImagePackSettings_tileActions {
+    grid-column: 1 / -1;
+}
+
+.mx_ImagePackSettings_tileErrors {
+    margin: 0;
+    padding-inline-start: 20px;
+    color: var(--cpd-color-text-critical-primary);
+    font: var(--cpd-font-body-sm-regular);
+}
+
 .mx_ImagePackSettings_add {
-    grid-template-columns: minmax(120px, 1fr) minmax(140px, 1.4fr) minmax(120px, 1fr) auto auto;
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.4fr) minmax(120px, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
 }
 
 @media (max-width: 700px) {
-    .mx_ImagePackSettings_image,
-    .mx_ImagePackSettings_add {
+    .mx_ImagePackSettings_header,
+    .mx_ImagePackSettings_add,
+    .mx_ImagePackSettings_addRoom {
         grid-template-columns: 1fr;
+    }
+
+    .mx_ImagePackSettings_dropzone,
+    .mx_ImagePackSettings_globalRoom {
+        align-items: stretch;
+        flex-direction: column;
     }
 }
