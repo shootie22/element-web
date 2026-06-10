@@ -162,7 +162,7 @@ export function ActionBarAdapter({
     const collapseReplyChain = replyChain?.canCollapse() ? replyChain.collapse : undefined;
 
     const showQuickReactions =
-        roomContext.canReact && SettingsStore.getValue("show_quick_reactions");
+        roomContext.canReact && SettingsStore.getValue("Tweaks.showQuickReactionsOnHover");
 
     return (
         <>
@@ -177,7 +177,7 @@ export function ActionBarAdapter({
                     border: "var(--cpd-border-width-1) solid var(--cpd-color-border-disabled)",
                 }}
             >
-                <QuickReactionsBar mxEvent={mxEvent} reactions={reactions} />
+                {showQuickReactions && <QuickReactionsBar mxEvent={mxEvent} reactions={reactions} />}
                 {showQuickReactions && (
                     <span
                         aria-hidden="true"

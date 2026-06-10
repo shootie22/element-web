@@ -33,8 +33,9 @@ export default function TweaksUserSettingsTab(): React.ReactNode {
                     <SettingsFlag name="MessageComposerInput.insertTrailingColon" level={SettingLevel.ACCOUNT} />
                 </SettingsSubsection>
 
-                <SettingsSubsection heading={_t("settings|tweaks|timeline_heading")} formWrap>
-                    <SettingsFlag name="show_quick_reactions" level={SettingLevel.ACCOUNT} />
+                <SettingsSubsection heading={_t("settings|tweaks|reactions_heading")} formWrap>
+                    <SettingsFlag name="Tweaks.showQuickReactionsOnHover" level={SettingLevel.ACCOUNT} />
+                    <SettingsFlag name="Tweaks.showQuickReactionsOnContextMenu" level={SettingLevel.ACCOUNT} />
                 </SettingsSubsection>
             </SettingsSection>
         </SettingsTab>

@@ -740,7 +740,7 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         );
 
         let quickReactionsBar: JSX.Element | undefined;
-        if (contentActionable && canReact) {
+        if (contentActionable && canReact && SettingsStore.getValue("Tweaks.showQuickReactionsOnContextMenu")) {
             quickReactionsBar = (
                 <div
                     style={{

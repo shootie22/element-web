@@ -17,7 +17,6 @@ import { type FocusComposerPayload } from "../../../dispatcher/payloads/FocusCom
 import { getImagePackEntries } from "../../../image-packs";
 import AccessibleButton from "../elements/AccessibleButton";
 import { REACTION_SHORTCODE_KEY } from "../../../viewmodels/room/timeline/event-tile/reactions/reactionShortcode";
-import SettingsStore from "../../../settings/SettingsStore";
 import RoomContext from "../../../contexts/RoomContext";
 
 interface QuickReactionsBarProps {
@@ -87,7 +86,7 @@ export function QuickReactionsBar({ mxEvent, reactions, className, onReaction }:
     };
 
     const emojiList: Array<{ key: string; reaction: string; shortcode?: string; imgSrc?: string }> = [];
-    if (roomContext.canReact && SettingsStore.getValue("show_quick_reactions")) {
+    if (roomContext.canReact) {
         const room = MatrixClientPeg.safeGet().getRoom(mxEvent.getRoomId());
         const customEntries = getImagePackEntries(MatrixClientPeg.safeGet(), room, "emoticon");
         const customByKey = new Map(

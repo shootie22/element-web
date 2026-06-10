@@ -51,6 +51,7 @@ import SettingsStore from "../../../../../src/settings/SettingsStore";
 import EditorStateTransfer from "../../../../../src/utils/EditorStateTransfer";
 import { RoomPermalinkCreator } from "../../../../../src/utils/permalinks/Permalinks";
 import PlatformPeg from "../../../../../src/PlatformPeg";
+import * as recent from "../../../../../src/emojipicker/recent";
 
 function getTile(container: HTMLElement): HTMLElement {
     const tile = container.querySelector(".mx_EventTile");
@@ -789,6 +790,34 @@ describe("EventTile", () => {
             fireEvent.mouseEnter(getTile(container));
 
             expect(container.querySelector(".mx_MessageActionBar")).not.toBeNull();
+        });
+
+        it("shows quick reactions on hover when enabled", () => {
+            mocked(SettingsStore.getValue).mockImplementation((settingName) => {
+                if (settingName === "Tweaks.showQuickReactionsOnHover") return true;
+                return false;
+            });
+            jest.spyOn(recent, "get").mockReturnValue([]);
+
+            const { container } = getComponent({}, TimelineRenderingType.Room, { canReact: true });
+
+            fireEvent.mouseEnter(getTile(container));
+
+            expect(container.querySelector('.mx_MessageActionBar button[title="👍"]')).toBeTruthy();
+        });
+
+        it("hides quick reactions on hover when disabled", () => {
+            mocked(SettingsStore.getValue).mockImplementation((settingName) => {
+                if (settingName === "Tweaks.showQuickReactionsOnHover") return false;
+                return false;
+            });
+            jest.spyOn(recent, "get").mockReturnValue([]);
+
+            const { container } = getComponent({}, TimelineRenderingType.Room, { canReact: true });
+
+            fireEvent.mouseEnter(getTile(container));
+
+            expect(container.querySelector('.mx_MessageActionBar button[title="👍"]')).toBeNull();
         });
 
         it("renders the message action bar when the tile receives keyboard focus", () => {

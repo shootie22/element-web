@@ -706,6 +706,33 @@ export default class SettingsStore {
     }
 
     /**
+     * Migrate the old single quick reactions toggle to the split hover/context menu toggles.
+     */
+    private static async migrateQuickReactionsSetting(): Promise<void> {
+        const MIGRATION_DONE_FLAG = "mx_quick_reactions_split_migration_done";
+        if (localStorage.getItem(MIGRATION_DONE_FLAG)) return;
+
+        const client = MatrixClientPeg.safeGet();
+        while (!client.isInitialSyncComplete()) {
+            await new Promise((resolve) => client.once(ClientEvent.Sync, resolve));
+        }
+
+        logger.info("Performing one-time settings migration of quick reactions settings");
+        const showQuickReactions = SettingsStore.getValue("show_quick_reactions", null, true);
+        if (typeof showQuickReactions === "boolean") {
+            this.setValue("Tweaks.showQuickReactionsOnHover", null, SettingLevel.ACCOUNT, showQuickReactions);
+            this.setValue(
+                "Tweaks.showQuickReactionsOnContextMenu",
+                null,
+                SettingLevel.ACCOUNT,
+                showQuickReactions,
+            );
+        }
+
+        localStorage.setItem(MIGRATION_DONE_FLAG, "true");
+    }
+
+    /**
      * Runs or queues any setting migrations needed.
      */
     public static runMigrations(isFreshLogin: boolean): void {
@@ -721,6 +748,9 @@ export default class SettingsStore {
         // media controls for this user will be missing
         SettingsStore.migrateMediaControlsToSetting(isFreshLogin).catch((e) => {
             logger.error("Failed to migrate media config settings", e);
+        });
+        SettingsStore.migrateQuickReactionsSetting().catch((e) => {
+            logger.error("Failed to migrate quick reactions settings", e);
         });
         // Dev notes: to add your migration, just add a new `migrateMyFeature` function, call it, and
         // add a comment to note when it can be removed.

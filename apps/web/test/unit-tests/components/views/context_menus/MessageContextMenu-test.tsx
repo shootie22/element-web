@@ -38,6 +38,7 @@ import { ReadPinsEventId } from "../../../../../src/components/views/right_panel
 import { Action } from "../../../../../src/dispatcher/actions";
 import { createMessageEventContent } from "../../../../test-utils/events";
 import { ScopedRoomContextProvider } from "../../../../../src/contexts/ScopedRoomContext.tsx";
+import * as recent from "../../../../../src/emojipicker/recent";
 
 jest.mock("../../../../../src/utils/strings", () => ({
     copyPlaintext: jest.fn(),
@@ -72,6 +73,32 @@ describe("MessageContextMenu", () => {
         createMenuWithContent(eventContent);
         const copyLinkButton = document.querySelector('a[aria-label="Copy link"]');
         expect(copyLinkButton).toBeFalsy();
+    });
+
+    describe("quick reactions", () => {
+        let getValueSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            getValueSpy = jest.spyOn(SettingsStore, "getValue").mockImplementation(
+                (settingName) => settingName === "Tweaks.showQuickReactionsOnContextMenu",
+            );
+            jest.spyOn(recent, "get").mockReturnValue([]);
+        });
+
+        it("shows quick reactions in the context menu when enabled", () => {
+            const eventContent = createMessageEventContent("hello");
+            createRightClickMenuWithContent(eventContent, { canReact: true });
+
+            expect(document.querySelector('div.mx_MessageContextMenu button[title="👍"]')).toBeTruthy();
+        });
+
+        it("hides quick reactions in the context menu when disabled", () => {
+            getValueSpy.mockImplementation(() => false);
+            const eventContent = createMessageEventContent("hello");
+            createRightClickMenuWithContent(eventContent, { canReact: true });
+
+            expect(document.querySelector('div.mx_MessageContextMenu button[title="👍"]')).toBeFalsy();
+        });
     });
 
     describe("message pinning", () => {

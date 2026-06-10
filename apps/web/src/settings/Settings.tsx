@@ -253,6 +253,8 @@ export interface Settings {
     "Tweaks.resizableEmojiStickerPickers": IBaseSetting<boolean>;
     "Tweaks.playAnimatedReactionImagesOnHover": IBaseSetting<boolean>;
     "Tweaks.playAnimatedStickersOnHover": IBaseSetting<boolean>;
+    "Tweaks.showQuickReactionsOnHover": IBaseSetting<boolean>;
+    "Tweaks.showQuickReactionsOnContextMenu": IBaseSetting<boolean>;
     "Notifications.alwaysShowBadgeCounts": IBaseSetting<boolean>;
     "Notifications.showbold": IBaseSetting<boolean>;
     "Notifications.tac_only_notifications": IBaseSetting<boolean>;
@@ -768,6 +770,16 @@ export const SETTINGS: Settings = {
         displayName: _td("settings|tweaks|play_animated_stickers_on_hover"),
         default: false,
     },
+    "Tweaks.showQuickReactionsOnHover": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|show_quick_reactions_on_hover"),
+        default: true,
+    },
+    "Tweaks.showQuickReactionsOnContextMenu": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|show_quick_reactions_on_context_menu"),
+        default: true,
+    },
     // TODO: Wire up appropriately to UI (FTUE notifications)
     "Notifications.alwaysShowBadgeCounts": {
         supportedLevels: LEVELS_ROOM_OR_ACCOUNT,
@@ -1132,8 +1144,8 @@ export const SETTINGS: Settings = {
     },
     "show_quick_reactions": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
-        displayName: _td("settings|preferences|show_quick_reactions"),
         default: true,
+        shouldExportToRageshake: false,
     },
     "room_directory_servers": {
         supportedLevels: [SettingLevel.ACCOUNT],
