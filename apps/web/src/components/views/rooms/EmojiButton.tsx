@@ -25,7 +25,7 @@ import * as recent from "../../../emojipicker/recent";
 
 const EMOJI_PICKER_WIDTH_STORAGE_KEY = "mx_emoji_picker_width";
 const EMOJI_PICKER_MIN_WIDTH = 340;
-const EMOJI_PICKER_MAX_WIDTH = 640;
+const EMOJI_PICKER_MAX_WIDTH = 768;
 const EMOJI_PICKER_GRID_PADDING = 24;
 const EMOJI_PICKER_ITEM_WIDTH = 38;
 
