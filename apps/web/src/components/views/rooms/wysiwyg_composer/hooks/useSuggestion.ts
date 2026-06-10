@@ -11,7 +11,11 @@ import { type AllowedMentionAttributes, type MappedSuggestion } from "@vector-im
 import { type SyntheticEvent, useState } from "react";
 
 import { isNotNull } from "../../../../../Typeguards";
-import { createCustomEmojiElement } from "../utils/customEmoji";
+import {
+    createCustomEmojiElement,
+    normalizeCustomEmojiCaretPlaceholders,
+    setCaretAfterCustomEmoji,
+} from "../utils/customEmoji";
 
 /**
  * Information about the current state of the `useSuggestion` hook.
@@ -289,12 +293,10 @@ export function processCustomEmojiReplacement(
     range.deleteContents();
     range.insertNode(customEmojiNode);
 
-    const selection = document.getSelection();
-    const caretRange = document.createRange();
-    caretRange.setStartAfter(customEmojiNode);
-    caretRange.collapse(true);
-    selection?.removeAllRanges();
-    selection?.addRange(caretRange);
+    if (parentNode instanceof HTMLElement) {
+        normalizeCustomEmojiCaretPlaceholders(parentNode);
+    }
+    setCaretAfterCustomEmoji(customEmojiNode);
 
     setText();
     setSuggestionData(null);

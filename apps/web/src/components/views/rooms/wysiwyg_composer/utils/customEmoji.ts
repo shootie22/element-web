@@ -12,6 +12,11 @@ export interface ComposerCustomEmoji {
     imgSrc: string;
 }
 
+interface CaretTarget {
+    node: Node;
+    offset: number;
+}
+
 const CUSTOM_EMOJI_SHORTCODE_REGEX = /:([a-zA-Z0-9-_]+):$/;
 const CUSTOM_EMOJI_SHORTCODE_REGEX_GLOBAL = /:([a-zA-Z0-9-_]+):/g;
 const CARET_PLACEHOLDER = "\u200A";
@@ -80,22 +85,75 @@ function ensureTrailingBr(editor: HTMLElement): void {
     }
 }
 
-function setCaretAfter(node: Node): void {
+function isCustomEmojiElement(node: Node | null): node is HTMLElement {
+    return node instanceof HTMLElement && node.matches("span.mx_CustomEmoji[data-mx-emoticon]");
+}
+
+function isCaretPlaceholderTextNode(node: Node | null): node is Text {
+    return node?.nodeType === Node.TEXT_NODE && node.textContent === CARET_PLACEHOLDER;
+}
+
+function ensureCaretNodeAfter(node: Node): Text | null {
     const doc = node.ownerDocument ?? document;
     let caretNode = node.nextSibling;
-    let caretOffset = 0;
 
     if (caretNode?.nodeType !== Node.TEXT_NODE) {
         caretNode = doc.createTextNode(CARET_PLACEHOLDER);
         node.parentNode?.insertBefore(caretNode, node.nextSibling);
-        caretOffset = CARET_PLACEHOLDER.length;
     } else if (caretNode.textContent === "") {
         caretNode.textContent = CARET_PLACEHOLDER;
-        caretOffset = CARET_PLACEHOLDER.length;
-    } else if (caretNode.textContent?.startsWith(CARET_PLACEHOLDER)) {
-        caretOffset = CARET_PLACEHOLDER.length;
     }
 
+    return caretNode.nodeType === Node.TEXT_NODE ? (caretNode as Text) : null;
+}
+
+function ensureCaretNodeBefore(node: Node): Text | null {
+    const doc = node.ownerDocument ?? document;
+    let caretNode = node.previousSibling;
+
+    if (caretNode?.nodeType !== Node.TEXT_NODE) {
+        caretNode = doc.createTextNode(CARET_PLACEHOLDER);
+        node.parentNode?.insertBefore(caretNode, node);
+    } else if (caretNode.textContent === "") {
+        caretNode.textContent = CARET_PLACEHOLDER;
+    }
+
+    return caretNode.nodeType === Node.TEXT_NODE ? (caretNode as Text) : null;
+}
+
+export function normalizeCustomEmojiCaretPlaceholders(editor: HTMLElement): void {
+    const customEmoji = Array.from(editor.querySelectorAll<HTMLElement>("span.mx_CustomEmoji[data-mx-emoticon]"));
+
+    for (const element of customEmoji) {
+        const previous = element.previousSibling;
+        if (previous === null || previous instanceof HTMLBRElement) {
+            ensureCaretNodeBefore(element);
+        }
+
+        const next = element.nextSibling;
+        if (isCustomEmojiElement(next) || next === null || next instanceof HTMLBRElement) {
+            ensureCaretNodeAfter(element);
+        }
+
+        const nextAfterCaret = element.nextSibling?.nextSibling ?? null;
+        if (isCaretPlaceholderTextNode(element.nextSibling) && isCaretPlaceholderTextNode(nextAfterCaret)) {
+            nextAfterCaret.remove();
+        }
+
+        const previousBeforeCaret = element.previousSibling?.previousSibling ?? null;
+        if (isCaretPlaceholderTextNode(element.previousSibling) && isCaretPlaceholderTextNode(previousBeforeCaret)) {
+            previousBeforeCaret.remove();
+        }
+    }
+}
+
+export function setCaretAfterCustomEmoji(node: Node): void {
+    const caretNode = ensureCaretNodeAfter(node);
+    if (!caretNode) {
+        return;
+    }
+
+    const caretOffset = caretNode.textContent?.startsWith(CARET_PLACEHOLDER) ? CARET_PLACEHOLDER.length : 0;
     const range = document.createRange();
     range.setStart(caretNode, caretOffset);
     range.collapse(true);
@@ -123,7 +181,8 @@ export function insertCustomEmojiAtSelection(editor: HTMLElement, emoji: Compose
 
     range.deleteContents();
     range.insertNode(node);
-    setCaretAfter(node);
+    normalizeCustomEmojiCaretPlaceholders(editor);
+    setCaretAfterCustomEmoji(node);
 }
 
 export function insertTextAtSelection(editor: HTMLElement, text: string): void {
@@ -169,8 +228,9 @@ export function replaceLastCustomEmojiShortcode(editor: HTMLElement, entries: Im
     const node = createCustomEmojiElement(editor.ownerDocument, { shortcode, imgSrc: entry.httpUrl });
     range.deleteContents();
     range.insertNode(node);
-    setCaretAfter(node);
     ensureTrailingBr(editor);
+    normalizeCustomEmojiCaretPlaceholders(editor);
+    setCaretAfterCustomEmoji(node);
     return true;
 }
 
@@ -212,7 +272,7 @@ export function decorateCustomEmojiShortcodes(editor: HTMLElement, entries: Imag
         const caretOffset =
             selection?.isCollapsed && selection.anchorNode === node ? selection.anchorOffset : undefined;
         const fragment = doc.createDocumentFragment();
-        let caretTarget: { node: Node; offset: number } | null = null;
+        let caretTarget: CaretTarget | null = null;
         let offset = 0;
 
         const appendText = (text: string, sourceOffset: number): void => {
@@ -263,12 +323,17 @@ export function decorateCustomEmojiShortcodes(editor: HTMLElement, entries: Imag
                 appendText(value.slice(offset), offset);
             }
             node.replaceWith(fragment);
-            if (caretTarget) {
-                if (caretTarget.offset === -1) {
-                    setCaretAfter(caretTarget.node);
+            const target = caretTarget as CaretTarget | null;
+            if (target) {
+                if (target.offset === -1) {
+                    normalizeCustomEmojiCaretPlaceholders(editor);
+                    setCaretAfterCustomEmoji(target.node);
                 } else {
-                    setCaretInNode(caretTarget.node, caretTarget.offset);
+                    normalizeCustomEmojiCaretPlaceholders(editor);
+                    setCaretInNode(target.node, target.offset);
                 }
+            } else {
+                normalizeCustomEmojiCaretPlaceholders(editor);
             }
         }
     }

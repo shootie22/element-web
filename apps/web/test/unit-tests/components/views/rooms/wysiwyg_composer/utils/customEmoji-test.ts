@@ -24,6 +24,11 @@ const partyEntry = {
     httpUrl: "https://example.org/party.gif",
 } as ImagePackEntry;
 
+const waveEntry = {
+    shortcode: "wave",
+    httpUrl: "https://example.org/wave.gif",
+} as ImagePackEntry;
+
 describe("customEmoji", () => {
     it("creates an atomic custom emoji element with shortcode fallback text", () => {
         const node = createCustomEmojiElement(document, {
@@ -74,7 +79,8 @@ describe("customEmoji", () => {
         const selection = document.getSelection();
         expect(selection?.anchorNode?.textContent).toBe(caretPlaceholder);
         expect(selection?.anchorOffset).toBe(1);
-        expect(editor.childNodes[0]).toBe(editor.querySelector("span.mx_CustomEmoji"));
+        expect(editor.childNodes[0].textContent).toBe(caretPlaceholder);
+        expect(editor.childNodes[1]).toBe(editor.querySelector("span.mx_CustomEmoji"));
 
         editor.remove();
     });
@@ -130,7 +136,7 @@ describe("customEmoji", () => {
         document.getSelection()?.setBaseAndExtent(text, text.length, text, text.length);
 
         expect(replaceLastCustomEmojiShortcode(editor, [partyEntry])).toBe(true);
-        expect(editor.textContent).toBe("hello :party:");
+        expect(stripCustomEmojiCaretPlaceholders(editor.textContent || "")).toBe("hello :party:");
         expect(editor.querySelector("span.mx_CustomEmoji")).not.toBeNull();
 
         editor.remove();
@@ -155,8 +161,73 @@ describe("customEmoji", () => {
         editor.appendChild(document.createTextNode("hello :party:"));
 
         expect(decorateCustomEmojiShortcodes(editor, [partyEntry])).toBe(true);
-        expect(editor.textContent).toBe("hello :party:");
+        expect(stripCustomEmojiCaretPlaceholders(editor.textContent || "")).toBe("hello :party:");
         expect(editor.querySelector("span.mx_CustomEmoji")).not.toBeNull();
+    });
+
+    it("adds caret placeholders between adjacent decorated custom emoji elements", () => {
+        const editor = document.createElement("div");
+        editor.appendChild(document.createTextNode(":party::wave:"));
+
+        expect(decorateCustomEmojiShortcodes(editor, [partyEntry, waveEntry])).toBe(true);
+
+        expect(editor.querySelectorAll("span.mx_CustomEmoji")).toHaveLength(2);
+        expect(editor.childNodes[0].textContent).toBe(caretPlaceholder);
+        expect(editor.childNodes[2].textContent).toBe(caretPlaceholder);
+        expect(stripCustomEmojiCaretPlaceholders(editor.textContent || "")).toBe(":party::wave:");
+    });
+
+    it("adds a caret placeholder before a leading decorated custom emoji element", () => {
+        const editor = document.createElement("div");
+        editor.appendChild(document.createTextNode(":party: hello"));
+
+        expect(decorateCustomEmojiShortcodes(editor, [partyEntry])).toBe(true);
+
+        expect(editor.childNodes[0].textContent).toBe(caretPlaceholder);
+        expect(editor.childNodes[1]).toBe(editor.querySelector("span.mx_CustomEmoji"));
+        expect(stripCustomEmojiCaretPlaceholders(editor.textContent || "")).toBe(":party: hello");
+    });
+
+    it("inserts text at the caret between adjacent decorated custom emoji elements", () => {
+        const editor = document.createElement("div");
+        editor.appendChild(document.createTextNode(":party::wave:"));
+        document.body.appendChild(editor);
+
+        expect(decorateCustomEmojiShortcodes(editor, [partyEntry, waveEntry])).toBe(true);
+
+        const range = document.createRange();
+        range.setStart(editor.childNodes[2], caretPlaceholder.length);
+        range.collapse(true);
+        document.getSelection()?.removeAllRanges();
+        document.getSelection()?.addRange(range);
+
+        insertTextAtSelection(editor, "hello");
+
+        expect(editor.querySelectorAll("span.mx_CustomEmoji")).toHaveLength(2);
+        expect(stripCustomEmojiCaretPlaceholders(editor.textContent || "")).toBe(":party:hello:wave:");
+
+        editor.remove();
+    });
+
+    it("inserts text at the caret before a leading custom emoji element", () => {
+        const editor = document.createElement("div");
+        editor.appendChild(document.createTextNode(":party:"));
+        document.body.appendChild(editor);
+
+        expect(decorateCustomEmojiShortcodes(editor, [partyEntry])).toBe(true);
+
+        const range = document.createRange();
+        range.setStart(editor.childNodes[0], caretPlaceholder.length);
+        range.collapse(true);
+        document.getSelection()?.removeAllRanges();
+        document.getSelection()?.addRange(range);
+
+        insertTextAtSelection(editor, "hello");
+
+        expect(editor.querySelectorAll("span.mx_CustomEmoji")).toHaveLength(1);
+        expect(stripCustomEmojiCaretPlaceholders(editor.textContent || "")).toBe("hello:party:");
+
+        editor.remove();
     });
 
     it("keeps the caret after text typed after a decorated custom emoji", () => {
