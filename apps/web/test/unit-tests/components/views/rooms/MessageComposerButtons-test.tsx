@@ -74,7 +74,7 @@ describe("MessageComposerButtons", () => {
             false,
         );
 
-        expect(getButtonLabels()).toEqual(["Emoji", "Attachment", "More options"]);
+        expect(getButtonLabels()).toEqual(["Sticker", "Emoji", "Attachment", "More options"]);
     });
 
     it("Renders other buttons in menu in wide mode", async () => {
@@ -93,10 +93,11 @@ describe("MessageComposerButtons", () => {
         // to appear, so we need to wait.
         await waitFor(() => {
             expect(getButtonLabels()).toEqual([
+                "Sticker",
                 "Emoji",
                 "Attachment",
                 "More options",
-                ["Sticker", "Voice Message", "Poll", "Location"],
+                ["Voice Message", "Poll", "Location"],
             ]);
         });
     });
@@ -113,7 +114,7 @@ describe("MessageComposerButtons", () => {
             true,
         );
 
-        expect(getButtonLabels()).toEqual(["Emoji", "More options"]);
+        expect(getButtonLabels()).toEqual(["Sticker", "Emoji", "More options"]);
     });
 
     it("Renders other buttons in menu (except voice messages) in narrow mode", () => {
@@ -128,7 +129,7 @@ describe("MessageComposerButtons", () => {
             true,
         );
 
-        expect(getButtonLabels()).toEqual(["Emoji", "More options", ["Attachment", "Sticker", "Poll", "Location"]]);
+        expect(getButtonLabels()).toEqual(["Sticker", "Emoji", "More options", ["Attachment", "Poll", "Location"]]);
     });
 
     describe("polls button", () => {
@@ -144,7 +145,7 @@ describe("MessageComposerButtons", () => {
                 true,
             );
 
-            expect(getButtonLabels()).toEqual(["Emoji", "More options", ["Attachment", "Sticker", "Poll", "Location"]]);
+            expect(getButtonLabels()).toEqual(["Sticker", "Emoji", "More options", ["Attachment", "Poll", "Location"]]);
         });
 
         it("should not render when asked not to", () => {
@@ -160,11 +161,11 @@ describe("MessageComposerButtons", () => {
             );
 
             expect(getButtonLabels()).toEqual([
+                "Sticker",
                 "Emoji",
                 "More options",
                 [
                     "Attachment",
-                    "Sticker",
                     // "Poll", // should be hidden
                     "Location",
                 ],

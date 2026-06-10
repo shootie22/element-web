@@ -39,7 +39,6 @@ import { TimelineRenderingType, type RoomContextType } from "../../../../../src/
 import { RoomUploadContextProvider } from "../../../../../src/viewmodels/room/RoomUploadViewModel.tsx";
 
 const openStickerPicker = async (): Promise<void> => {
-    await userEvent.click(screen.getByLabelText("More options"));
     await userEvent.click(screen.getByLabelText("Sticker"));
 };
 
@@ -207,7 +206,9 @@ describe("MessageComposer", () => {
                     beforeEach(async () => {
                         await act(() => SettingsStore.setValue(setting, null, SettingLevel.DEVICE, value));
                         wrapAndRender({ room });
-                        await userEvent.click(screen.getByLabelText("More options"));
+                        if (buttonLabel !== "Sticker") {
+                            await userEvent.click(screen.getByLabelText("More options"));
+                        }
                     });
 
                     it(`should${value ? "" : " not"} display the button`, () => {
@@ -297,7 +298,7 @@ describe("MessageComposer", () => {
                 });
 
                 it("should close the menu", () => {
-                    expect(screen.queryByLabelText("Sticker")).not.toBeInTheDocument();
+                    expect(screen.queryByLabelText("Poll")).not.toBeInTheDocument();
                 });
 
                 it("should not show the attachment button", () => {
@@ -319,7 +320,7 @@ describe("MessageComposer", () => {
                 });
 
                 it("should close the menu", () => {
-                    expect(screen.queryByLabelText("Sticker")).not.toBeInTheDocument();
+                    expect(screen.queryByLabelText("Poll")).not.toBeInTheDocument();
                 });
 
                 it("should show the attachment button", () => {
@@ -429,9 +430,6 @@ describe("MessageComposer", () => {
 
         it("should not show the stickers button", async () => {
             wrapAndRender({ room: localRoom });
-            await act(async () => {
-                await userEvent.click(screen.getByLabelText("More options"));
-            });
             expect(screen.queryByLabelText("Sticker")).not.toBeInTheDocument();
         });
     });

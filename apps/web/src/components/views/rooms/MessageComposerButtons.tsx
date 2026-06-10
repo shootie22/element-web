@@ -81,6 +81,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
     let moreButtons: ReactNode[];
     if (narrow) {
         mainButtons = [
+            showStickersButton(props),
             isWysiwygLabEnabled ? (
                 <ComposerModeButton
                     key="composerModeButton"
@@ -101,13 +102,13 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
                     key={type}
                 />
             )),
-            showStickersButton(props),
             voiceRecordingButton(props, narrow),
             props.showPollsButton ? pollButton(room, props.relation) : null,
             showLocationButton(props, room, matrixClient),
         ];
     } else {
         mainButtons = [
+            showStickersButton(props),
             isWysiwygLabEnabled ? (
                 <ComposerModeButton
                     key="composerModeButton"
@@ -120,7 +121,6 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             <UploadButton key="upload" vm={roomUploadVM} />,
         ];
         moreButtons = [
-            showStickersButton(props),
             voiceRecordingButton(props, narrow),
             props.showPollsButton ? pollButton(room, props.relation) : null,
             showLocationButton(props, room, matrixClient),
