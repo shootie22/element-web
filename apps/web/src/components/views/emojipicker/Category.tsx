@@ -44,6 +44,7 @@ interface IProps {
     onMouseEnter(emoji: IEmoji): void;
     onMouseLeave(emoji: IEmoji): void;
     isEmojiDisabled?: (unicode: string) => boolean;
+    columnCount?: number;
 }
 
 function hexEncode(str: string): string {
@@ -62,7 +63,8 @@ function hexEncode(str: string): string {
 class Category extends React.PureComponent<IProps> {
     private renderEmojiRow = (rowIndex: number): JSX.Element => {
         const { onClick, onMouseEnter, onMouseLeave, selectedEmojis, emojis } = this.props;
-        const emojisForRow = emojis.slice(rowIndex * 8, (rowIndex + 1) * 8);
+        const columnCount = this.props.columnCount ?? EMOJIS_PER_ROW;
+        const emojisForRow = emojis.slice(rowIndex * columnCount, (rowIndex + 1) * columnCount);
         return (
             <div key={rowIndex} role="row">
                 {emojisForRow.map((emoji) => (
@@ -84,10 +86,11 @@ class Category extends React.PureComponent<IProps> {
 
     public render(): React.ReactNode {
         const { emojis, name, heightBefore, viewportHeight, scrollTop } = this.props;
+        const columnCount = this.props.columnCount ?? EMOJIS_PER_ROW;
         if (!emojis || emojis.length === 0) {
             return null;
         }
-        const rows = new Array(Math.ceil(emojis.length / EMOJIS_PER_ROW));
+        const rows = new Array(Math.ceil(emojis.length / columnCount));
         for (let counter = 0; counter < rows.length; ++counter) {
             rows[counter] = counter;
         }

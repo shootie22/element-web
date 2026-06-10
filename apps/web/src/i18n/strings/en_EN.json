@@ -949,7 +949,8 @@
     },
     "emoji_picker": {
         "cancel_search_label": "Cancel search",
-        "react_with_text": "React with \"%(reaction)s\""
+        "react_with_text": "React with \"%(reaction)s\"",
+        "resize": "Resize emoji picker"
     },
     "image_packs": {
         "add_mxc": "Add by MXC URL",

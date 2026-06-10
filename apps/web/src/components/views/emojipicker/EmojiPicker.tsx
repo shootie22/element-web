@@ -43,6 +43,7 @@ interface IProps {
     isEmojiDisabled?: (unicode: string) => boolean;
     customEmoji?: ICustomEmojiData[];
     allowTextReaction?: boolean;
+    columnCount?: number;
 }
 
 interface IState {
@@ -128,6 +129,12 @@ class EmojiPicker extends React.Component<IProps, IState> {
                 ref: React.createRef(),
             };
         });
+    }
+
+    public componentDidUpdate(prevProps: IProps): void {
+        if (prevProps.columnCount !== this.props.columnCount) {
+            this.updateVisibility();
+        }
     }
 
     private onScroll = (): void => {
@@ -350,14 +357,15 @@ class EmojiPicker extends React.Component<IProps, IState> {
         }
     };
 
-    private static categoryHeightForEmojiCount(count: number): number {
+    private static categoryHeightForEmojiCount(count: number, columnCount: number): number {
         if (count === 0) {
             return 0;
         }
-        return CATEGORY_HEADER_HEIGHT + Math.ceil(count / EMOJIS_PER_ROW) * EMOJI_HEIGHT;
+        return CATEGORY_HEADER_HEIGHT + Math.ceil(count / columnCount) * EMOJI_HEIGHT;
     }
 
     public render(): React.ReactNode {
+        const columnCount = this.props.columnCount ?? EMOJIS_PER_ROW;
         return (
             <RovingGridIndexProvider
                 getGridCell={this.getGridcell}
@@ -420,9 +428,10 @@ class EmojiPicker extends React.Component<IProps, IState> {
                                             onMouseLeave={this.onHoverEmojiEnd}
                                             isEmojiDisabled={this.props.isEmojiDisabled}
                                             selectedEmojis={this.props.selectedEmojis}
+                                            columnCount={columnCount}
                                         />
                                     );
-                                    const height = EmojiPicker.categoryHeightForEmojiCount(emojis.length);
+                                    const height = EmojiPicker.categoryHeightForEmojiCount(emojis.length, columnCount);
                                     heightBefore += height;
                                     return categoryElement;
                                 })}

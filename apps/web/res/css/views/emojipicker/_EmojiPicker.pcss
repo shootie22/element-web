@@ -7,7 +7,8 @@ Please see LICENSE files in the repository root for full details.
 */
 
 .mx_EmojiPicker {
-    width: 340px;
+    width: 100%;
+    min-width: 340px;
     height: min(450px, 80vh);
     max-height: 80vh;
 
@@ -27,6 +28,8 @@ Please see LICENSE files in the repository root for full details.
 .mx_EmojiPicker_header {
     padding: 4px 8px 0;
     border-bottom: 1px solid $message-action-bar-border-color;
+    display: flex;
+    overflow-x: auto;
 }
 
 .mx_EmojiPicker_anchor {
@@ -142,12 +145,12 @@ Please see LICENSE files in the repository root for full details.
 }
 
 .mx_EmojiPicker_category_label {
-    width: 304px;
+    width: 100%;
     font: var(--cpd-font-heading-sm-semibold);
 }
 
 .mx_EmojiPicker_list {
-    width: 304px;
+    width: 100%;
     padding: 0;
     margin: 0;
 }

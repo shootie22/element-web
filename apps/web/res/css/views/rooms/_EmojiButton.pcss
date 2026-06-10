@@ -19,3 +19,31 @@ Please see LICENSE files in the repository root for full details.
         @mixin composerButton 5px, $tertiary-content, $panels;
     }
 }
+
+.mx_EmojiButton_picker {
+    position: relative;
+}
+
+.mx_EmojiButton_pickerResizeHandle {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -4px;
+    width: 8px;
+    cursor: ew-resize;
+    touch-action: none;
+    z-index: 1;
+
+    &::after {
+        content: "";
+        position: absolute;
+        inset-block: 12px;
+        inset-inline-start: 3px;
+        width: 2px;
+        border-radius: 2px;
+        background: transparent;
+    }
+
+    &:hover::after {
+        background: var(--cpd-color-border-focused);
+    }
+}
