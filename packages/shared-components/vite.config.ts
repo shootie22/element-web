@@ -16,7 +16,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const cssLayerOrder = "@layer compound-tokens, compound-web, shared-components, app-web;";
 const sharedComponentsLayer = "shared-components";
 
-const cssAssetFileName = "element-web-shared-components.css";
+const cssAssetName = "element-web-shared-components";
+const cssAssetFileName = `${cssAssetName}.css`;
 
 function layerCssAssets(): Plugin {
     return {
@@ -25,17 +26,16 @@ function layerCssAssets(): Plugin {
         // vite/rolldown derives CSS filenames from the unscoped package name (dropping
         // the `element-` prefix), so we rename on disk to keep the path stable for
         // consumers importing `@element-hq/web-shared-components/.../*.css`.
-        writeBundle(options): void {
-            const outDir = options.dir ?? resolve(__dirname, "dist");
-            const expectedPath = resolve(outDir, cssAssetFileName);
-            const renamedFromPath = resolve(outDir, "web-shared-components.css");
+        closeBundle(): void {
+            const expectedPath = resolve(__dirname, "dist", cssAssetFileName);
+            const renamedFromPath = resolve(__dirname, "dist", "web-shared-components.css");
 
-            if (existsSync(renamedFromPath)) {
+            if (!existsSync(expectedPath) && existsSync(renamedFromPath)) {
                 renameSync(renamedFromPath, expectedPath);
             }
 
             // No CSS emitted in this build (e.g. storybook's vite build doesn't produce
-            // the library CSS bundle), or already renamed and layered on a prior pass.
+            // the library CSS bundle), or already layered on a prior pass.
             if (!existsSync(expectedPath)) return;
 
             const source = readFileSync(expectedPath, "utf-8");
@@ -62,6 +62,7 @@ export default defineConfig({
             // to keep the existing package.json `require` paths working.
             formats: ["es", "cjs"],
             fileName: (format, entryName) => `${entryName}.${format === "es" ? "js" : "umd.cjs"}`,
+            cssFileName: cssAssetName,
         },
         outDir: "dist",
         rolldownOptions: {

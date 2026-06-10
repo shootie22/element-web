@@ -17,7 +17,7 @@
         "start": {
             "command": "vite build --watch",
             "options": { "cwd": "packages/module-api" },
-            "dependsOn": ["^start"],
+            "dependsOn": ["build", "^start"],
             "continuous": true
         },
         "lint:types": {
