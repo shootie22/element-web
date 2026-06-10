@@ -7,6 +7,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { type JSX } from "react";
+import { THREAD_RELATION_TYPE, type IEventRelation } from "matrix-js-sdk/src/matrix";
 
 import { type MenuProps } from "../../../../structures/ContextMenu";
 import { EmojiButton } from "../../EmojiButton";
@@ -14,32 +15,41 @@ import dis from "../../../../../dispatcher/dispatcher";
 import { type ComposerInsertPayload } from "../../../../../dispatcher/payloads/ComposerInsertPayload";
 import { Action } from "../../../../../dispatcher/actions";
 import { useScopedRoomContext } from "../../../../../contexts/ScopedRoomContext.tsx";
+import { StickerButton } from "../../Stickerpicker";
 
 interface EmojiProps {
     menuPosition: MenuProps;
+    showStickersButton?: boolean;
+    eventRelation?: IEventRelation;
 }
 
-export function Emoji({ menuPosition }: EmojiProps): JSX.Element {
-    const roomContext = useScopedRoomContext("timelineRenderingType");
+export function Emoji({ menuPosition, showStickersButton = false, eventRelation }: EmojiProps): JSX.Element {
+    const roomContext = useScopedRoomContext("room", "timelineRenderingType");
+    const threadId = eventRelation?.rel_type === THREAD_RELATION_TYPE.name ? eventRelation.event_id : null;
 
     return (
-        <EmojiButton
-            menuPosition={menuPosition}
-            addEmoji={(emoji, customEmoji) => {
-                dis.dispatch<ComposerInsertPayload>({
-                    action: Action.ComposerInsert,
-                    ...(customEmoji?.imgSrc
-                        ? {
-                              customEmoji: {
-                                  shortcode: customEmoji.shortcode,
-                                  imgSrc: customEmoji.imgSrc,
-                              },
-                          }
-                        : { text: emoji }),
-                    timelineRenderingType: roomContext.timelineRenderingType,
-                });
-                return true;
-            }}
-        />
+        <>
+            {showStickersButton && roomContext.room && (
+                <StickerButton room={roomContext.room} threadId={threadId} menuPosition={menuPosition} />
+            )}
+            <EmojiButton
+                menuPosition={menuPosition}
+                addEmoji={(emoji, customEmoji) => {
+                    dis.dispatch<ComposerInsertPayload>({
+                        action: Action.ComposerInsert,
+                        ...(customEmoji?.imgSrc
+                            ? {
+                                  customEmoji: {
+                                      shortcode: customEmoji.shortcode,
+                                      imgSrc: customEmoji.imgSrc,
+                                  },
+                              }
+                            : { text: emoji }),
+                        timelineRenderingType: roomContext.timelineRenderingType,
+                    });
+                    return true;
+                }}
+            />
+        </>
     );
 }

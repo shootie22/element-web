@@ -148,7 +148,6 @@ interface ISendMessageComposerProps extends MatrixClientProps {
     replyToEvent?: MatrixEvent;
     disabled?: boolean;
     onChange?(model: EditorModel): void;
-    toggleStickerPickerOpen: () => void;
 }
 
 export class SendMessageComposer extends React.Component<ISendMessageComposerProps> {
@@ -225,7 +224,7 @@ export class SendMessageComposer extends React.Component<ISendMessageComposerPro
                 if (!SettingsStore.getValue("MessageComposerInput.showStickersButton")) {
                     return; // Do nothing if there is no Stickers button
                 }
-                this.props.toggleStickerPickerOpen();
+                dis.dispatch({ action: "stickerpicker_toggle" });
                 event.preventDefault();
                 break;
             }

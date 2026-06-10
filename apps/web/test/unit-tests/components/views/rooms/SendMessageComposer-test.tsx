@@ -184,7 +184,6 @@ describe("<SendMessageComposer/>", () => {
 
         const defaultProps = {
             room: mockRoom,
-            toggleStickerPickerOpen: jest.fn(),
         };
         const getRawComponent = (props = {}, roomContext = defaultRoomContext, client = mockClient) => (
             <MatrixClientContext.Provider value={client}>
@@ -440,7 +439,7 @@ describe("<SendMessageComposer/>", () => {
             <MatrixClientContext.Provider value={cli}>
                 <ScopedRoomContextProvider {...({ room } as unknown as RoomContextType)}>
                     <RoomUploadContextProvider>
-                        <SendMessageComposer room={room} toggleStickerPickerOpen={jest.fn()} />
+                        <SendMessageComposer room={room} />
                     </RoomUploadContextProvider>
                 </ScopedRoomContextProvider>
             </MatrixClientContext.Provider>,

@@ -24,7 +24,6 @@ import { _t } from "../../../languageHandler";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import dis from "../../../dispatcher/dispatcher";
 import { type ActionPayload } from "../../../dispatcher/payloads";
-import Stickerpicker from "./Stickerpicker";
 import { makeRoomPermalink, type RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import E2EIcon from "./E2EIcon";
 import SettingsStore from "../../../settings/SettingsStore";
@@ -96,7 +95,6 @@ interface IState {
     recordingTimeLeftSeconds?: number;
     me?: RoomMember;
     isMenuOpen: boolean;
-    isStickerPickerOpen: boolean;
     showStickersButton: boolean;
     showPollsButton: boolean;
     isWysiwygLabEnabled: boolean;
@@ -147,7 +145,6 @@ export class MessageComposer extends React.Component<IProps, IState> {
             haveRecording: false,
             recordingTimeLeftSeconds: undefined, // when set to a number, shows a toast
             isMenuOpen: false,
-            isStickerPickerOpen: false,
             showStickersButton: SettingsStore.getValue("MessageComposerInput.showStickersButton"),
             showPollsButton: SettingsStore.getValue("MessageComposerInput.showPollsButton"),
             isWysiwygLabEnabled: isWysiwygLabEnabled,
@@ -258,8 +255,8 @@ export class MessageComposer extends React.Component<IProps, IState> {
             const { narrow } = this.context;
             this.setState({
                 isMenuOpen: !narrow ? false : this.state.isMenuOpen,
-                isStickerPickerOpen: false,
             });
+            dis.dispatch({ action: "stickerpicker_close" });
         }
     };
 
@@ -486,17 +483,6 @@ export class MessageComposer extends React.Component<IProps, IState> {
         window.setTimeout(() => this.setState({ recordingTimeLeftSeconds: undefined }), 3000);
     };
 
-    private setStickerPickerOpen = (isStickerPickerOpen: boolean): void => {
-        this.setState({
-            isStickerPickerOpen,
-            isMenuOpen: false,
-        });
-    };
-
-    private toggleStickerPickerOpen = (): void => {
-        this.setStickerPickerOpen(!this.state.isStickerPickerOpen);
-    };
-
     private toggleButtonMenu = (): void => {
         this.setState({
             isMenuOpen: !this.state.isMenuOpen,
@@ -584,6 +570,7 @@ export class MessageComposer extends React.Component<IProps, IState> {
                         menuPosition={menuPosition}
                         placeholder={this.renderPlaceholderText()}
                         eventRelation={this.props.relation}
+                        showStickersButton={this.showStickersButton}
                     />
                 );
             } else {
@@ -597,7 +584,6 @@ export class MessageComposer extends React.Component<IProps, IState> {
                         replyToEvent={this.props.replyToEvent}
                         onChange={this.onChange}
                         disabled={this.state.haveRecording}
-                        toggleStickerPickerOpen={this.toggleStickerPickerOpen}
                     />
                 );
             }
@@ -657,20 +643,6 @@ export class MessageComposer extends React.Component<IProps, IState> {
             );
         }
 
-        const threadId =
-            this.props.relation?.rel_type === THREAD_RELATION_TYPE.name ? this.props.relation.event_id : null;
-
-        controls.push(
-            <Stickerpicker
-                room={this.props.room}
-                threadId={threadId}
-                isStickerPickerOpen={this.state.isStickerPickerOpen}
-                setStickerPickerOpen={this.setStickerPickerOpen}
-                menuPosition={menuPosition}
-                key="stickers"
-            />,
-        );
-
         const showSendButton = canSendMessages && (!this.state.isComposerEmpty || this.state.haveRecording);
 
         const classes = classNames({
@@ -698,11 +670,9 @@ export class MessageComposer extends React.Component<IProps, IState> {
                                     addEmoji={this.addEmoji}
                                     haveRecording={this.state.haveRecording}
                                     isMenuOpen={this.state.isMenuOpen}
-                                    isStickerPickerOpen={this.state.isStickerPickerOpen}
                                     menuPosition={menuPosition}
                                     relation={this.props.relation}
                                     onRecordStartEndClick={this.onRecordStartEndClick}
-                                    setStickerPickerOpen={this.setStickerPickerOpen}
                                     showLocationButton={
                                         !window.electron && SettingsStore.getValue(UIFeature.LocationSharing)
                                     }

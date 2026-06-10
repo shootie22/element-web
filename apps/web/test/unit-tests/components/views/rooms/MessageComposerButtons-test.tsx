@@ -23,10 +23,8 @@ describe("MessageComposerButtons", () => {
     const mockProps: React.ComponentProps<typeof MessageComposerButtons> = {
         addEmoji: () => false,
         haveRecording: false,
-        isStickerPickerOpen: false,
         menuPosition: undefined,
         onRecordStartEndClick: () => {},
-        setStickerPickerOpen: () => {},
         toggleButtonMenu: () => {},
     };
 

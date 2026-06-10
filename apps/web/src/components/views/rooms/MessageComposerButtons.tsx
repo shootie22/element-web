@@ -20,7 +20,6 @@ import {
     MicOnIcon,
     OverflowHorizontalIcon,
     PollsIcon,
-    StickerIcon,
     TextFormattingIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
 import { UploadButton, useViewModel } from "@element-hq/web-shared-components";
@@ -44,16 +43,15 @@ import { useSettingValue } from "../../../hooks/useSettings";
 import AccessibleButton, { type ButtonEvent } from "../elements/AccessibleButton";
 import { useScopedRoomContext } from "../../../contexts/ScopedRoomContext.tsx";
 import { useRoomUploadViewModel } from "../../../viewmodels/room/RoomUploadViewModel.tsx";
+import { StickerButton } from "./Stickerpicker";
 
 interface IProps {
     addEmoji: (emoji: string) => boolean;
     haveRecording: boolean;
     isMenuOpen: boolean;
-    isStickerPickerOpen: boolean;
     menuPosition?: MenuProps;
     onRecordStartEndClick: () => void;
     relation?: IEventRelation;
-    setStickerPickerOpen: (isStickerPickerOpen: boolean) => void;
     showLocationButton: boolean;
     showPollsButton: boolean;
     showStickersButton: boolean;
@@ -81,7 +79,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
     let moreButtons: ReactNode[];
     if (narrow) {
         mainButtons = [
-            showStickersButton(props),
+            !isWysiwygLabEnabled ? showStickersButton(props, room) : null,
             isWysiwygLabEnabled ? (
                 <ComposerModeButton
                     key="composerModeButton"
@@ -108,7 +106,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
         ];
     } else {
         mainButtons = [
-            showStickersButton(props),
+            !isWysiwygLabEnabled ? showStickersButton(props, room) : null,
             isWysiwygLabEnabled ? (
                 <ComposerModeButton
                     key="composerModeButton"
@@ -175,17 +173,15 @@ function emojiButton(props: IProps): ReactElement {
     );
 }
 
-function showStickersButton(props: IProps): ReactElement | null {
+function showStickersButton(props: IProps, room: Room): ReactElement | null {
     return props.showStickersButton ? (
-        <CollapsibleButton
-            id="stickersButton"
+        <StickerButton
             key="controls_stickers"
+            room={room}
+            threadId={props.relation?.rel_type === THREAD_RELATION_TYPE.name ? props.relation.event_id : null}
+            menuPosition={props.menuPosition}
             className="mx_MessageComposer_button"
-            onClick={() => props.setStickerPickerOpen(!props.isStickerPickerOpen)}
-            title={props.isStickerPickerOpen ? _t("composer|close_sticker_picker") : _t("common|sticker")}
-        >
-            <StickerIcon />
-        </CollapsibleButton>
+        />
     ) : null;
 }
 

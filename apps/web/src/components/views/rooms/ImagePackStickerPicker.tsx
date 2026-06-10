@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, useMemo, useState } from "react";
+import React, { type CSSProperties, type JSX, useMemo, useState } from "react";
 import { type Room } from "matrix-js-sdk/src/matrix";
 import { SearchIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
@@ -21,6 +21,7 @@ interface Props {
     showLegacyButton: boolean;
     onFinished(this: void): void;
     onOpenLegacy(this: void): void;
+    columnCount: number;
 }
 
 function entryMatchesFilter(entry: ImagePackEntry, filter: string): boolean {
@@ -39,6 +40,7 @@ export function ImagePackStickerPicker({
     showLegacyButton,
     onFinished,
     onOpenLegacy,
+    columnCount,
 }: Props): JSX.Element {
     const [filter, setFilter] = useState("");
     useImagePackRoomUpdate(room);
@@ -77,7 +79,12 @@ export function ImagePackStickerPicker({
             </div>
             <div className="mx_ImagePackStickerPicker_body">
                 {filteredEntries.length > 0 ? (
-                    <div className="mx_ImagePackStickerPicker_grid" role="grid" aria-label={_t("common|sticker")}>
+                    <div
+                        className="mx_ImagePackStickerPicker_grid"
+                        role="grid"
+                        aria-label={_t("common|sticker")}
+                        style={{ "--sticker-picker-columns": columnCount } as CSSProperties}
+                    >
                         {filteredEntries.map((entry) => (
                             <AccessibleButton
                                 key={`${entry.pack.id}:${entry.shortcode}:${entry.url}`}

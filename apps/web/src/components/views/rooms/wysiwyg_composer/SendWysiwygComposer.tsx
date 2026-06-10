@@ -37,6 +37,7 @@ export interface SendWysiwygComposerProps {
     placeholder?: string;
     disabled?: boolean;
     e2eStatus?: E2EStatus;
+    showStickersButton?: boolean;
     onChange: (content: string) => void;
     onSend: () => void;
     menuPosition: MenuProps;
@@ -48,6 +49,7 @@ export default function SendWysiwygComposer({
     isRichTextEnabled,
     e2eStatus,
     menuPosition,
+    showStickersButton = false,
     ...props
 }: SendWysiwygComposerProps): JSX.Element {
     const Composer = isRichTextEnabled ? WysiwygComposer : PlainTextComposer;
@@ -75,7 +77,13 @@ export default function SendWysiwygComposer({
             <Composer
                 className="mx_SendWysiwygComposer"
                 leftComponent={leftIcon}
-                rightComponent={<Emoji menuPosition={menuPosition} />}
+                rightComponent={
+                    <Emoji
+                        menuPosition={menuPosition}
+                        showStickersButton={showStickersButton}
+                        eventRelation={props.eventRelation}
+                    />
+                }
                 {...props}
             >
                 {(ref, composerFunctions) => (

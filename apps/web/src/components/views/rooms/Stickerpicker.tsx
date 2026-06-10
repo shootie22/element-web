@@ -5,10 +5,12 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX } from "react";
+import classNames from "classnames";
+import React, { type JSX, useEffect, useState } from "react";
 import { type Room, ClientEvent } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 import { type IWidget } from "matrix-widget-api";
+import { StickerIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import { _t, _td } from "../../../languageHandler";
 import AppTile from "../elements/AppTile";
@@ -18,20 +20,26 @@ import AccessibleButton from "../elements/AccessibleButton";
 import WidgetUtils, { type UserWidget } from "../../../utils/WidgetUtils";
 import PersistedElement from "../elements/PersistedElement";
 import { IntegrationManagers } from "../../../integrations/IntegrationManagers";
-import ContextMenu, { ChevronFace } from "../../structures/ContextMenu";
+import ContextMenu, { aboveLeftOf, type MenuProps, useContextMenu } from "../../structures/ContextMenu";
 import { WidgetType } from "../../../widgets/WidgetType";
 import { WidgetMessagingStore } from "../../../stores/widgets/WidgetMessagingStore";
 import { type ActionPayload } from "../../../dispatcher/payloads";
 import type ScalarAuthClient from "../../../ScalarAuthClient";
-import GenericElementContextMenu from "../context_menus/GenericElementContextMenu";
 import RightPanelStore from "../../../stores/right-panel/RightPanelStore";
 import { UPDATE_EVENT } from "../../../stores/AsyncStore";
 import SettingsStore from "../../../settings/SettingsStore";
 import { ImagePackStickerPicker } from "./ImagePackStickerPicker";
+import { CollapsibleButton } from "./CollapsibleButton";
+import UIStore from "../../../stores/UIStore";
 
 // This should be below the dialog level (4000), but above the rest of the UI (1000-2000).
 // We sit in a context menu, so this should be given to the context menu.
 const STICKERPICKER_Z_INDEX = 3500;
+const STICKER_PICKER_WIDTH_STORAGE_KEY = "mx_sticker_picker_width";
+const STICKER_PICKER_MIN_WIDTH = 340;
+const STICKER_PICKER_MAX_WIDTH = 768;
+const STICKER_PICKER_GRID_PADDING = 16;
+const STICKER_PICKER_ITEM_WIDTH = 76;
 
 // Key to store the widget's AppTile under in PersistedElement
 const PERSISTED_ELEMENT_KEY = "stickerPicker";
@@ -40,8 +48,10 @@ interface IProps {
     room: Room;
     threadId?: string | null;
     isStickerPickerOpen: boolean;
-    menuPosition?: any;
+    menuPosition: MenuProps;
+    pickerWidth: number;
     setStickerPickerOpen: (isStickerPickerOpen: boolean) => void;
+    onResizePointerDown(this: void, ev: React.PointerEvent): void;
 }
 
 interface IState {
@@ -51,7 +61,106 @@ interface IState {
     showLegacyPicker: boolean;
 }
 
-export default class Stickerpicker extends React.PureComponent<IProps, IState> {
+interface StickerButtonProps {
+    room: Room;
+    threadId?: string | null;
+    menuPosition?: MenuProps;
+    className?: string;
+}
+
+function clampStickerPickerWidth(width: number): number {
+    const viewportMax = Math.max(STICKER_PICKER_MIN_WIDTH, UIStore.instance.windowWidth - 24);
+    return Math.max(STICKER_PICKER_MIN_WIDTH, Math.min(width, STICKER_PICKER_MAX_WIDTH, viewportMax));
+}
+
+function readStickerPickerWidth(): number {
+    const storedWidth = Number(window.localStorage.getItem(STICKER_PICKER_WIDTH_STORAGE_KEY));
+    return clampStickerPickerWidth(Number.isFinite(storedWidth) ? storedWidth : STICKER_PICKER_MIN_WIDTH);
+}
+
+function columnCountForWidth(width: number): number {
+    return Math.max(4, Math.floor((width - STICKER_PICKER_GRID_PADDING) / STICKER_PICKER_ITEM_WIDTH));
+}
+
+export function StickerButton({ room, threadId, menuPosition, className }: StickerButtonProps): JSX.Element {
+    const [menuDisplayed, button, openMenu, closeMenu, setMenuDisplayed] = useContextMenu();
+    const [pickerWidth, setPickerWidth] = useState(readStickerPickerWidth);
+    const computedClassName = classNames("mx_StickerButton", className, {
+        mx_StickerButton_highlight: menuDisplayed,
+    });
+    const position = button.current
+        ? (menuPosition ?? aboveLeftOf(button.current.getBoundingClientRect()))
+        : undefined;
+
+    useEffect(() => {
+        const dispatcherRef = dis.register((payload: ActionPayload) => {
+            switch (payload.action) {
+                case "stickerpicker_toggle":
+                    setMenuDisplayed(!menuDisplayed);
+                    break;
+                case "stickerpicker_close":
+                    setMenuDisplayed(false);
+                    break;
+            }
+        });
+        return () => dis.unregister(dispatcherRef);
+    }, [menuDisplayed, setMenuDisplayed]);
+
+    const onResizePointerDown = (ev: React.PointerEvent): void => {
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        const startX = ev.clientX;
+        const startWidth = pickerWidth;
+        let nextWidth = pickerWidth;
+
+        const onPointerMove = (moveEv: PointerEvent): void => {
+            nextWidth = clampStickerPickerWidth(startWidth + startX - moveEv.clientX);
+            setPickerWidth(nextWidth);
+        };
+        const onPointerUp = (): void => {
+            window.localStorage.setItem(STICKER_PICKER_WIDTH_STORAGE_KEY, String(nextWidth));
+            document.removeEventListener("pointermove", onPointerMove);
+            document.removeEventListener("pointerup", onPointerUp);
+        };
+
+        document.addEventListener("pointermove", onPointerMove);
+        document.addEventListener("pointerup", onPointerUp);
+    };
+
+    return (
+        <>
+            <CollapsibleButton
+                id="stickersButton"
+                className={computedClassName}
+                onClick={() => setMenuDisplayed(!menuDisplayed)}
+                title={menuDisplayed ? _t("composer|close_sticker_picker") : _t("common|sticker")}
+                inputRef={button}
+            >
+                <StickerIcon />
+            </CollapsibleButton>
+            {position && (
+                <Stickerpicker
+                    room={room}
+                    threadId={threadId}
+                    isStickerPickerOpen={menuDisplayed}
+                    menuPosition={position}
+                    pickerWidth={pickerWidth}
+                    setStickerPickerOpen={(isOpen) => {
+                        if (isOpen) {
+                            openMenu();
+                        } else {
+                            closeMenu();
+                        }
+                    }}
+                    onResizePointerDown={onResizePointerDown}
+                />
+            )}
+        </>
+    );
+}
+
+class Stickerpicker extends React.PureComponent<IProps, IState> {
     public static defaultProps: Partial<IProps> = {
         threadId: null,
     };
@@ -62,7 +171,6 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
 
     private prevSentVisibility?: boolean;
 
-    private popoverWidth = 300;
     private popoverHeight = 300;
     // This is loaded by _acquireScalarClient on an as-needed basis.
     private scalarClient: ScalarAuthClient | null = null;
@@ -250,6 +358,7 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
                     showLegacyButton={showLegacyButton}
                     onFinished={this.onFinished}
                     onOpenLegacy={this.openLegacyPicker}
+                    columnCount={columnCountForWidth(this.props.pickerWidth)}
                 />
             );
         }
@@ -297,7 +406,7 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
                         style={{
                             border: "none",
                             height: this.popoverHeight,
-                            width: this.popoverWidth,
+                            width: this.props.pickerWidth,
                         }}
                     >
                         <PersistedElement persistKey={PERSISTED_ELEMENT_KEY} zIndex={STICKERPICKER_Z_INDEX}>
@@ -364,23 +473,27 @@ export default class Stickerpicker extends React.PureComponent<IProps, IState> {
 
     public render(): React.ReactNode {
         if (!this.props.isStickerPickerOpen) return null;
-        const width = this.state.showLegacyPicker ? this.popoverWidth : 340;
+        const width = this.props.pickerWidth;
         const height = this.state.showLegacyPicker ? this.popoverHeight : 380;
 
         return (
             <ContextMenu
-                chevronFace={ChevronFace.Bottom}
-                menuWidth={width}
-                menuHeight={height}
                 onFinished={this.onFinished}
-                menuPaddingTop={0}
-                menuPaddingLeft={0}
-                menuPaddingRight={0}
                 zIndex={STICKERPICKER_Z_INDEX}
-                mountAsChild={true}
+                managed={false}
+                focusLock
                 {...this.props.menuPosition}
             >
-                <GenericElementContextMenu element={this.getStickerpickerContent()} onResize={this.onFinished} />
+                <div className="mx_StickerButton_picker" style={{ width, height }}>
+                    <div
+                        className="mx_StickerButton_pickerResizeHandle"
+                        role="separator"
+                        aria-orientation="vertical"
+                        aria-label={_t("emoji_picker|resize")}
+                        onPointerDown={this.props.onResizePointerDown}
+                    />
+                    {this.getStickerpickerContent()}
+                </div>
             </ContextMenu>
         );
     }
