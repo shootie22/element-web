@@ -113,6 +113,19 @@ export function insertCustomEmojiAtSelection(editor: HTMLElement, emoji: Compose
     setCaretAfter(node);
 }
 
+export function insertTextAtSelection(editor: HTMLElement, text: string): void {
+    ensureTrailingBr(editor);
+
+    const selection = document.getSelection();
+    const range =
+        selection && isSelectionInsideEditor(editor, selection) ? selection.getRangeAt(0) : rangeAtEditorEnd(editor);
+    const node = editor.ownerDocument.createTextNode(text);
+
+    range.deleteContents();
+    range.insertNode(node);
+    setCaretInNode(node, text.length);
+}
+
 export function replaceLastCustomEmojiShortcode(editor: HTMLElement, entries: ImagePackEntry[]): boolean {
     const selection = document.getSelection();
     if (!selection?.isCollapsed || !isSelectionInsideEditor(editor, selection)) {
@@ -278,4 +291,18 @@ export function replaceCustomEmojiHtmlWithShortcodes(html: string): string {
     }
 
     return document.body.innerHTML;
+}
+
+export function clipboardTextWithCustomEmojiShortcodes(data: DataTransfer | null): string | null {
+    if (!data) {
+        return null;
+    }
+
+    const html = data.getData("text/html");
+    const normalizedHtml = html ? replaceCustomEmojiHtmlWithShortcodes(html) : "";
+    if (normalizedHtml !== html) {
+        return new DOMParser().parseFromString(normalizedHtml, "text/html").body.textContent || "";
+    }
+
+    return null;
 }

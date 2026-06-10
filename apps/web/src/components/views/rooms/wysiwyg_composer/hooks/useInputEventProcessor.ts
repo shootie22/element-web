@@ -27,6 +27,7 @@ import type Autocomplete from "../../Autocomplete";
 import { handleClipboardEvent, handleEventWithAutocomplete, isEventToHandleAsClipboardEvent } from "./utils";
 import { useScopedRoomContext } from "../../../../../contexts/ScopedRoomContext.tsx";
 import { useRoomUploadViewModel } from "../../../../../viewmodels/room/RoomUploadViewModel.tsx";
+import { clipboardTextWithCustomEmojiShortcodes } from "../utils/customEmoji";
 
 export function useInputEventProcessor(
     onSend: () => void,
@@ -53,6 +54,10 @@ export function useInputEventProcessor(
 
             if (isEventToHandleAsClipboardEvent(event)) {
                 const data = event instanceof ClipboardEvent ? event.clipboardData : event.dataTransfer;
+                const customEmojiText = clipboardTextWithCustomEmojiShortcodes(data);
+                if (customEmojiText !== null) {
+                    return { inputType: "insertText", data: customEmojiText } as WysiwygEvent;
+                }
                 const handled = handleClipboardEvent(event, data, roomUploadVm);
                 return handled ? null : event;
             }

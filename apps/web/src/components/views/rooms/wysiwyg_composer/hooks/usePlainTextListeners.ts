@@ -18,7 +18,12 @@ import { useSuggestion } from "./useSuggestion";
 import { isNotNull, isNotUndefined } from "../../../../../Typeguards";
 import type { RoomUploadViewModel } from "../../../../../viewmodels/room/RoomUploadViewModel.tsx";
 import { getImagePackEntries } from "../../../../../image-packs";
-import { replaceLastCustomEmojiShortcode } from "../utils/customEmoji";
+import {
+    clipboardTextWithCustomEmojiShortcodes,
+    decorateCustomEmojiShortcodes,
+    insertTextAtSelection,
+    replaceLastCustomEmojiShortcode,
+} from "../utils/customEmoji";
 
 function isDivElement(target: EventTarget): target is HTMLDivElement {
     return target instanceof HTMLDivElement;
@@ -131,10 +136,21 @@ export function usePlainTextListeners(
             const { nativeEvent } = event;
             let imagePasteWasHandled = false;
 
-            if (roomUploadVM && isEventToHandleAsClipboardEvent(nativeEvent)) {
+            if (isEventToHandleAsClipboardEvent(nativeEvent)) {
                 const data =
                     nativeEvent instanceof ClipboardEvent ? nativeEvent.clipboardData : nativeEvent.dataTransfer;
-                imagePasteWasHandled = handleClipboardEvent(nativeEvent, data, roomUploadVM);
+                const customEmojiText = clipboardTextWithCustomEmojiShortcodes(data);
+                if (customEmojiText !== null && isDivElement(event.target)) {
+                    insertTextAtSelection(event.target, customEmojiText);
+                    if (room) {
+                        decorateCustomEmojiShortcodes(event.target, getImagePackEntries(room.client, room, "emoticon"));
+                    }
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setText();
+                    return;
+                }
+                imagePasteWasHandled = roomUploadVM ? handleClipboardEvent(nativeEvent, data, roomUploadVM) : false;
             }
 
             // prevent default behaviour and skip call to onInput if the image paste event was handled
@@ -144,7 +160,7 @@ export function usePlainTextListeners(
                 onInput(event);
             }
         },
-        [onInput, roomUploadVM],
+        [onInput, room, roomUploadVM, setText],
     );
 
     const enterShouldSend = !useSettingValue("MessageComposerInput.ctrlEnterToSend");

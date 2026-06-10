@@ -6,9 +6,11 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import {
+    clipboardTextWithCustomEmojiShortcodes,
     createCustomEmojiElement,
     decorateCustomEmojiShortcodes,
     insertCustomEmojiAtSelection,
+    insertTextAtSelection,
     replaceCustomEmojiHtmlWithShortcodes,
     replaceLastCustomEmojiShortcode,
 } from "../../../../../../../src/components/views/rooms/wysiwyg_composer/utils/customEmoji";
@@ -53,6 +55,22 @@ describe("customEmoji", () => {
         expect(editor.querySelector("span.mx_CustomEmoji")).not.toBeNull();
         expect(editor.lastChild).toBeInstanceOf(HTMLBRElement);
         expect(editor.textContent).not.toContain("\u200B");
+
+        editor.remove();
+    });
+
+    it("inserts text at the current selection", () => {
+        const editor = document.createElement("div");
+        const text = document.createTextNode("hello world");
+        editor.appendChild(text);
+        document.body.appendChild(editor);
+        document.getSelection()?.setBaseAndExtent(text, 6, text, 11);
+
+        insertTextAtSelection(editor, ":party:");
+
+        expect(editor.textContent).toBe("hello :party:");
+        expect(document.getSelection()?.anchorNode?.textContent).toBe(":party:");
+        expect(document.getSelection()?.anchorOffset).toBe(7);
 
         editor.remove();
     });
@@ -120,5 +138,20 @@ describe("customEmoji", () => {
         ].join("");
 
         expect(replaceCustomEmojiHtmlWithShortcodes(html)).toBe("hello :party:");
+    });
+
+    it("extracts custom emoji shortcode text from clipboard HTML", () => {
+        const html = [
+            "hello ",
+            '<span class="mx_CustomEmoji" contenteditable="false" data-mx-emoticon title="party">',
+            '<img class="mx_CustomEmoji_image" data-mx-emoticon src="https://example.org/party.gif" alt=":party:" title="party">',
+            '<span class="mx_CustomEmoji_hiddenText" style="display: none;">:party:</span>',
+            "</span>",
+        ].join("");
+        const data = {
+            getData: (type: string) => (type === "text/html" ? html : ""),
+        } as DataTransfer;
+
+        expect(clipboardTextWithCustomEmojiShortcodes(data)).toBe("hello :party:");
     });
 });
