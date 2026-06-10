@@ -249,6 +249,10 @@ export interface Settings {
     "MessageComposerInput.showStickersButton": IBaseSetting<boolean>;
     "MessageComposerInput.showPollsButton": IBaseSetting<boolean>;
     "MessageComposerInput.insertTrailingColon": IBaseSetting<boolean>;
+    "Tweaks.accentEmojiStickerButtons": IBaseSetting<boolean>;
+    "Tweaks.resizableEmojiStickerPickers": IBaseSetting<boolean>;
+    "Tweaks.playAnimatedReactionImagesOnHover": IBaseSetting<boolean>;
+    "Tweaks.playAnimatedStickersOnHover": IBaseSetting<boolean>;
     "Notifications.alwaysShowBadgeCounts": IBaseSetting<boolean>;
     "Notifications.showbold": IBaseSetting<boolean>;
     "Notifications.tac_only_notifications": IBaseSetting<boolean>;
@@ -743,6 +747,26 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|insert_trailing_colon_mentions"),
         default: true,
+    },
+    "Tweaks.accentEmojiStickerButtons": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|accent_emoji_sticker_buttons"),
+        default: true,
+    },
+    "Tweaks.resizableEmojiStickerPickers": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|resizable_emoji_sticker_pickers"),
+        default: true,
+    },
+    "Tweaks.playAnimatedReactionImagesOnHover": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|play_animated_reaction_images_on_hover"),
+        default: false,
+    },
+    "Tweaks.playAnimatedStickersOnHover": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|play_animated_stickers_on_hover"),
+        default: false,
     },
     // TODO: Wire up appropriately to UI (FTUE notifications)
     "Notifications.alwaysShowBadgeCounts": {

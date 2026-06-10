@@ -135,8 +135,6 @@ export default class PreferencesUserSettingsTab extends React.Component<IProps, 
         "MessageComposerInput.suggestEmoji",
         "MessageComposerInput.ctrlEnterToSend",
         "MessageComposerInput.surroundWith",
-        "MessageComposerInput.showStickersButton",
-        "MessageComposerInput.insertTrailingColon",
     ];
 
     private static TIME_SETTINGS: BooleanSettingKey[] = ["showTwelveHourTimestamps", "alwaysShowTimestamps"];
@@ -160,7 +158,6 @@ export default class PreferencesUserSettingsTab extends React.Component<IProps, 
         "Pill.shouldShowPillAvatar",
         "TextualBody.enableBigEmoji",
         "scrollToBottomOnMessageSent",
-        "show_quick_reactions",
         "useOnlyCurrentProfiles",
     ];
 

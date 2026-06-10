@@ -7,7 +7,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React from "react";
-import { render, screen } from "jest-matrix-react";
+import { render, screen, waitFor } from "jest-matrix-react";
 import { EventType, getHttpUriForMxc, MatrixEvent, Room } from "matrix-js-sdk/src/matrix";
 import fetchMock from "@fetch-mock/jest";
 import userEvent from "@testing-library/user-event";
@@ -23,6 +23,12 @@ import {
 } from "../../../../test-utils";
 import SettingsStore from "../../../../../src/settings/SettingsStore";
 import MStickerBody from "../../../../../src/components/views/messages/MStickerBody";
+import { useMediaVisible } from "../../../../../src/hooks/useMediaVisible";
+
+jest.mock("../../../../../src/hooks/useMediaVisible", () => ({
+    __esModule: true,
+    useMediaVisible: jest.fn(),
+}));
 
 describe("<MStickerBody/>", () => {
     const userId = "@user:server";
@@ -70,9 +76,12 @@ describe("<MStickerBody/>", () => {
         permalinkCreator: new RoomPermalinkCreator(new Room(mediaEvent.getRoomId()!, cli, cli.getUserId()!)),
     };
 
+    const mockedUseMediaVisible = jest.mocked(useMediaVisible);
+
     beforeEach(() => {
         jest.spyOn(SettingsStore, "getValue").mockRestore();
         fetchMock.mockReset();
+        mockedUseMediaVisible.mockReturnValue([true, jest.fn()]);
     });
 
     it("should show a tooltip on hover", async () => {
@@ -83,5 +92,48 @@ describe("<MStickerBody/>", () => {
         expect(screen.queryByRole("tooltip")).toBeNull();
         await userEvent.hover(screen.getByRole("img"));
         await expect(screen.findByRole("tooltip")).resolves.toHaveTextContent("sticker description");
+    });
+
+    it("only plays animated stickers on hover when the tweak is enabled", async () => {
+        jest.spyOn(SettingsStore, "getValue").mockImplementation((settingName: string) => {
+            if (settingName === "autoplayGifs") return true;
+            if (settingName === "Tweaks.playAnimatedStickersOnHover") return true;
+            return false;
+        });
+
+        render(
+            <MStickerBody
+                {...props}
+                mxEvent={
+                    new MatrixEvent({
+                        room_id: "!room:server",
+                        sender: userId,
+                        type: EventType.RoomMessage,
+                        content: {
+                            body: "animated sticker",
+                            info: {
+                                w: 40,
+                                h: 50,
+                                mimetype: "image/gif",
+                            },
+                            file: {
+                                url: "mxc://server/animated-sticker",
+                            },
+                        },
+                    })
+                }
+            />,
+            withClientContextRenderOptions(cli),
+        );
+
+        const image = screen.getByRole("img");
+        const initialSrc = image.getAttribute("src");
+        expect(initialSrc).toBeTruthy();
+
+        await userEvent.hover(image);
+
+        await waitFor(() => {
+            expect(screen.getByRole("img")).not.toHaveAttribute("src", initialSrc ?? "");
+        });
     });
 });

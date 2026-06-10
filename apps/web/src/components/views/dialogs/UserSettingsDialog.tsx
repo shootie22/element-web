@@ -23,6 +23,7 @@ import LockIcon from "@vector-im/compound-design-tokens/assets/web/icons/lock";
 import LabsIcon from "@vector-im/compound-design-tokens/assets/web/icons/labs";
 import BlockIcon from "@vector-im/compound-design-tokens/assets/web/icons/block";
 import HelpIcon from "@vector-im/compound-design-tokens/assets/web/icons/help";
+import SettingsIcon from "@vector-im/compound-design-tokens/assets/web/icons/settings";
 import { StickerIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import TabbedView, { Tab, useActiveTabWithDefault } from "../../structures/TabbedView";
@@ -37,6 +38,7 @@ import PreferencesUserSettingsTab from "../settings/tabs/user/PreferencesUserSet
 import VoiceUserSettingsTab from "../settings/tabs/user/VoiceUserSettingsTab";
 import HelpUserSettingsTab from "../settings/tabs/user/HelpUserSettingsTab";
 import MjolnirUserSettingsTab from "../settings/tabs/user/MjolnirUserSettingsTab";
+import TweaksUserSettingsTab from "../settings/tabs/user/TweaksUserSettingsTab";
 import { UIFeature } from "../../../settings/UIFeature";
 import BaseDialog from "./BaseDialog";
 import SidebarUserSettingsTab from "../settings/tabs/user/SidebarUserSettingsTab";
@@ -94,6 +96,8 @@ function titleForTabID(tabId: UserTab): React.ReactNode {
             return _t("settings|labs|dialog_title", undefined, subs);
         case UserTab.Mjolnir:
             return _t("settings|labs_mjolnir|dialog_title", undefined, subs);
+        case UserTab.Tweaks:
+            return _t("settings|tweaks|dialog_title", undefined, subs);
         case UserTab.Help:
             return _t("setting|help_about|dialog_title", undefined, subs);
     }
@@ -251,6 +255,15 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
                 ),
             );
         }
+        tabs.push(
+            new Tab(
+                UserTab.Tweaks,
+                _td("settings|tweaks|title"),
+                <SettingsIcon />,
+                <TweaksUserSettingsTab />,
+                undefined,
+            ),
+        );
         tabs.push(
             new Tab(
                 UserTab.Help,

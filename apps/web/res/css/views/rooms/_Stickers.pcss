@@ -144,9 +144,29 @@
     @mixin composerButtonHighLight;
 }
 
+.mx_StickerButton_accent {
+    @mixin composerButton 50%, var(--cpd-color-icon-accent-primary), var(--cpd-color-bg-accent-selected);
+
+    svg {
+        color: var(--cpd-color-icon-accent-primary);
+    }
+}
+
+.mx_StickerButton_highlight.mx_StickerButton_accent {
+    background: var(--cpd-color-bg-accent-selected);
+}
+
 .mx_MessageComposer_wysiwyg {
     .mx_StickerButton {
         @mixin composerButton 5px, $tertiary-content, $panels;
+    }
+
+    .mx_StickerButton_accent {
+        @mixin composerButton 5px, var(--cpd-color-icon-accent-primary), var(--cpd-color-bg-accent-selected);
+
+        svg {
+            color: var(--cpd-color-icon-accent-primary);
+        }
     }
 }
 

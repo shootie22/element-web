@@ -14,9 +14,29 @@ Please see LICENSE files in the repository root for full details.
     @mixin composerButtonHighLight;
 }
 
+.mx_EmojiButton_accent {
+    @mixin composerButton 50%, var(--cpd-color-icon-accent-primary), var(--cpd-color-bg-accent-selected);
+
+    svg {
+        color: var(--cpd-color-icon-accent-primary);
+    }
+}
+
+.mx_EmojiButton_highlight.mx_EmojiButton_accent {
+    background: var(--cpd-color-bg-accent-selected);
+}
+
 .mx_MessageComposer_wysiwyg {
     .mx_EmojiButton {
         @mixin composerButton 5px, $tertiary-content, $panels;
+    }
+
+    .mx_EmojiButton_accent {
+        @mixin composerButton 5px, var(--cpd-color-icon-accent-primary), var(--cpd-color-bg-accent-selected);
+
+        svg {
+            color: var(--cpd-color-icon-accent-primary);
+        }
     }
 }
 

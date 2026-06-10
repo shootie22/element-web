@@ -130,7 +130,7 @@ export class ImageBodyBaseInner extends React.Component<ImageBodyBaseProps, ISta
         }
     };
 
-    private get shouldAutoplay(): boolean {
+    protected get shouldAutoplay(): boolean {
         return !(
             !this.state.contentUrl ||
             !this.props.mediaVisible ||

@@ -57,6 +57,10 @@ export interface ReactionsRowButtonViewModelProps {
      * Whether to render custom image reactions.
      */
     customReactionImagesEnabled?: boolean;
+    /**
+     * Whether animated reaction images should only play while hovered.
+     */
+    playAnimatedReactionImagesOnHover?: boolean;
 }
 
 export class ReactionsRowButtonViewModel
@@ -81,6 +85,7 @@ export class ReactionsRowButtonViewModel
             myReactionEvent,
             disabled,
             customReactionImagesEnabled,
+            playAnimatedReactionImagesOnHover,
         } = props;
 
         const room = client.getRoom(mxEvent.getRoomId());
@@ -116,10 +121,10 @@ export class ReactionsRowButtonViewModel
             const src = media.srcHttp ?? undefined;
             const thumbnail = media.getThumbnailOfSourceHttp(32, 32) ?? undefined;
             const autoplayGifs = SettingsStore.getValue("autoplayGifs") as boolean;
-            const resolved = autoplayGifs ? src : (thumbnail ?? src);
+            const resolved = playAnimatedReactionImagesOnHover ? (thumbnail ?? src) : autoplayGifs ? src : (thumbnail ?? src);
             if (resolved) {
                 imageSrc = resolved;
-                imageHoverSrc = !autoplayGifs && src && src !== resolved ? src : undefined;
+                imageHoverSrc = src && src !== resolved ? src : undefined;
                 imageAlt = customReactionName || _t("timeline|reactions|custom_reaction_fallback_label");
             }
         }
@@ -181,8 +186,15 @@ export class ReactionsRowButtonViewModel
         content: string,
         reactionEvents: MatrixEvent[],
         customReactionImagesEnabled?: boolean,
+        playAnimatedReactionImagesOnHover?: boolean,
     ): void {
-        this.props = { ...this.props, content, reactionEvents, customReactionImagesEnabled };
+        this.props = {
+            ...this.props,
+            content,
+            reactionEvents,
+            customReactionImagesEnabled,
+            playAnimatedReactionImagesOnHover,
+        };
 
         this.tooltipVm.setProps({ content, reactionEvents, customReactionImagesEnabled });
         this.setSnapshot(ReactionsRowButtonViewModel.computeSnapshot(this.props, this.tooltipVm));

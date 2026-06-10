@@ -2811,6 +2811,18 @@
         "labs_mjolnir": {
             "dialog_title": "<strong>Settings:</strong> Ignored Users"
         },
+        "tweaks": {
+            "accent_emoji_sticker_buttons": "Use Element green for emoji and sticker buttons",
+            "animated_media_heading": "Animated media",
+            "composer_heading": "Composer",
+            "dialog_title": "<strong>Settings:</strong> Tweaks",
+            "emoji_stickers_heading": "Emoji & stickers",
+            "play_animated_reaction_images_on_hover": "Only animate GIF reactions on hover",
+            "play_animated_stickers_on_hover": "Only animate stickers on hover",
+            "resizable_emoji_sticker_pickers": "Resizable emoji and sticker pickers",
+            "timeline_heading": "Timeline",
+            "title": "Tweaks"
+        },
         "media_preview": {
             "hide_avatars": "Hide avatars of room and inviter",
             "hide_media": "Always hide",

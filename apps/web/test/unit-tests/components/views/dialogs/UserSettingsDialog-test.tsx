@@ -112,7 +112,21 @@ describe("<UserSettingsDialog />", () => {
             show_labs_settings: true,
         });
         const { container } = render(getComponent());
-        expect(container.querySelectorAll(".mx_TabbedView_tabLabel")).toMatchSnapshot();
+        expect(Array.from(container.querySelectorAll(".mx_TabbedView_tabLabel")).map((tab) => tab.textContent)).toEqual([
+            "Account",
+            "Sessions",
+            "Appearance",
+            "Notifications",
+            "Preferences",
+            "Emojis & Stickers",
+            "Keyboard",
+            "Sidebar",
+            "Security & Privacy",
+            "Encryption",
+            "Labs",
+            "Tweaks",
+            "Help & About",
+        ]);
     });
 
     it("renders ignored users tab when feature_mjolnir is enabled", () => {
@@ -199,6 +213,13 @@ describe("<UserSettingsDialog />", () => {
         const { container } = render(getComponent({ initialTabId: UserTab.Mjolnir }));
         expect(getActiveTabLabel(container)).toEqual("Ignored users");
         expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Ignored Users");
+    });
+
+    it("renders with tweaks tab selected", () => {
+        const { container } = render(getComponent({ initialTabId: UserTab.Tweaks }));
+
+        expect(getActiveTabLabel(container)).toEqual("Tweaks");
+        expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Settings: Tweaks");
     });
 
     it("renders with help tab selected", () => {

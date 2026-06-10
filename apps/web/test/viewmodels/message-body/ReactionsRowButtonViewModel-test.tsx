@@ -65,7 +65,8 @@ describe("ReactionsRowButtonViewModel", () => {
         jest.clearAllMocks();
         jest.spyOn(SettingsStore, "getValue").mockImplementation((settingName: string) => {
             if (settingName === "autoplayGifs") return false;
-            return undefined;
+            if (settingName === "Tweaks.playAnimatedReactionImagesOnHover") return false;
+            return false;
         });
         client = createTestClient();
         room = mkStubRoom("!room:example.org", "Test Room", client);
@@ -139,7 +140,8 @@ describe("ReactionsRowButtonViewModel", () => {
     it("renders custom reaction image sources when gif autoplay is enabled", () => {
         jest.spyOn(SettingsStore, "getValue").mockImplementation((settingName: string) => {
             if (settingName === "autoplayGifs") return true;
-            return undefined;
+            if (settingName === "Tweaks.playAnimatedReactionImagesOnHover") return false;
+            return false;
         });
         const reactionEvent = createReactionEvent("@alice:example.org", "mxc://example.org/reaction");
 
@@ -154,6 +156,29 @@ describe("ReactionsRowButtonViewModel", () => {
         expect(vm.getSnapshot()).toMatchObject({
             imageSrc: "https://example.org/_matrix/media/reaction.gif",
             imageHoverSrc: undefined,
+        });
+    });
+
+    it("renders custom reaction image sources only on hover when the hover-only tweak is enabled", () => {
+        jest.spyOn(SettingsStore, "getValue").mockImplementation((settingName: string) => {
+            if (settingName === "autoplayGifs") return true;
+            if (settingName === "Tweaks.playAnimatedReactionImagesOnHover") return true;
+            return false;
+        });
+        const reactionEvent = createReactionEvent("@alice:example.org", "mxc://example.org/reaction");
+
+        const vm = new ReactionsRowButtonViewModel(
+            createProps({
+                content: "mxc://example.org/reaction",
+                reactionEvents: [reactionEvent],
+                customReactionImagesEnabled: true,
+                playAnimatedReactionImagesOnHover: true,
+            }),
+        );
+
+        expect(vm.getSnapshot()).toMatchObject({
+            imageSrc: "https://example.org/_matrix/media/reaction-thumbnail.png",
+            imageHoverSrc: "https://example.org/_matrix/media/reaction.gif",
         });
     });
 

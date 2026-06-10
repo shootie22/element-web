@@ -22,6 +22,7 @@ import { getImagePackEntries } from "../../../image-packs";
 import { useImagePackRoomUpdate } from "../../../hooks/useImagePackUpdate";
 import UIStore from "../../../stores/UIStore";
 import * as recent from "../../../emojipicker/recent";
+import { useSettingValue } from "../../../hooks/useSettings";
 
 const EMOJI_PICKER_WIDTH_STORAGE_KEY = "mx_emoji_picker_width";
 const EMOJI_PICKER_MIN_WIDTH = 340;
@@ -56,6 +57,9 @@ export function EmojiButton({ addEmoji, menuPosition, className }: IEmojiButtonP
     const [pickerWidth, setPickerWidth] = useState(readEmojiPickerWidth);
     const imagePackVersion = useImagePackRoomUpdate(roomContext.room);
     const resizeAnimationFrame = useRef<number | null>(null);
+    const useAccentButtons = useSettingValue("Tweaks.accentEmojiStickerButtons");
+    const useResizablePickers = useSettingValue("Tweaks.resizableEmojiStickerPickers");
+    const effectivePickerWidth = useResizablePickers ? pickerWidth : EMOJI_PICKER_MIN_WIDTH;
 
     const customEmoji = useMemo(
         () => {
@@ -121,19 +125,21 @@ export function EmojiButton({ addEmoji, menuPosition, className }: IEmojiButtonP
 
         contextMenu = (
             <ContextMenu {...position} onFinished={onFinished} managed={false} focusLock>
-                <div className="mx_EmojiButton_picker" style={{ width: pickerWidth }}>
-                    <div
-                        className="mx_EmojiButton_pickerResizeHandle"
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label={_t("emoji_picker|resize")}
-                        onPointerDown={onResizePointerDown}
-                    />
+                <div className="mx_EmojiButton_picker" style={{ width: effectivePickerWidth }}>
+                    {useResizablePickers && (
+                        <div
+                            className="mx_EmojiButton_pickerResizeHandle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={_t("emoji_picker|resize")}
+                            onPointerDown={onResizePointerDown}
+                        />
+                    )}
                     <EmojiPicker
                         onChoose={addEmoji}
                         onFinished={onFinished}
                         customEmoji={customEmoji}
-                        columnCount={columnCountForWidth(pickerWidth)}
+                        columnCount={columnCountForWidth(effectivePickerWidth)}
                     />
                 </div>
             </ContextMenu>
@@ -142,6 +148,7 @@ export function EmojiButton({ addEmoji, menuPosition, className }: IEmojiButtonP
 
     const computedClassName = classNames("mx_EmojiButton", className, {
         mx_EmojiButton_highlight: menuDisplayed,
+        mx_EmojiButton_accent: useAccentButtons,
     });
 
     // TODO: replace ContextMenuTooltipButton with a unified representation of

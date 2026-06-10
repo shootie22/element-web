@@ -31,6 +31,7 @@ import SettingsStore from "../../../settings/SettingsStore";
 import { ImagePackStickerPicker } from "./ImagePackStickerPicker";
 import { CollapsibleButton } from "./CollapsibleButton";
 import UIStore from "../../../stores/UIStore";
+import { useSettingValue } from "../../../hooks/useSettings";
 
 // This should be below the dialog level (4000), but above the rest of the UI (1000-2000).
 // We sit in a context menu, so this should be given to the context menu.
@@ -50,6 +51,7 @@ interface IProps {
     isStickerPickerOpen: boolean;
     menuPosition: MenuProps;
     pickerWidth: number;
+    isResizable: boolean;
     setStickerPickerOpen: (isStickerPickerOpen: boolean) => void;
     onResizePointerDown(this: void, ev: React.PointerEvent): void;
 }
@@ -86,8 +88,12 @@ export function StickerButton({ room, threadId, menuPosition, className }: Stick
     const [menuDisplayed, button, openMenu, closeMenu, setMenuDisplayed] = useContextMenu();
     const [pickerWidth, setPickerWidth] = useState(readStickerPickerWidth);
     const resizeAnimationFrame = useRef<number | null>(null);
+    const useAccentButtons = useSettingValue("Tweaks.accentEmojiStickerButtons");
+    const useResizablePickers = useSettingValue("Tweaks.resizableEmojiStickerPickers");
+    const effectivePickerWidth = useResizablePickers ? pickerWidth : STICKER_PICKER_MIN_WIDTH;
     const computedClassName = classNames("mx_StickerButton", className, {
         mx_StickerButton_highlight: menuDisplayed,
+        mx_StickerButton_accent: useAccentButtons,
     });
     const position = button.current
         ? (menuPosition ?? aboveLeftOf(button.current.getBoundingClientRect()))
@@ -164,7 +170,8 @@ export function StickerButton({ room, threadId, menuPosition, className }: Stick
                     threadId={threadId}
                     isStickerPickerOpen={menuDisplayed}
                     menuPosition={position}
-                    pickerWidth={pickerWidth}
+                    pickerWidth={effectivePickerWidth}
+                    isResizable={useResizablePickers}
                     setStickerPickerOpen={(isOpen) => {
                         if (isOpen) {
                             openMenu();
@@ -504,13 +511,15 @@ class Stickerpicker extends React.PureComponent<IProps, IState> {
                 {...this.props.menuPosition}
             >
                 <div className="mx_StickerButton_picker" style={{ width, height }}>
-                    <div
-                        className="mx_StickerButton_pickerResizeHandle"
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label={_t("emoji_picker|resize")}
-                        onPointerDown={this.props.onResizePointerDown}
-                    />
+                    {this.props.isResizable && (
+                        <div
+                            className="mx_StickerButton_pickerResizeHandle"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={_t("emoji_picker|resize")}
+                            onPointerDown={this.props.onResizePointerDown}
+                        />
+                    )}
                     {this.getStickerpickerContent()}
                 </div>
             </ContextMenu>

@@ -19,6 +19,7 @@ import ContextMenu, { aboveLeftOf } from "../../../structures/ContextMenu";
 import ReactionPicker from "../../emojipicker/ReactionPicker";
 import RoomContext from "../../../../contexts/RoomContext";
 import { useMatrixClientContext } from "../../../../contexts/MatrixClientContext";
+import { useSettingValue } from "../../../../hooks/useSettings";
 import SettingsStore from "../../../../settings/SettingsStore";
 import { isContentActionable } from "../../../../utils/EventUtils";
 import { type EventTileViewModel } from "../../../../viewmodels/room/timeline/event-tile/EventTileViewModel";
@@ -43,6 +44,8 @@ interface ReactionsRowButtonAdapterProps {
     disabled?: boolean;
     /** Enables rendering custom reaction images. */
     customReactionImagesEnabled?: boolean;
+    /** Forces animated reaction images to animate only while hovered. */
+    playAnimatedReactionImagesOnHover?: boolean;
 }
 
 /**
@@ -62,12 +65,18 @@ function ReactionsRowButtonAdapter(props: Readonly<ReactionsRowButtonAdapterProp
                 myReactionEvent: props.myReactionEvent,
                 disabled: props.disabled,
                 customReactionImagesEnabled: props.customReactionImagesEnabled,
+                playAnimatedReactionImagesOnHover: props.playAnimatedReactionImagesOnHover,
             }),
     );
 
     useEffect(() => {
-        vm.setReactionData(props.content, props.reactionEvents, props.customReactionImagesEnabled);
-    }, [props.content, props.reactionEvents, props.customReactionImagesEnabled, vm]);
+        vm.setReactionData(
+            props.content,
+            props.reactionEvents,
+            props.customReactionImagesEnabled,
+            props.playAnimatedReactionImagesOnHover,
+        );
+    }, [props.content, props.reactionEvents, props.customReactionImagesEnabled, props.playAnimatedReactionImagesOnHover, vm]);
 
     useEffect(() => {
         vm.setCount(props.count);
@@ -137,6 +146,7 @@ export function ReactionsRowAdapter({
     const [myReactions, setMyReactions] = useState<MatrixEvent[] | null>(() => getMyReactions(reactions, userId));
     const [menuDisplayed, setMenuDisplayed] = useState(false);
     const [menuAnchorRect, setMenuAnchorRect] = useState<DOMRect | null>(null);
+    const playAnimatedReactionImagesOnHover = useSettingValue("Tweaks.playAnimatedReactionImagesOnHover");
 
     const vm = eventTileViewModel.getReactionsRowViewModel({
         isActionable: isContentActionable(mxEvent),
@@ -242,6 +252,7 @@ export function ReactionsRowAdapter({
                     reactionEvents={deduplicatedEvents}
                     myReactionEvent={myReactionEvent}
                     customReactionImagesEnabled={customReactionImagesEnabled}
+                    playAnimatedReactionImagesOnHover={playAnimatedReactionImagesOnHover}
                     disabled={
                         !roomContext.canReact ||
                         (myReactionEvent && !myReactionEvent.isRedacted() && !roomContext.canSelfRedact)
@@ -260,6 +271,7 @@ export function ReactionsRowAdapter({
         myReactions,
         mxEvent,
         customReactionImagesEnabled,
+        playAnimatedReactionImagesOnHover,
         roomContext.canReact,
         roomContext.canSelfRedact,
         snapshot.showAllButtonVisible,

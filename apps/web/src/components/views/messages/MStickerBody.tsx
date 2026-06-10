@@ -14,8 +14,11 @@ import { BLURHASH_FIELD } from "../../../utils/image-media";
 import IconsShowStickersSvg from "../../../../res/img/icons-show-stickers.svg";
 import { type IBodyProps } from "./IBodyProps";
 import { useMediaVisible } from "../../../hooks/useMediaVisible";
+import SettingsStore from "../../../settings/SettingsStore";
 
 class MStickerBodyInner extends ImageBodyBaseInner {
+    private hoverAnimatedStickersWatcher?: string;
+
     // Mostly empty to prevent default behaviour of MImageBody
     protected onClick = (ev: React.MouseEvent): void => {
         ev.preventDefault();
@@ -75,6 +78,37 @@ class MStickerBodyInner extends ImageBodyBaseInner {
 
     protected getBanner(content: MediaEventContent): ReactNode {
         return null; // we don't need a banner, we have a tooltip
+    }
+
+    protected get shouldAutoplay(): boolean {
+        if (SettingsStore.getValue("Tweaks.playAnimatedStickersOnHover") === true) {
+            return (
+                !!this.state.contentUrl &&
+                this.props.mediaVisible &&
+                !!this.state.isAnimated &&
+                (this.state.hover || this.state.focus)
+            );
+        }
+
+        return super.shouldAutoplay;
+    }
+
+    public componentDidMount(): void {
+        super.componentDidMount();
+        this.hoverAnimatedStickersWatcher = SettingsStore.watchSetting(
+            "Tweaks.playAnimatedStickersOnHover",
+            null,
+            () => {
+                this.forceUpdate();
+            },
+        );
+    }
+
+    public componentWillUnmount(): void {
+        super.componentWillUnmount();
+        if (this.hoverAnimatedStickersWatcher) {
+            SettingsStore.unwatchSetting(this.hoverAnimatedStickersWatcher);
+        }
     }
 }
 
