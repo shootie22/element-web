@@ -18,7 +18,8 @@ import SettingsStore from "../../../../../settings/SettingsStore";
 import { parsePermalink } from "../../../../../utils/permalinks/Permalinks";
 import { addReplyToMessageContent } from "../../../../../utils/Reply";
 import { isNotNull } from "../../../../../Typeguards";
-import { htmlWithEmoticonShortcodes } from "../../../../../image-pack-html";
+import { htmlWithEmoticonShortcodes, shortcodeToEmoticonHtml } from "../../../../../image-pack-html";
+import { replaceCustomEmojiHtmlWithShortcodes } from "./customEmoji";
 
 export const EMOTE_PREFIX = "/me ";
 
@@ -63,7 +64,10 @@ export async function createMessageContent(
 
     // if we're editing rich text, the message content is pure html
     // BUT if we're not, the message content will be plain text where we need to convert the mentions
-    const body = isHTML ? await richToPlain(message, false) : convertPlainTextToBody(message);
+    const messageWithCustomEmojiShortcodes = replaceCustomEmojiHtmlWithShortcodes(message);
+    const body = isHTML
+        ? await richToPlain(messageWithCustomEmojiShortcodes, false)
+        : convertPlainTextToBody(messageWithCustomEmojiShortcodes);
 
     const content = {
         msgtype: isEmote ? MsgType.Emote : MsgType.Text,
@@ -73,9 +77,18 @@ export async function createMessageContent(
     // TODO markdown support
 
     const isMarkdownEnabled = SettingsStore.getValue("MessageComposerInput.useMarkdown");
-    let formattedBody = isHTML ? message : isMarkdownEnabled ? await plainToRich(message, true) : null;
+    let formattedBody = isHTML
+        ? messageWithCustomEmojiShortcodes
+        : isMarkdownEnabled
+          ? await plainToRich(messageWithCustomEmojiShortcodes, true)
+          : null;
     if (formattedBody && room) {
         formattedBody = htmlWithEmoticonShortcodes(room.client, room, formattedBody);
+    } else if (room) {
+        const customEmoticonBody = shortcodeToEmoticonHtml(room.client, room, body);
+        if (customEmoticonBody.includes("data-mx-emoticon")) {
+            formattedBody = customEmoticonBody;
+        }
     }
 
     if (formattedBody) {

@@ -25,10 +25,17 @@ export function Emoji({ menuPosition }: EmojiProps): JSX.Element {
     return (
         <EmojiButton
             menuPosition={menuPosition}
-            addEmoji={(emoji) => {
+            addEmoji={(emoji, customEmoji) => {
                 dis.dispatch<ComposerInsertPayload>({
                     action: Action.ComposerInsert,
-                    text: emoji,
+                    ...(customEmoji?.imgSrc
+                        ? {
+                              customEmoji: {
+                                  shortcode: customEmoji.shortcode,
+                                  imgSrc: customEmoji.imgSrc,
+                              },
+                          }
+                        : { text: emoji }),
                     timelineRenderingType: roomContext.timelineRenderingType,
                 });
                 return true;

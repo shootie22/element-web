@@ -9,6 +9,7 @@ Please see LICENSE files in the repository root for full details.
 import { type RefObject, useMemo } from "react";
 
 import { setSelection } from "../utils/selection";
+import { insertCustomEmojiAtSelection } from "../utils/customEmoji";
 
 export function useComposerFunctions(
     ref: RefObject<HTMLDivElement | null>,
@@ -16,6 +17,7 @@ export function useComposerFunctions(
 ): {
     clear(): void;
     insertText(text: string): void;
+    insertCustomEmoji(shortcode: string, imgSrc: string): void;
 } {
     return useMemo(
         () => ({
@@ -39,6 +41,12 @@ export function useComposerFunctions(
                         focusOffset: focusOffset + text.length,
                         isForward: true,
                     });
+                    setContent(ref.current.innerHTML);
+                }
+            },
+            insertCustomEmoji: (shortcode: string, imgSrc: string) => {
+                if (ref.current) {
+                    insertCustomEmojiAtSelection(ref.current, { shortcode, imgSrc });
                     setContent(ref.current.innerHTML);
                 }
             },

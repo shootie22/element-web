@@ -58,6 +58,13 @@ export function useWysiwygSendActionHandler(
                         // TODO insert mention - see SendMessageComposer
                     } else if (payload.event) {
                         // TODO insert quote message - see SendMessageComposer
+                    } else if (payload.customEmoji) {
+                        setSelection(composerContext.selection).then(() =>
+                            composerFunctions.insertCustomEmoji(
+                                payload.customEmoji.shortcode,
+                                payload.customEmoji.imgSrc,
+                            ),
+                        );
                     } else if (payload.text) {
                         setSelection(composerContext.selection).then(() => composerFunctions.insertText(payload.text));
                     }

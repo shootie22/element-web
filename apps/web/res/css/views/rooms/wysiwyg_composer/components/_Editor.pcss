@@ -150,6 +150,23 @@ Please see LICENSE files in the repository root for full details.
                 font-size: $font-10-4px;
             }
         }
+
+        span.mx_CustomEmoji {
+            display: inline-block;
+            width: $font-22px;
+            height: $font-22px;
+            line-height: $font-22px;
+            vertical-align: middle;
+            user-select: all;
+
+            img.mx_CustomEmoji_image {
+                display: block;
+                width: $font-22px;
+                height: $font-22px;
+                object-fit: contain;
+                vertical-align: middle;
+            }
+        }
     }
 
     .mx_WysiwygComposer_Editor_content_placeholder::before {

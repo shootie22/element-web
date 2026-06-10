@@ -8,6 +8,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { type KeyboardEvent, type RefObject, type SyntheticEvent, useCallback, useRef, useState } from "react";
 import { type AllowedMentionAttributes, type MappedSuggestion } from "@vector-im/matrix-wysiwyg";
+import { type Room } from "matrix-js-sdk/src/matrix";
 
 import { useSettingValue } from "../../../../../hooks/useSettings";
 import { IS_MAC, Key } from "../../../../../Keyboard";
@@ -16,6 +17,8 @@ import { handleClipboardEvent, handleEventWithAutocomplete, isEventToHandleAsCli
 import { useSuggestion } from "./useSuggestion";
 import { isNotNull, isNotUndefined } from "../../../../../Typeguards";
 import type { RoomUploadViewModel } from "../../../../../viewmodels/room/RoomUploadViewModel.tsx";
+import { getImagePackEntries } from "../../../../../image-packs";
+import { replaceLastCustomEmojiShortcode } from "../utils/customEmoji";
 
 function isDivElement(target: EventTarget): target is HTMLDivElement {
     return target instanceof HTMLDivElement;
@@ -46,6 +49,7 @@ export function usePlainTextListeners(
     onSend?: () => void,
     isAutoReplaceEmojiEnabled?: boolean,
     roomUploadVM?: RoomUploadViewModel,
+    room?: Room,
 ): {
     ref: RefObject<HTMLDivElement | null>;
     autocompleteRef: RefObject<Autocomplete | null>;
@@ -59,6 +63,7 @@ export function usePlainTextListeners(
     handleAtRoomMention: (this: void, attributes: AllowedMentionAttributes) => void;
     handleCommand: (this: void, text: string) => void;
     handleEmoji: (this: void, emoji: string) => void;
+    handleCustomEmoji: (this: void, shortcode: string, imgSrc: string) => void;
     onSelect: (this: void, event: SyntheticEvent<HTMLDivElement>) => void;
     suggestion: MappedSuggestion | null;
 } {
@@ -98,16 +103,27 @@ export function usePlainTextListeners(
         handleMention,
         handleAtRoomMention,
         handleEmojiSuggestion,
+        handleCustomEmojiSuggestion,
         handleEmojiReplacement,
     } = useSuggestion(ref, setText, isAutoReplaceEmojiEnabled);
 
     const onInput = useCallback(
         (event: SyntheticEvent<HTMLDivElement, InputEvent | ClipboardEvent>) => {
             if (isDivElement(event.target)) {
-                setText(event.target.innerHTML);
+                if (
+                    room &&
+                    event.nativeEvent instanceof InputEvent &&
+                    event.nativeEvent.inputType === "insertText" &&
+                    event.nativeEvent.data === ":" &&
+                    replaceLastCustomEmojiShortcode(event.target, getImagePackEntries(room.client, room, "emoticon"))
+                ) {
+                    setText();
+                } else {
+                    setText(event.target.innerHTML);
+                }
             }
         },
-        [setText],
+        [room, setText],
     );
 
     const onPaste = useCallback(
@@ -182,5 +198,6 @@ export function usePlainTextListeners(
         handleMention,
         handleAtRoomMention,
         handleEmoji: handleEmojiSuggestion,
+        handleCustomEmoji: handleCustomEmojiSuggestion,
     };
 }

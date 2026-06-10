@@ -9,6 +9,7 @@ Please see LICENSE files in the repository root for full details.
 export type ComposerFunctions = {
     clear: () => void;
     insertText: (text: string) => void;
+    insertCustomEmoji: (shortcode: string, imgSrc: string) => void;
 };
 
 export type SubSelection = Pick<Selection, "anchorNode" | "anchorOffset" | "focusNode" | "focusOffset"> & {

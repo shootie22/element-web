@@ -11,6 +11,7 @@ import {
     findSuggestionInText,
     getMappedSuggestion,
     processCommand,
+    processCustomEmojiReplacement,
     processEmojiReplacement,
     processMention,
     processSelectionChange,
@@ -100,6 +101,47 @@ describe("processEmojiReplacement", () => {
 
         // check that the text has changed and includes a trailing space
         expect(mockSetText).toHaveBeenCalledWith(replacementText);
+    });
+});
+
+describe("processCustomEmojiReplacement", () => {
+    it("does not change parent hook state if suggestion is null", () => {
+        const mockSetSuggestion = jest.fn();
+        const mockSetText = jest.fn();
+
+        processCustomEmojiReplacement("party", "https://example.org/party.gif", null, mockSetSuggestion, mockSetText);
+
+        expect(mockSetText).not.toHaveBeenCalled();
+        expect(mockSetSuggestion).not.toHaveBeenCalled();
+    });
+
+    it("replaces the shortcode suggestion with an atomic custom emoji element", () => {
+        const textNode = document.createTextNode(":party:");
+        const mockEditor = document.createElement("div");
+        mockEditor.appendChild(textNode);
+        document.body.appendChild(mockEditor);
+
+        const mockSetSuggestionData = jest.fn();
+        const mockSetText = jest.fn();
+        processCustomEmojiReplacement(
+            "party",
+            "https://example.org/party.gif",
+            { node: textNode, startOffset: 0, endOffset: 7 } as unknown as Suggestion,
+            mockSetSuggestionData,
+            mockSetText,
+        );
+
+        const customEmoji = mockEditor.querySelector<HTMLElement>("span.mx_CustomEmoji");
+        const image = customEmoji?.querySelector<HTMLImageElement>("img.mx_CustomEmoji_image");
+        expect(customEmoji).toHaveAttribute("contenteditable", "false");
+        expect(customEmoji).toHaveAttribute("data-mx-emoticon");
+        expect(customEmoji).toHaveTextContent(":party:");
+        expect(image).toHaveAttribute("src", "https://example.org/party.gif");
+        expect(image).toHaveAttribute("alt", ":party:");
+        expect(mockSetText).toHaveBeenCalledWith();
+        expect(mockSetSuggestionData).toHaveBeenCalledWith(null);
+
+        mockEditor.remove();
     });
 });
 

@@ -20,6 +20,7 @@ import { Editor } from "./Editor";
 import { WysiwygAutocomplete } from "./WysiwygAutocomplete";
 import { useSettingValue } from "../../../../../hooks/useSettings";
 import { RoomUploadContext } from "../../../../../viewmodels/room/RoomUploadViewModel";
+import { useScopedRoomContext } from "../../../../../contexts/ScopedRoomContext.tsx";
 
 interface PlainTextComposerProps {
     disabled?: boolean;
@@ -48,6 +49,7 @@ export function PlainTextComposer({
 }: PlainTextComposerProps): JSX.Element {
     const isAutoReplaceEmojiEnabled = useSettingValue("MessageComposerInput.autoReplaceEmoji");
     const uploadContext = useContext(RoomUploadContext);
+    const { room } = useScopedRoomContext("room");
     const {
         ref: editorRef,
         autocompleteRef,
@@ -63,7 +65,15 @@ export function PlainTextComposer({
         handleMention,
         handleAtRoomMention,
         handleEmoji,
-    } = usePlainTextListeners(initialContent, onChange, onSend, isAutoReplaceEmojiEnabled, uploadContext || undefined);
+        handleCustomEmoji,
+    } = usePlainTextListeners(
+        initialContent,
+        onChange,
+        onSend,
+        isAutoReplaceEmojiEnabled,
+        uploadContext || undefined,
+        room,
+    );
     const composerFunctions = useComposerFunctions(editorRef, setContent);
     usePlainTextInitialization(initialContent, editorRef);
     useSetCursorPosition(disabled, editorRef);
@@ -88,6 +98,7 @@ export function PlainTextComposer({
                 handleCommand={handleCommand}
                 handleAtRoomMention={handleAtRoomMention}
                 handleEmoji={handleEmoji}
+                handleCustomEmoji={handleCustomEmoji}
             />
             <Editor
                 ref={editorRef}

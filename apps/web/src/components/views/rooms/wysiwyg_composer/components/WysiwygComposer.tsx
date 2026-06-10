@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
 import React, { memo, type RefObject, type ReactNode, useEffect, useMemo, useRef } from "react";
 import { type IEventRelation } from "matrix-js-sdk/src/matrix";
 import { EMOTICON_TO_EMOJI } from "@matrix-org/emojibase-bindings";
-import { useWysiwyg, type FormattingFunctions } from "@vector-im/matrix-wysiwyg";
+import { useWysiwyg } from "@vector-im/matrix-wysiwyg";
 import classNames from "classnames";
 
 import type Autocomplete from "../../Autocomplete";
@@ -26,6 +26,9 @@ import { isNotNull } from "../../../../../Typeguards";
 import { useSettingValue } from "../../../../../hooks/useSettings";
 import { useScopedRoomContext } from "../../../../../contexts/ScopedRoomContext.tsx";
 import { useContainsCommand } from "../hooks/useContainsCommand.ts";
+import { type ComposerFunctions } from "../types";
+import { customEmojiText, decorateCustomEmojiShortcodes } from "../utils/customEmoji";
+import { getImagePackEntries } from "../../../../../image-packs";
 
 interface WysiwygComposerProps {
     disabled?: boolean;
@@ -36,7 +39,7 @@ interface WysiwygComposerProps {
     className?: string;
     leftComponent?: ReactNode;
     rightComponent?: ReactNode;
-    children?: (ref: RefObject<HTMLDivElement | null>, wysiwyg: FormattingFunctions) => ReactNode;
+    children?: (ref: RefObject<HTMLDivElement | null>, wysiwyg: ComposerFunctions) => ReactNode;
     eventRelation?: IEventRelation;
 }
 
@@ -70,6 +73,16 @@ export const WysiwygComposer = memo(function WysiwygComposer({
         inputEventProcessor,
         emojiSuggestions,
     });
+    const composerFunctions = useMemo<ComposerFunctions>(
+        () => ({
+            clear: wysiwyg.clear,
+            insertText: wysiwyg.insertText,
+            insertCustomEmoji: (shortcode: string, _imgSrc: string) => {
+                wysiwyg.insertText(customEmojiText(shortcode));
+            },
+        }),
+        [wysiwyg],
+    );
 
     const { isFocused, onFocus } = useIsFocused();
 
@@ -77,6 +90,11 @@ export const WysiwygComposer = memo(function WysiwygComposer({
     const computedPlaceholder = (!content && placeholder) || undefined;
 
     useSetCursorPosition(!isReady, ref);
+
+    useEffect(() => {
+        if (!ref.current || !room) return;
+        decorateCustomEmojiShortcodes(ref.current, getImagePackEntries(room.client, room, "emoticon"));
+    }, [content, ref, room]);
 
     useEffect(() => {
         if (!disabled && isNotNull(messageContent)) {
@@ -128,6 +146,7 @@ export const WysiwygComposer = memo(function WysiwygComposer({
                 handleAtRoomMention={wysiwyg.mentionAtRoom}
                 handleCommand={wysiwyg.command}
                 handleEmoji={wysiwyg.emoji}
+                handleCustomEmoji={composerFunctions.insertCustomEmoji}
             />
             <FormattingButtons composer={wysiwyg} actionStates={actionStates} disabled={disableFormatting} />
             <Editor
@@ -137,7 +156,7 @@ export const WysiwygComposer = memo(function WysiwygComposer({
                 rightComponent={rightComponent}
                 placeholder={computedPlaceholder}
             />
-            {children?.(ref, wysiwyg)}
+            {children?.(ref, composerFunctions)}
         </div>
     );
 });

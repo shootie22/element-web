@@ -45,7 +45,14 @@ export function useWysiwygEditActionHandler(
                     if (payload.timelineRenderingType !== roomContext.timelineRenderingType) break;
                     if (payload.composerType !== ComposerType.Edit) break;
 
-                    if (payload.text) {
+                    if (payload.customEmoji) {
+                        setSelection(composerContext.selection).then(() =>
+                            composerFunctions.insertCustomEmoji(
+                                payload.customEmoji.shortcode,
+                                payload.customEmoji.imgSrc,
+                            ),
+                        );
+                    } else if (payload.text) {
                         setSelection(composerContext.selection).then(() => composerFunctions.insertText(payload.text));
                     }
                     break;

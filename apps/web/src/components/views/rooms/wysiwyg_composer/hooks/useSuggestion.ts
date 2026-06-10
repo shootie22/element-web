@@ -11,6 +11,7 @@ import { type AllowedMentionAttributes, type MappedSuggestion } from "@vector-im
 import { type SyntheticEvent, useState } from "react";
 
 import { isNotNull } from "../../../../../Typeguards";
+import { createCustomEmojiElement } from "../utils/customEmoji";
 
 /**
  * Information about the current state of the `useSuggestion` hook.
@@ -52,6 +53,7 @@ export function useSuggestion(
     handleAtRoomMention: (attributes: AllowedMentionAttributes) => void;
     handleCommand: (text: string) => void;
     handleEmojiSuggestion: (text: string) => void;
+    handleCustomEmojiSuggestion: (shortcode: string, imgSrc: string) => void;
     handleEmojiReplacement: () => void;
     onSelect: (event: SyntheticEvent<HTMLDivElement>) => void;
     suggestion: MappedSuggestion | null;
@@ -76,12 +78,16 @@ export function useSuggestion(
     const handleEmojiSuggestion = (emoji: string): void =>
         processTextReplacement(emoji, suggestionData, setSuggestionData, setText);
 
+    const handleCustomEmojiSuggestion = (shortcode: string, imgSrc: string): void =>
+        processCustomEmojiReplacement(shortcode, imgSrc, suggestionData, setSuggestionData, setText);
+
     return {
         suggestion: suggestionData?.mappedSuggestion ?? null,
         handleCommand,
         handleMention,
         handleAtRoomMention,
         handleEmojiSuggestion,
+        handleCustomEmojiSuggestion,
         handleEmojiReplacement,
         onSelect,
     };
@@ -256,6 +262,42 @@ export function processEmojiReplacement(
     }
 
     processTextReplacement(suggestionData.mappedSuggestion.text, suggestionData, setSuggestionData, setText);
+}
+
+export function processCustomEmojiReplacement(
+    shortcode: string,
+    imgSrc: string,
+    suggestionData: SuggestionState,
+    setSuggestionData: React.Dispatch<React.SetStateAction<SuggestionState>>,
+    setText: (text?: string) => void,
+): void {
+    if (suggestionData === null) {
+        return;
+    }
+
+    const { node } = suggestionData;
+    const parentNode = node.parentNode;
+    if (!isNotNull(parentNode)) {
+        return;
+    }
+
+    const range = document.createRange();
+    range.setStart(node, suggestionData.startOffset);
+    range.setEnd(node, suggestionData.endOffset);
+
+    const customEmojiNode = createCustomEmojiElement(node.ownerDocument ?? document, { shortcode, imgSrc });
+    range.deleteContents();
+    range.insertNode(customEmojiNode);
+
+    const selection = document.getSelection();
+    const caretRange = document.createRange();
+    caretRange.setStartAfter(customEmojiNode);
+    caretRange.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(caretRange);
+
+    setText();
+    setSuggestionData(null);
 }
 
 /**
