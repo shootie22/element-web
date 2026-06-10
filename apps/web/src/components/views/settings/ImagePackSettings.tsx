@@ -22,7 +22,7 @@ import { SettingsSubsection, SettingsSubsectionText } from "./shared/SettingsSub
 import { chromeFileInputFix } from "../../../utils/BrowserWorkarounds";
 import {
     getAccountImagePack,
-    getFavoriteImagePackRoomIds,
+    getFavoriteImagePackRoomReferences,
     IMAGE_PACK_SHORTCODE_MAX_BYTES,
     isValidImagePackShortcode,
     packToContent,
@@ -36,6 +36,7 @@ import {
     validateImagePackEventSize,
     type ImagePack,
     type ImagePackImage,
+    type ImagePackRoomReference,
     type ImagePackUsage,
     parseImagePackContent,
 } from "../../../image-packs";
@@ -189,8 +190,25 @@ function packScopeHeading(mode: Mode, room?: Room): string {
     return room?.isSpaceRoom() ? _t("image_packs|space_pack_heading") : _t("image_packs|room_pack_heading");
 }
 
-function favoriteRoomName(client: MatrixClient | null | undefined, roomId: string): string {
-    return client?.getRoom(roomId)?.name || roomId;
+function favoriteRoomName(client: MatrixClient | null | undefined, ref: ImagePackRoomReference): string {
+    return client?.getRoom(ref.roomId)?.name || ref.roomId;
+}
+
+function favoriteRoomReferenceKey({ roomId, stateKey, legacyAllPacks }: ImagePackRoomReference): string {
+    return `${roomId}:${legacyAllPacks ? "*" : stateKey}`;
+}
+
+function favoriteRoomPackLabel(ref: ImagePackRoomReference): string {
+    if (ref.legacyAllPacks) return _t("image_packs|legacy_all_packs");
+    return ref.stateKey || _t("image_packs|default_pack_state_key");
+}
+
+function favoriteRoomReferenceMatches(
+    ref: ImagePackRoomReference,
+    roomId: string | undefined,
+    stateKey: string,
+): boolean {
+    return !!roomId && ref.roomId === roomId && (ref.legacyAllPacks || ref.stateKey === stateKey);
 }
 
 interface UsageTogglesProps {
@@ -225,7 +243,7 @@ interface ImageTileProps {
     index: number;
     disabled?: boolean;
     errors?: string[];
-    onChange: (index: number, image: ImagePackImage) => void;
+    onChange: (index: number, image: ImagePackImage, save?: boolean) => void;
     onRemove: (index: number) => void;
     onReplace: (index: number, file: File) => Promise<void>;
 }
@@ -260,6 +278,9 @@ function ImageTile({ image, index, disabled, errors, onChange, onRemove, onRepla
                     onChange={(ev: React.ChangeEvent<HTMLInputElement>) =>
                         onChange(index, { ...image, shortcode: ev.target.value })
                     }
+                    onBlur={(ev: React.FocusEvent<HTMLInputElement>) =>
+                        onChange(index, { ...image, shortcode: ev.target.value }, true)
+                    }
                 />
                 <Field
                     label={_t("common|description")}
@@ -268,11 +289,14 @@ function ImageTile({ image, index, disabled, errors, onChange, onRemove, onRepla
                     onChange={(ev: React.ChangeEvent<HTMLInputElement>) =>
                         onChange(index, { ...image, body: ev.target.value })
                     }
+                    onBlur={(ev: React.FocusEvent<HTMLInputElement>) =>
+                        onChange(index, { ...image, body: ev.target.value }, true)
+                    }
                 />
                 <UsageToggles
                     usage={usage}
                     disabled={disabled}
-                    onChange={(nextUsage) => onChange(index, { ...image, usage: nextUsage })}
+                    onChange={(nextUsage) => onChange(index, { ...image, usage: nextUsage }, true)}
                 />
                 <details className="mx_ImagePackSettings_advanced">
                     <summary>{_t("common|advanced")}</summary>
@@ -282,6 +306,9 @@ function ImageTile({ image, index, disabled, errors, onChange, onRemove, onRepla
                         disabled={disabled}
                         onChange={(ev: React.ChangeEvent<HTMLInputElement>) =>
                             onChange(index, { ...image, url: ev.target.value })
+                        }
+                        onBlur={(ev: React.FocusEvent<HTMLInputElement>) =>
+                            onChange(index, { ...image, url: ev.target.value }, true)
                         }
                     />
                 </details>
@@ -328,16 +355,22 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
         mode === "room" ? room?.name || _t("common|stickerpack") : _t("image_packs|my_pack_default_name");
     const [pack, setPack] = useState(() => editableFromPack(initialPack, fallbackPackName));
     const [stateKey, setStateKey] = useState(initialPack?.stateKey || "");
-    const [favoriteRooms, setFavoriteRooms] = useState(() => (client ? getFavoriteImagePackRoomIds(client) : []));
-    const [favorite, setFavorite] = useState(() => !!room && favoriteRooms.includes(room.roomId));
+    const [favoriteRooms, setFavoriteRooms] = useState(() =>
+        client ? getFavoriteImagePackRoomReferences(client) : [],
+    );
+    const [favorite, setFavorite] = useState(() =>
+        favoriteRooms.some((ref) => favoriteRoomReferenceMatches(ref, room?.roomId, initialPack?.stateKey || "")),
+    );
     const [newShortcode, setNewShortcode] = useState("");
     const [newUrl, setNewUrl] = useState("");
     const [newBody, setNewBody] = useState("");
     const [manualRoomId, setManualRoomId] = useState("");
+    const [manualStateKey, setManualStateKey] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [uploadSummary, setUploadSummary] = useState<string | null>(null);
     const [validation, setValidation] = useState<ValidationResult>({ packErrors: [], imageErrors: new Map() });
     const [saved, setSaved] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [avatarUploading, setAvatarUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -355,43 +388,114 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
         setSaved(false);
     };
 
-    const updateImage = (index: number, image: ImagePackImage): void => {
-        setPackAndClearValidation((current) => ({
-            ...current,
-            images: current.images.map((value, i) => (i === index ? image : value)),
-        }));
+    const saveChanges = async ({
+        pack: nextPack = pack,
+        favoriteRooms: nextFavoriteRooms = favoriteRooms,
+        favorite: nextFavorite = favorite,
+        stateKey: nextStateKey = stateKey,
+    }: {
+        pack?: EditablePack;
+        favoriteRooms?: ImagePackRoomReference[];
+        favorite?: boolean;
+        stateKey?: string;
+    } = {}): Promise<void> => {
+        if (!client) return;
+        setSaving(true);
+        setSaved(false);
+        setError(null);
+
+        const nextValidation = validatePack(nextPack);
+        setValidation(nextValidation);
+        const errorCount = validationErrorCount(nextValidation);
+        if (errorCount > 0) {
+            setError(_t("image_packs|validation_summary", { count: errorCount }));
+            setSaving(false);
+            return;
+        }
+
+        const content = packContentFromEditable(nextPack);
+        if (!validateImagePackEventSize(content)) {
+            setError(_t("image_packs|too_large"));
+            setSaving(false);
+            return;
+        }
+
+        try {
+            if (mode === "room" && room) {
+                const existingStateKeys = room.currentState
+                    .getStateEvents(ROOM_IMAGE_PACK_EVENT)
+                    .map((event) => event.getStateKey() ?? "");
+                const savedStateKey = nextStateKey || slugifyImagePackStateKey(nextPack.displayName, existingStateKeys);
+                await saveRoomImagePack(client, room.roomId, savedStateKey, content);
+                setStateKey(savedStateKey);
+                const currentRef = { roomId: room.roomId, stateKey: savedStateKey };
+                const refsWithoutCurrentPack = nextFavoriteRooms.filter(
+                    (ref) => !favoriteRoomReferenceMatches(ref, room.roomId, savedStateKey),
+                );
+                const savedFavorites = nextFavorite ? [...refsWithoutCurrentPack, currentRef] : refsWithoutCurrentPack;
+                await saveFavoriteImagePackRooms(client, savedFavorites);
+                setFavoriteRooms(savedFavorites);
+            } else {
+                await saveAccountImagePack(client, content);
+                await saveFavoriteImagePackRooms(client, nextFavoriteRooms);
+            }
+            setSaved(true);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : _t("common|error"));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const updateImage = (index: number, image: ImagePackImage, save = false): void => {
+        const nextPack = {
+            ...pack,
+            images: pack.images.map((value, i) => (i === index ? image : value)),
+        };
+        setPackAndClearValidation(nextPack);
+        if (save) void saveChanges({ pack: nextPack });
     };
 
     const removeImage = (index: number): void => {
-        setPackAndClearValidation((current) => ({
-            ...current,
-            images: current.images.filter((_, i) => i !== index),
-        }));
+        const nextPack = {
+            ...pack,
+            images: pack.images.filter((_, i) => i !== index),
+        };
+        setPackAndClearValidation(nextPack);
+        void saveChanges({ pack: nextPack });
     };
 
-    const addImages = (images: ImagePackImage[]): { added: number; skipped: number } => {
+    const setPackField = (nextPack: EditablePack, save = false): void => {
+        setPackAndClearValidation(nextPack);
+        if (save) void saveChanges({ pack: nextPack });
+    };
+
+    const addImages = (images: ImagePackImage[], save = false): { added: number; skipped: number } => {
         let added = 0;
         let skipped = 0;
-        setPackAndClearValidation((current) => {
-            const shortcodes = new Set(current.images.map((image) => image.shortcode.trim()).filter(Boolean));
-            const urls = new Set(current.images.map((image) => image.url.trim()).filter(Boolean));
-            const nextImages = [...current.images];
+        const shortcodes = new Set(pack.images.map((image) => image.shortcode.trim()).filter(Boolean));
+        const urls = new Set(pack.images.map((image) => image.url.trim()).filter(Boolean));
+        const nextImages = [...pack.images];
 
-            for (const image of images) {
-                const shortcode = image.shortcode.trim();
-                const url = image.url.trim();
-                if (shortcodes.has(shortcode) || urls.has(url)) {
-                    skipped++;
-                    continue;
-                }
-                shortcodes.add(shortcode);
-                urls.add(url);
-                nextImages.push(image);
-                added++;
+        for (const image of images) {
+            const shortcode = image.shortcode.trim();
+            const url = image.url.trim();
+            if (shortcodes.has(shortcode) || urls.has(url)) {
+                skipped++;
+                continue;
             }
+            shortcodes.add(shortcode);
+            urls.add(url);
+            nextImages.push(image);
+            added++;
+        }
 
-            return { ...current, images: nextImages };
-        });
+        const nextPack = {
+            ...pack,
+            images: nextImages,
+        };
+        setPackAndClearValidation(nextPack);
+        if (save) void saveChanges({ pack: nextPack });
         return { added, skipped };
     };
 
@@ -412,7 +516,7 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
                 const shortcode = isValidImagePackShortcode(image.shortcode) ? image.shortcode : "image";
                 uploadedImages.push({ ...image, shortcode, usage: ["emoticon", "sticker"] });
             }
-            const result = addImages(uploadedImages);
+            const result = addImages(uploadedImages, true);
             skipped += result.skipped;
             setUploadSummary(_t("image_packs|upload_summary", { added: result.added, skipped }));
         } catch (e) {
@@ -440,12 +544,18 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
         setError(null);
         try {
             const image = await uploadImagePackFile(client, file);
-            updateImage(index, {
-                ...image,
-                shortcode: isValidImagePackShortcode(image.shortcode) ? image.shortcode : pack.images[index].shortcode,
-                usage: pack.images[index].usage ?? ["emoticon", "sticker"],
-                body: image.body || pack.images[index].body,
-            });
+            updateImage(
+                index,
+                {
+                    ...image,
+                    shortcode: isValidImagePackShortcode(image.shortcode)
+                        ? image.shortcode
+                        : pack.images[index].shortcode,
+                    usage: pack.images[index].usage ?? ["emoticon", "sticker"],
+                    body: image.body || pack.images[index].body,
+                },
+                true,
+            );
         } catch (e) {
             setError(e instanceof Error ? e.message : _t("common|error"));
         } finally {
@@ -461,7 +571,7 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
         setError(null);
         try {
             const { content_uri: avatarUrl } = await client.uploadContent(file);
-            setPackAndClearValidation((current) => ({ ...current, avatarUrl }));
+            setPackField({ ...pack, avatarUrl }, true);
         } catch (e) {
             setError(e instanceof Error ? e.message : _t("common|error"));
         } finally {
@@ -480,9 +590,10 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
             setError(_t("image_packs|invalid_mxc"));
             return;
         }
-        const result = addImages([
-            { shortcode, url, body: newBody.trim() || shortcode, usage: ["emoticon", "sticker"] },
-        ]);
+        const result = addImages(
+            [{ shortcode, url, body: newBody.trim() || shortcode, usage: ["emoticon", "sticker"] }],
+            true,
+        );
         setNewShortcode("");
         setNewUrl("");
         setNewBody("");
@@ -493,52 +604,20 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
     const addFavoriteRoom = (): void => {
         const roomId = manualRoomId.trim();
         if (!roomId) return;
-        setFavoriteRooms((current) => Array.from(new Set([...current, roomId])));
+        const ref = { roomId, stateKey: manualStateKey.trim() };
+        const refs = favoriteRooms.filter(
+            (currentRef) => favoriteRoomReferenceKey(currentRef) !== favoriteRoomReferenceKey(ref),
+        );
+        const nextFavoriteRooms = [...refs, ref];
+        setFavoriteRooms(nextFavoriteRooms);
         setManualRoomId("");
+        setManualStateKey("");
         setSaved(false);
+        void saveChanges({ favoriteRooms: nextFavoriteRooms });
     };
 
     const onSave = async (): Promise<void> => {
-        if (!client) return;
-        setSaved(false);
-        setError(null);
-
-        const nextValidation = validatePack(pack);
-        setValidation(nextValidation);
-        const errorCount = validationErrorCount(nextValidation);
-        if (errorCount > 0) {
-            setError(_t("image_packs|validation_summary", { count: errorCount }));
-            return;
-        }
-
-        const content = packContentFromEditable(pack);
-        if (!validateImagePackEventSize(content)) {
-            setError(_t("image_packs|too_large"));
-            return;
-        }
-
-        try {
-            if (mode === "room" && room) {
-                const existingStateKeys = room.currentState
-                    .getStateEvents(ROOM_IMAGE_PACK_EVENT)
-                    .map((event) => event.getStateKey() ?? "");
-                const nextStateKey = stateKey || slugifyImagePackStateKey(pack.displayName, existingStateKeys);
-                await saveRoomImagePack(client, room.roomId, nextStateKey, content);
-                setStateKey(nextStateKey);
-                const nextFavorites = favorite
-                    ? Array.from(new Set([...favoriteRooms, room.roomId]))
-                    : favoriteRooms.filter((roomId) => roomId !== room.roomId);
-                await saveFavoriteImagePackRooms(client, nextFavorites);
-                setFavoriteRooms(nextFavorites);
-            } else {
-                await saveAccountImagePack(client, content);
-                await saveFavoriteImagePackRooms(client, favoriteRooms);
-            }
-            setSaved(true);
-            setUploadSummary(null);
-        } catch (e) {
-            setError(e instanceof Error ? e.message : _t("common|error"));
-        }
+        await saveChanges();
     };
 
     const onDelete = async (): Promise<void> => {
@@ -582,9 +661,7 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
                                 {pack.avatarUrl && (
                                     <AccessibleButton
                                         kind="danger_outline"
-                                        onClick={() =>
-                                            setPackAndClearValidation((current) => ({ ...current, avatarUrl: "" }))
-                                        }
+                                        onClick={() => setPackField({ ...pack, avatarUrl: "" }, true)}
                                     >
                                         <DeleteIcon width="16px" height="16px" />
                                         {_t("action|remove")}
@@ -610,6 +687,9 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
                             onChange={(ev: React.ChangeEvent<HTMLInputElement>) =>
                                 setPackAndClearValidation({ ...pack, displayName: ev.target.value })
                             }
+                            onBlur={(ev: React.FocusEvent<HTMLInputElement>) =>
+                                setPackField({ ...pack, displayName: ev.target.value }, true)
+                            }
                         />
                         <Field
                             label={_t("image_packs|attribution")}
@@ -618,12 +698,15 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
                             onChange={(ev: React.ChangeEvent<HTMLInputElement>) =>
                                 setPackAndClearValidation({ ...pack, attribution: ev.target.value })
                             }
+                            onBlur={(ev: React.FocusEvent<HTMLInputElement>) =>
+                                setPackField({ ...pack, attribution: ev.target.value }, true)
+                            }
                         />
                         <SettingsSubsectionText>{_t("image_packs|attribution_help")}</SettingsSubsectionText>
                         <UsageToggles
                             usage={pack.usage}
                             disabled={!canEditRoomPack}
-                            onChange={(usage) => setPackAndClearValidation({ ...pack, usage })}
+                            onChange={(usage) => setPackField({ ...pack, usage }, true)}
                         />
                         <details className="mx_ImagePackSettings_advanced">
                             <summary>{_t("common|advanced")}</summary>
@@ -633,6 +716,9 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
                                 disabled={!canEditRoomPack}
                                 onChange={(ev: React.ChangeEvent<HTMLInputElement>) =>
                                     setPackAndClearValidation({ ...pack, avatarUrl: ev.target.value })
+                                }
+                                onBlur={(ev: React.FocusEvent<HTMLInputElement>) =>
+                                    setPackField({ ...pack, avatarUrl: ev.target.value }, true)
                                 }
                             />
                         </details>
@@ -652,19 +738,30 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
                         <SettingsSubsectionText>{_t("image_packs|global_room_packs_empty")}</SettingsSubsectionText>
                     ) : (
                         <div className="mx_ImagePackSettings_globalRooms">
-                            {favoriteRooms.map((roomId) => (
-                                <div className="mx_ImagePackSettings_globalRoom" key={roomId}>
+                            {favoriteRooms.map((ref) => (
+                                <div className="mx_ImagePackSettings_globalRoom" key={favoriteRoomReferenceKey(ref)}>
                                     <div>
                                         <div className="mx_ImagePackSettings_globalRoomName">
-                                            {favoriteRoomName(client, roomId)}
+                                            {favoriteRoomName(client, ref)}
                                         </div>
-                                        <div className="mx_ImagePackSettings_globalRoomId">{roomId}</div>
+                                        <div className="mx_ImagePackSettings_globalRoomId">{ref.roomId}</div>
+                                        <div className="mx_ImagePackSettings_globalRoomId">
+                                            {_t("image_packs|pack_state_key", {
+                                                stateKey: favoriteRoomPackLabel(ref),
+                                            })}
+                                        </div>
                                     </div>
                                     <AccessibleButton
                                         kind="danger_outline"
                                         onClick={() => {
-                                            setFavoriteRooms((current) => current.filter((id) => id !== roomId));
+                                            const nextFavoriteRooms = favoriteRooms.filter(
+                                                (currentRef) =>
+                                                    favoriteRoomReferenceKey(currentRef) !==
+                                                    favoriteRoomReferenceKey(ref),
+                                            );
+                                            setFavoriteRooms(nextFavoriteRooms);
                                             setSaved(false);
+                                            void saveChanges({ favoriteRooms: nextFavoriteRooms });
                                         }}
                                     >
                                         {_t("action|remove")}
@@ -681,6 +778,13 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
                                 value={manualRoomId}
                                 onChange={(ev: React.ChangeEvent<HTMLInputElement>) => setManualRoomId(ev.target.value)}
                             />
+                            <Field
+                                label={_t("image_packs|state_key")}
+                                value={manualStateKey}
+                                onChange={(ev: React.ChangeEvent<HTMLInputElement>) =>
+                                    setManualStateKey(ev.target.value)
+                                }
+                            />
                             <AccessibleButton kind="primary_outline" onClick={addFavoriteRoom}>
                                 {_t("action|add")}
                             </AccessibleButton>
@@ -693,8 +797,10 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
                     <StyledCheckbox
                         checked={favorite}
                         onChange={(ev) => {
-                            setFavorite(ev.target.checked);
+                            const nextFavorite = ev.target.checked;
+                            setFavorite(nextFavorite);
                             setSaved(false);
+                            void saveChanges({ favorite: nextFavorite });
                         }}
                     >
                         {_t("image_packs|favorite_this_room")}
@@ -782,13 +888,14 @@ export function ImagePackSettings({ mode, room }: Props): JSX.Element {
             </SettingsSubsection>
             <SettingsSubsection>
                 {error && <div className="mx_SettingsTab_warningText">{error}</div>}
+                {saving && <SettingsSubsectionText>{_t("common|saving")}</SettingsSubsectionText>}
                 {saved && <SettingsSubsectionText>{_t("common|saved")}</SettingsSubsectionText>}
                 <div className="mx_ImagePackSettings_saveBar">
-                    <AccessibleButton kind="primary" onClick={onSave} disabled={!client}>
+                    <AccessibleButton kind="primary" onClick={onSave} disabled={!client || saving}>
                         {_t("action|save")}
                     </AccessibleButton>
                     {canEditRoomPack && (
-                        <AccessibleButton kind="danger_outline" onClick={onDelete} disabled={!client}>
+                        <AccessibleButton kind="danger_outline" onClick={onDelete} disabled={!client || saving}>
                             {_t("action|delete")}
                         </AccessibleButton>
                     )}

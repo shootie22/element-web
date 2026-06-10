@@ -57,8 +57,14 @@ export interface ImagePack {
     eventType?: string;
 }
 
+export interface ImagePackRoomReference {
+    roomId: string;
+    stateKey: string;
+    legacyAllPacks?: boolean;
+}
+
 export interface ImagePackRoomsContent {
-    rooms?: Record<string, unknown> | string[];
+    rooms?: Record<string, Record<string, unknown>> | string[];
 }
 
 export type ImagePackContent = {
@@ -181,7 +187,7 @@ function getStateEvents(room: Room, eventType: string): MatrixEvent[] {
     return Array.isArray(events) ? events : [events];
 }
 
-function parseRoomPacks(room: Room, source: ImagePack["source"]): ImagePack[] {
+function parseRoomPacks(room: Room, source: ImagePack["source"], stateKeys?: ReadonlySet<string>): ImagePack[] {
     const unstableByStateKey = new Map<string, MatrixEvent>();
     for (const event of getStateEvents(room, ROOM_IMAGE_PACK_EVENT_UNSTABLE)) {
         unstableByStateKey.set(event.getStateKey() ?? "", event);
@@ -192,6 +198,7 @@ function parseRoomPacks(room: Room, source: ImagePack["source"]): ImagePack[] {
 
     for (const event of getStateEvents(room, ROOM_IMAGE_PACK_EVENT)) {
         const stateKey = event.getStateKey() ?? "";
+        if (stateKeys && !stateKeys.has(stateKey)) continue;
         seenStateKeys.add(stateKey);
         const pack = parseImagePackContent(event.getContent(), `${room.roomId}:${stateKey}`, source, {
             roomId: room.roomId,
@@ -203,6 +210,7 @@ function parseRoomPacks(room: Room, source: ImagePack["source"]): ImagePack[] {
 
     for (const [stateKey, event] of unstableByStateKey) {
         if (seenStateKeys.has(stateKey)) continue;
+        if (stateKeys && !stateKeys.has(stateKey)) continue;
         const pack = parseImagePackContent(event.getContent(), `${room.roomId}:${stateKey}`, source, {
             roomId: room.roomId,
             stateKey,
@@ -236,21 +244,53 @@ export function getAccountImagePack(client: MatrixClient): ImagePack | null {
     });
 }
 
-export function getFavoriteImagePackRoomIds(client: MatrixClient): string[] {
+function imagePackRoomReferenceKey({ roomId, stateKey, legacyAllPacks }: ImagePackRoomReference): string {
+    return `${roomId}\u0000${legacyAllPacks ? "*" : stateKey}`;
+}
+
+function dedupeImagePackRoomReferences(refs: ImagePackRoomReference[]): ImagePackRoomReference[] {
+    const seen = new Set<string>();
+    return refs.filter((ref) => {
+        const key = imagePackRoomReferenceKey(ref);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+export function getFavoriteImagePackRoomReferences(client: MatrixClient): ImagePackRoomReference[] {
     const stable = accountDataContent(client, IMAGE_PACK_ROOMS_EVENT);
     const unstable = accountDataContent(client, IMAGE_PACK_ROOMS_EVENT_UNSTABLE);
     const content = isObject(stable) ? stable : isObject(unstable) ? unstable : {};
     const rooms = (content as ImagePackRoomsContent).rooms;
 
     if (Array.isArray(rooms)) {
-        return rooms.filter((roomId): roomId is string => typeof roomId === "string");
+        return dedupeImagePackRoomReferences(
+            rooms
+                .filter((roomId): roomId is string => typeof roomId === "string")
+                .map((roomId) => ({ roomId, stateKey: "", legacyAllPacks: true })),
+        );
     }
 
     if (isObject(rooms)) {
-        return Object.keys(rooms);
+        const refs: ImagePackRoomReference[] = [];
+        for (const [roomId, stateKeys] of Object.entries(rooms)) {
+            if (!isObject(stateKeys)) continue;
+            const stateKeyNames = Object.keys(stateKeys);
+            if (stateKeyNames.length === 0) {
+                refs.push({ roomId, stateKey: "", legacyAllPacks: true });
+                continue;
+            }
+            refs.push(...stateKeyNames.map((stateKey) => ({ roomId, stateKey })));
+        }
+        return dedupeImagePackRoomReferences(refs);
     }
 
     return [];
+}
+
+export function getFavoriteImagePackRoomIds(client: MatrixClient): string[] {
+    return Array.from(new Set(getFavoriteImagePackRoomReferences(client).map(({ roomId }) => roomId)));
 }
 
 function getCanonicalParentSpaces(client: MatrixClient, room: Room): Room[] {
@@ -271,10 +311,10 @@ export function getImagePacksForRoom(client: MatrixClient, room?: Room | null): 
         }
     }
 
-    for (const roomId of getFavoriteImagePackRoomIds(client)) {
-        const packRoom = client.getRoom(roomId);
+    for (const ref of getFavoriteImagePackRoomReferences(client)) {
+        const packRoom = client.getRoom(ref.roomId);
         if (!packRoom || packRoom.roomId === room?.roomId) continue;
-        packs.push(...parseRoomPacks(packRoom, "global"));
+        packs.push(...parseRoomPacks(packRoom, "global", ref.legacyAllPacks ? undefined : new Set([ref.stateKey])));
     }
 
     const accountPack = getAccountImagePack(client);
@@ -305,7 +345,7 @@ export function getImagePackEntries(
                 ...image,
                 pack,
                 label,
-                httpUrl: mediaFromMxc(image.url).srcHttp,
+                httpUrl: mediaFromMxc(image.url).srcHttp ?? undefined,
             }));
     });
 }
@@ -372,8 +412,21 @@ export async function saveRoomImagePack(
     await client.sendStateEvent(roomId, ROOM_IMAGE_PACK_EVENT_UNSTABLE, content, stateKey);
 }
 
-export async function saveFavoriteImagePackRooms(client: MatrixClient, roomIds: string[]): Promise<void> {
-    const rooms = Object.fromEntries(roomIds.map((roomId) => [roomId, {}]));
+export async function saveFavoriteImagePackRooms(client: MatrixClient, refs: ImagePackRoomReference[]): Promise<void> {
+    const rooms: Record<string, Record<string, unknown>> = {};
+
+    for (const ref of dedupeImagePackRoomReferences(refs)) {
+        const stateKeys =
+            ref.legacyAllPacks && client.getRoom(ref.roomId)
+                ? parseRoomPacks(client.getRoom(ref.roomId)!, "global").map((pack) => pack.stateKey ?? "")
+                : [ref.stateKey];
+
+        for (const stateKey of stateKeys) {
+            rooms[ref.roomId] = rooms[ref.roomId] ?? {};
+            rooms[ref.roomId][stateKey] = {};
+        }
+    }
+
     const content = { rooms };
     await client.setAccountData(IMAGE_PACK_ROOMS_EVENT, content);
     await client.setAccountData(IMAGE_PACK_ROOMS_EVENT_UNSTABLE, content);

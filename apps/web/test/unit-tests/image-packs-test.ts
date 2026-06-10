@@ -8,6 +8,7 @@ Please see LICENSE files in the repository root for full details.
 import {
     ACCOUNT_IMAGE_PACK_EVENT,
     ACCOUNT_IMAGE_PACK_EVENT_UNSTABLE,
+    getFavoriteImagePackRoomReferences,
     IMAGE_PACK_ROOMS_EVENT,
     IMAGE_PACK_ROOMS_EVENT_UNSTABLE,
     isImagePackEventType,
@@ -150,10 +151,54 @@ describe("image-packs", () => {
             setAccountData: jest.fn().mockResolvedValue(undefined),
         };
 
-        await saveFavoriteImagePackRooms(client as never, ["!pack:server"]);
+        await saveFavoriteImagePackRooms(client as never, [{ roomId: "!pack:server", stateKey: "cats" }]);
 
-        const content = { rooms: { "!pack:server": {} } };
+        const content = { rooms: { "!pack:server": { cats: {} } } };
         expect(client.setAccountData).toHaveBeenCalledWith(IMAGE_PACK_ROOMS_EVENT, content);
         expect(client.setAccountData).toHaveBeenCalledWith(IMAGE_PACK_ROOMS_EVENT_UNSTABLE, content);
+    });
+
+    it("reads specific favorite pack room state keys", () => {
+        const client = {
+            getAccountData: jest.fn((type: string) =>
+                type === IMAGE_PACK_ROOMS_EVENT
+                    ? {
+                          getContent: () => ({
+                              rooms: {
+                                  "!pack:server": {
+                                      cats: {},
+                                      dogs: {},
+                                  },
+                              },
+                          }),
+                      }
+                    : undefined,
+            ),
+        };
+
+        expect(getFavoriteImagePackRoomReferences(client as never)).toEqual([
+            { roomId: "!pack:server", stateKey: "cats" },
+            { roomId: "!pack:server", stateKey: "dogs" },
+        ]);
+    });
+
+    it("keeps legacy room-only favorite pack data readable", () => {
+        const client = {
+            getAccountData: jest.fn((type: string) =>
+                type === IMAGE_PACK_ROOMS_EVENT
+                    ? {
+                          getContent: () => ({
+                              rooms: {
+                                  "!pack:server": {},
+                              },
+                          }),
+                      }
+                    : undefined,
+            ),
+        };
+
+        expect(getFavoriteImagePackRoomReferences(client as never)).toEqual([
+            { roomId: "!pack:server", stateKey: "", legacyAllPacks: true },
+        ]);
     });
 });
