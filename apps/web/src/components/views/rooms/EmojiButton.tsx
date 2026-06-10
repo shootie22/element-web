@@ -7,7 +7,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import classNames from "classnames";
-import React, { type JSX, useContext, useState } from "react";
+import React, { type JSX, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ReactionIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import { _t } from "../../../languageHandler";
@@ -54,16 +54,31 @@ export function EmojiButton({ addEmoji, menuPosition, className }: IEmojiButtonP
     const roomContext = useContext(RoomContext);
     const [menuDisplayed, button, openMenu, closeMenu] = useContextMenu();
     const [pickerWidth, setPickerWidth] = useState(readEmojiPickerWidth);
-    useImagePackRoomUpdate(roomContext.room);
+    const imagePackVersion = useImagePackRoomUpdate(roomContext.room);
+    const resizeAnimationFrame = useRef<number | null>(null);
 
-    const customEmoji = roomContext.room
-        ? getImagePackEntries(MatrixClientPeg.safeGet(), roomContext.room, "emoticon").map((e) => ({
-              shortcode: e.shortcode,
-              label: e.body || e.shortcode,
-              imgSrc: e.httpUrl,
-              recentKey: recent.customEmojiKey(e.shortcode, e.url),
-          }))
-        : undefined;
+    const customEmoji = useMemo(
+        () => {
+            void imagePackVersion;
+            return roomContext.room
+                ? getImagePackEntries(MatrixClientPeg.safeGet(), roomContext.room, "emoticon").map((e) => ({
+                      shortcode: e.shortcode,
+                      label: e.body || e.shortcode,
+                      imgSrc: e.httpUrl,
+                      recentKey: recent.customEmojiKey(e.shortcode, e.url),
+                  }))
+                : undefined;
+        },
+        [imagePackVersion, roomContext.room],
+    );
+
+    useEffect(() => {
+        return () => {
+            if (resizeAnimationFrame.current !== null) {
+                window.cancelAnimationFrame(resizeAnimationFrame.current);
+            }
+        };
+    }, []);
 
     let contextMenu: React.ReactElement | null = null;
     if (menuDisplayed && button.current) {
@@ -82,9 +97,19 @@ export function EmojiButton({ addEmoji, menuPosition, className }: IEmojiButtonP
 
             const onPointerMove = (moveEv: PointerEvent): void => {
                 nextWidth = clampEmojiPickerWidth(startWidth + startX - moveEv.clientX);
-                setPickerWidth(nextWidth);
+                if (resizeAnimationFrame.current === null) {
+                    resizeAnimationFrame.current = window.requestAnimationFrame(() => {
+                        resizeAnimationFrame.current = null;
+                        setPickerWidth(nextWidth);
+                    });
+                }
             };
             const onPointerUp = (): void => {
+                if (resizeAnimationFrame.current !== null) {
+                    window.cancelAnimationFrame(resizeAnimationFrame.current);
+                    resizeAnimationFrame.current = null;
+                }
+                setPickerWidth(nextWidth);
                 window.localStorage.setItem(EMOJI_PICKER_WIDTH_STORAGE_KEY, String(nextWidth));
                 document.removeEventListener("pointermove", onPointerMove);
                 document.removeEventListener("pointerup", onPointerUp);

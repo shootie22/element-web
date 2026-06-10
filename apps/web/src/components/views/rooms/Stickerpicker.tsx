@@ -6,7 +6,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import classNames from "classnames";
-import React, { type JSX, useEffect, useState } from "react";
+import React, { type JSX, useEffect, useRef, useState } from "react";
 import { type Room, ClientEvent } from "matrix-js-sdk/src/matrix";
 import { logger } from "matrix-js-sdk/src/logger";
 import { type IWidget } from "matrix-widget-api";
@@ -85,6 +85,7 @@ function columnCountForWidth(width: number): number {
 export function StickerButton({ room, threadId, menuPosition, className }: StickerButtonProps): JSX.Element {
     const [menuDisplayed, button, openMenu, closeMenu, setMenuDisplayed] = useContextMenu();
     const [pickerWidth, setPickerWidth] = useState(readStickerPickerWidth);
+    const resizeAnimationFrame = useRef<number | null>(null);
     const computedClassName = classNames("mx_StickerButton", className, {
         mx_StickerButton_highlight: menuDisplayed,
     });
@@ -106,6 +107,14 @@ export function StickerButton({ room, threadId, menuPosition, className }: Stick
         return () => dis.unregister(dispatcherRef);
     }, [menuDisplayed, setMenuDisplayed]);
 
+    useEffect(() => {
+        return () => {
+            if (resizeAnimationFrame.current !== null) {
+                window.cancelAnimationFrame(resizeAnimationFrame.current);
+            }
+        };
+    }, []);
+
     const onResizePointerDown = (ev: React.PointerEvent): void => {
         ev.preventDefault();
         ev.stopPropagation();
@@ -116,9 +125,19 @@ export function StickerButton({ room, threadId, menuPosition, className }: Stick
 
         const onPointerMove = (moveEv: PointerEvent): void => {
             nextWidth = clampStickerPickerWidth(startWidth + startX - moveEv.clientX);
-            setPickerWidth(nextWidth);
+            if (resizeAnimationFrame.current === null) {
+                resizeAnimationFrame.current = window.requestAnimationFrame(() => {
+                    resizeAnimationFrame.current = null;
+                    setPickerWidth(nextWidth);
+                });
+            }
         };
         const onPointerUp = (): void => {
+            if (resizeAnimationFrame.current !== null) {
+                window.cancelAnimationFrame(resizeAnimationFrame.current);
+                resizeAnimationFrame.current = null;
+            }
+            setPickerWidth(nextWidth);
             window.localStorage.setItem(STICKER_PICKER_WIDTH_STORAGE_KEY, String(nextWidth));
             document.removeEventListener("pointermove", onPointerMove);
             document.removeEventListener("pointerup", onPointerUp);
@@ -139,7 +158,7 @@ export function StickerButton({ room, threadId, menuPosition, className }: Stick
             >
                 <StickerIcon />
             </CollapsibleButton>
-            {position && (
+            {menuDisplayed && position && (
                 <Stickerpicker
                     room={room}
                     threadId={threadId}

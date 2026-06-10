@@ -43,8 +43,11 @@ export function ImagePackStickerPicker({
     columnCount,
 }: Props): JSX.Element {
     const [filter, setFilter] = useState("");
-    useImagePackRoomUpdate(room);
-    const entries = getImagePackEntries(room.client, room, "sticker");
+    const imagePackVersion = useImagePackRoomUpdate(room);
+    const entries = useMemo(() => {
+        void imagePackVersion;
+        return getImagePackEntries(room.client, room, "sticker");
+    }, [imagePackVersion, room]);
     const filteredEntries = useMemo(
         () => entries.filter((entry) => entryMatchesFilter(entry, filter.trim())),
         [entries, filter],
