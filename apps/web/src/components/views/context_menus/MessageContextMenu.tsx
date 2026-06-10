@@ -75,6 +75,7 @@ import { type ShowThreadPayload } from "../../../dispatcher/payloads/ShowThreadP
 import { CardContext } from "../right_panel/context";
 import PinningUtils from "../../../utils/PinningUtils";
 import PosthogTrackers from "../../../PosthogTrackers.ts";
+import { QuickReactionsBar } from "../emojipicker/QuickReactionsBar";
 
 interface IReplyInThreadButton {
     mxEvent: MatrixEvent;
@@ -738,6 +739,22 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
             </IconizedContextMenuOptionList>
         );
 
+        let quickReactionsBar: JSX.Element | undefined;
+        if (contentActionable && canReact) {
+            quickReactionsBar = (
+                <div
+                    style={{
+                        display: "flex",
+                        gap: 4,
+                        padding: "4px 8px",
+                        borderBottom: "1px solid var(--cpd-color-border-interactive-secondary, #e3e8f0)",
+                    }}
+                >
+                    <QuickReactionsBar mxEvent={mxEvent} reactions={reactions} onReaction={this.closeMenu} />
+                </div>
+            );
+        }
+
         let redactItemList: JSX.Element | undefined;
         if (redactButton) {
             redactItemList = <IconizedContextMenuOptionList red>{redactButton}</IconizedContextMenuOptionList>;
@@ -761,6 +778,7 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
                     compact={true}
                     data-testid="mx_MessageContextMenu"
                 >
+                    {quickReactionsBar}
                     {nativeItemsList}
                     {quickItemsList}
                     {commonItemsList}
