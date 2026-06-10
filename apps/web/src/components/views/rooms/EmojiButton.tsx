@@ -21,6 +21,7 @@ import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { getImagePackEntries } from "../../../image-packs";
 import { useImagePackRoomUpdate } from "../../../hooks/useImagePackUpdate";
 import UIStore from "../../../stores/UIStore";
+import * as recent from "../../../emojipicker/recent";
 
 const EMOJI_PICKER_WIDTH_STORAGE_KEY = "mx_emoji_picker_width";
 const EMOJI_PICKER_MIN_WIDTH = 340;
@@ -60,6 +61,7 @@ export function EmojiButton({ addEmoji, menuPosition, className }: IEmojiButtonP
               shortcode: e.shortcode,
               label: e.body || e.shortcode,
               imgSrc: e.httpUrl,
+              recentKey: recent.customEmojiKey(e.shortcode, e.url),
           }))
         : undefined;
 

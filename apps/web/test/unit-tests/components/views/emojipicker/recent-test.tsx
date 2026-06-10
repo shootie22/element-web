@@ -5,7 +5,12 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { translateLegacyEmojiData, mergeEmojiData } from "../../../../../src/emojipicker/recent.ts";
+import {
+    customEmojiKey,
+    isCustomEmojiKey,
+    translateLegacyEmojiData,
+    mergeEmojiData,
+} from "../../../../../src/emojipicker/recent.ts";
 
 describe("recent", () => {
     describe("translateLegacyEmojiData", () => {
@@ -40,6 +45,15 @@ describe("recent", () => {
 
         it("should handle data2 being undefined", () => {
             expect(mergeEmojiData([{ emoji: "🤩", total: 1 }])).toEqual([{ emoji: "🤩", total: 1 }]);
+        });
+    });
+
+    describe("customEmojiKey", () => {
+        it("creates a recognizable key for custom emoji recents", () => {
+            const key = customEmojiKey("party", "mxc://example.org/media");
+
+            expect(isCustomEmojiKey(key)).toBe(true);
+            expect(isCustomEmojiKey("😀")).toBe(false);
         });
     });
 });

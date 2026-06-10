@@ -36,6 +36,8 @@ export const EMOJIS_PER_ROW = 8;
 
 const ZERO_WIDTH_JOINER = "\u200D";
 
+type PickerEmoji = IEmoji & Partial<ICustomEmojiData>;
+
 interface IProps {
     selectedEmojis?: Set<string>;
     onChoose(unicode: string, customEmoji?: ICustomEmojiData): boolean;
@@ -59,8 +61,9 @@ interface IState {
 }
 
 class EmojiPicker extends React.Component<IProps, IState> {
-    private readonly recentlyUsed: IEmoji[];
-    private readonly memoizedDataByCategory: Record<CategoryKey, IEmoji[]>;
+    private readonly recentlyUsed: PickerEmoji[];
+    private readonly dataByCategory: Record<CategoryKey, PickerEmoji[]>;
+    private readonly memoizedDataByCategory: Record<CategoryKey, PickerEmoji[]>;
     private readonly categories: ICategory[];
 
     private scrollRef = React.createRef<AutoHideScrollbar<"div">>();
@@ -75,21 +78,26 @@ class EmojiPicker extends React.Component<IProps, IState> {
             showHighlight: false,
         };
 
-        // Convert recent emoji characters to emoji data, removing unknowns and duplicates
-        this.recentlyUsed = Array.from(new Set(filterBoolean(recent.get().map(getEmojiFromUnicode))));
-        this.memoizedDataByCategory = {
+        const customEmoji = props.customEmoji?.map(EmojiPicker.customEmojiToPickerEmoji) ?? [];
+        const customEmojiByRecentKey = new Map(
+            customEmoji.map((emoji) => [EmojiPicker.recentKeyForCustomEmoji(emoji), emoji]),
+        );
+        // Convert recent emoji characters to emoji data, removing unknowns and duplicates.
+        this.recentlyUsed = EmojiPicker.dedupeEmoji(
+            filterBoolean(
+                recent
+                    .get()
+                    .map((emoji) =>
+                        recent.isCustomEmojiKey(emoji) ? customEmojiByRecentKey.get(emoji) : getEmojiFromUnicode(emoji),
+                    ),
+            ) as PickerEmoji[],
+        );
+        this.dataByCategory = {
             recent: this.recentlyUsed,
             ...DATA_BY_CATEGORY,
+            custom: customEmoji,
         };
-
-        if (props.customEmoji?.length) {
-            this.memoizedDataByCategory.custom = props.customEmoji.map((e) => ({
-                ...e,
-                shortcodes: [e.shortcode],
-                hexcode: e.shortcode,
-                unicode: `:${e.shortcode}:`,
-            })) as unknown as IEmoji[];
-        }
+        this.memoizedDataByCategory = { ...this.dataByCategory };
 
         const hasRecentlyUsed = this.recentlyUsed.length > 0;
         const hasCustomEmoji = !!props.customEmoji?.length;
@@ -128,6 +136,31 @@ class EmojiPicker extends React.Component<IProps, IState> {
                 firstVisible: firstVisible,
                 ref: React.createRef(),
             };
+        });
+    }
+
+    private static customEmojiToPickerEmoji(emoji: ICustomEmojiData): PickerEmoji {
+        return {
+            ...emoji,
+            shortcodes: [emoji.shortcode],
+            hexcode: emoji.recentKey ?? emoji.shortcode,
+            unicode: `:${emoji.shortcode}:`,
+        } as PickerEmoji;
+    }
+
+    private static recentKeyForCustomEmoji(emoji: ICustomEmojiData): string {
+        return emoji.recentKey ?? recent.customEmojiKey(emoji.shortcode, emoji.imgSrc);
+    }
+
+    private static dedupeEmoji(emojis: PickerEmoji[]): PickerEmoji[] {
+        const seen = new Set<string>();
+        return emojis.filter((emoji) => {
+            const key = "imgSrc" in emoji ? EmojiPicker.recentKeyForCustomEmoji(emoji) : emoji.unicode;
+            if (seen.has(key)) {
+                return false;
+            }
+            seen.add(key);
+            return true;
         });
     }
 
@@ -253,12 +286,12 @@ class EmojiPicker extends React.Component<IProps, IState> {
         }
 
         for (const cat of this.categories) {
-            let emojis: IEmoji[];
+            let emojis: PickerEmoji[];
             // If the new filter string includes the old filter string, we don't have to re-filter the whole dataset.
             if (lcFilter.includes(this.state.filter)) {
                 emojis = this.memoizedDataByCategory[cat.id];
             } else {
-                emojis = cat.id === "recent" ? this.recentlyUsed : DATA_BY_CATEGORY[cat.id];
+                emojis = this.dataByCategory[cat.id];
             }
 
             if (lcFilter !== "") {
@@ -297,7 +330,7 @@ class EmojiPicker extends React.Component<IProps, IState> {
         window.setTimeout(this.updateVisibility, 0);
     };
 
-    private emojiMatchesFilter = (emoji: IEmoji, filter: string): boolean => {
+    private emojiMatchesFilter = (emoji: PickerEmoji, filter: string): boolean => {
         // If the query is an emoji containing a variation then strip it to provide more useful matches
         if (filter.includes(ZERO_WIDTH_JOINER)) {
             filter = filter.split(ZERO_WIDTH_JOINER, 2)[0];
@@ -342,8 +375,8 @@ class EmojiPicker extends React.Component<IProps, IState> {
     private onClickEmoji = (ev: ButtonEvent, emoji: IEmoji): void => {
         const custom = "imgSrc" in emoji ? (emoji as unknown as ICustomEmojiData) : undefined;
         const value = custom ? `:${custom.shortcode}:` : emoji.unicode;
-        if (this.props.onChoose(value, custom) !== false && !custom) {
-            recent.add(emoji.unicode);
+        if (this.props.onChoose(value, custom) !== false) {
+            recent.add(custom ? EmojiPicker.recentKeyForCustomEmoji(custom) : emoji.unicode);
         }
         if ((ev as React.KeyboardEvent).key === Key.ENTER) {
             this.props.onFinished();

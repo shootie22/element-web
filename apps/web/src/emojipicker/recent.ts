@@ -24,6 +24,7 @@ declare module "matrix-js-sdk/src/types" {
 }
 
 const SETTING_NAME = "recent_emoji";
+const CUSTOM_EMOJI_PREFIX = "io.element.custom_emoji:";
 
 // we store more recents than we typically query but this lets us sort by weighted usage
 // even if you haven't used your typically favourite emoji for a little while.
@@ -31,6 +32,14 @@ const STORAGE_LIMIT = 100;
 
 function getRecentEmoji(): RecentEmojiData {
     return SettingsStore.getValue(SETTING_NAME) || [];
+}
+
+export function customEmojiKey(shortcode: string, url?: string): string {
+    return `${CUSTOM_EMOJI_PREFIX}${encodeURIComponent(url || shortcode)}:${encodeURIComponent(shortcode)}`;
+}
+
+export function isCustomEmojiKey(emoji: string): boolean {
+    return emoji.startsWith(CUSTOM_EMOJI_PREFIX);
 }
 
 export function translateLegacyEmojiData(legacyData: LegacyRecentEmojiData): RecentEmojiData {

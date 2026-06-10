@@ -14,6 +14,7 @@ import EmojiPicker from "../../../../../src/components/views/emojipicker/EmojiPi
 import { stubClient } from "../../../../test-utils";
 import SettingsStore from "../../../../../src/settings/SettingsStore";
 import { SettingLevel } from "../../../../../src/settings/SettingLevel.ts";
+import * as recent from "../../../../../src/emojipicker/recent.ts";
 
 describe("EmojiPicker", function () {
     stubClient();
@@ -125,6 +126,70 @@ describe("EmojiPicker", function () {
             visible: true,
             firstVisible: false,
         });
+    });
+
+    it("should show recently used custom emojis in the recent category", () => {
+        const recentKey = recent.customEmojiKey("party", "mxc://example.org/party");
+        SettingsStore.setValue("recent_emoji", null, SettingLevel.ACCOUNT, [{ emoji: recentKey, total: 3 }]);
+
+        const ref = createRef<EmojiPicker>();
+        const { container } = render(
+            <EmojiPicker
+                ref={ref}
+                onChoose={(str: string) => false}
+                onFinished={jest.fn()}
+                customEmoji={[
+                    {
+                        shortcode: "party",
+                        label: "Party",
+                        imgSrc: "https://example.org/party.gif",
+                        recentKey,
+                    },
+                ]}
+            />,
+        );
+
+        //@ts-ignore private access
+        const categories = ref.current!.categories;
+        expect(categories.find((c) => c.id === "recent")).toMatchObject({
+            enabled: true,
+            visible: true,
+            firstVisible: true,
+        });
+        expect(container.querySelector('[data-category-id="recent"] img[alt="Party"]')).toBeInTheDocument();
+    });
+
+    it("should add custom emojis to recent emojis when selected", async () => {
+        const recentKey = recent.customEmojiKey("party", "mxc://example.org/party");
+        const onChoose = jest.fn().mockReturnValue(true);
+        const { container } = render(
+            <EmojiPicker
+                onChoose={onChoose}
+                onFinished={jest.fn()}
+                customEmoji={[
+                    {
+                        shortcode: "party",
+                        label: "Party",
+                        imgSrc: "https://example.org/party.gif",
+                        recentKey,
+                    },
+                ]}
+            />,
+        );
+
+        const customEmoji = container.querySelector('[data-category-id="custom"] img[alt="Party"]');
+        await userEvent.click(customEmoji!.closest("button")!);
+
+        expect(onChoose).toHaveBeenCalledWith(
+            ":party:",
+            expect.objectContaining({
+                shortcode: "party",
+                label: "Party",
+                imgSrc: "https://example.org/party.gif",
+                recentKey,
+            }),
+        );
+        expect(SettingsStore.getValue("recent_emoji")).toEqual([{ emoji: recentKey, total: 1 }]);
     });
 
     it("should not mangle default order after filtering", async () => {
