@@ -14,7 +14,7 @@ export interface ComposerCustomEmoji {
 
 const CUSTOM_EMOJI_SHORTCODE_REGEX = /:([a-zA-Z0-9-_]+):$/;
 const CUSTOM_EMOJI_SHORTCODE_REGEX_GLOBAL = /:([a-zA-Z0-9-_]+):/g;
-const CARET_PLACEHOLDER = "\u200B";
+const CARET_PLACEHOLDER = "\u200A";
 
 export function customEmojiText(shortcode: string): string {
     return `:${shortcode}:`;

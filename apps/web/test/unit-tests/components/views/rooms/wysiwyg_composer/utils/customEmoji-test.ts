@@ -17,7 +17,7 @@ import {
 } from "../../../../../../../src/components/views/rooms/wysiwyg_composer/utils/customEmoji";
 import { type ImagePackEntry } from "../../../../../../../src/image-packs";
 
-const caretPlaceholder = "\u200B";
+const caretPlaceholder = "\u200A";
 
 const partyEntry = {
     shortcode: "party",
@@ -54,7 +54,7 @@ describe("customEmoji", () => {
             imgSrc: "https://example.org/party.gif",
         });
 
-        expect(editor.textContent).toBe("hello :party:");
+        expect(stripCustomEmojiCaretPlaceholders(editor.textContent || "")).toBe("hello :party:");
         expect(editor.querySelector("span.mx_CustomEmoji")).not.toBeNull();
         expect(editor.lastChild).toBeInstanceOf(HTMLBRElement);
         expect(editor.textContent).toContain(caretPlaceholder);
