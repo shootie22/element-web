@@ -258,12 +258,40 @@ function applyGradientWrap(editor: HTMLElement, defaultStyle: DefaultStyle): voi
     editor.appendChild(wrap);
 }
 
+function saveCaret(editor: HTMLElement): { start: number; end: number } | null {
+    const sel = document.getSelection();
+    if (!sel || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    const startPre = document.createRange();
+    startPre.selectNodeContents(editor);
+    startPre.setEnd(range.startContainer, range.startOffset);
+    const endPre = document.createRange();
+    endPre.selectNodeContents(editor);
+    endPre.setEnd(range.endContainer, range.endOffset);
+    return { start: startPre.toString().length, end: endPre.toString().length };
+}
+
+function restoreCaret(editor: HTMLElement, pos: { start: number; end: number }): void {
+    const sel = document.getSelection();
+    if (!sel) return;
+    const startInfo = findTextNodeAtOffset(editor, pos.start);
+    const endInfo = findTextNodeAtOffset(editor, pos.end);
+    if (!startInfo || !endInfo) return;
+    const range = document.createRange();
+    range.setStart(startInfo.node, startInfo.localOffset);
+    range.setEnd(endInfo.node, endInfo.localOffset);
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
 function reapplyRanges(): void {
     if (pendingRanges.length === 0 && !defaultStyle) return;
     if (isReapplying) return;
     const editor =
         document.querySelector<HTMLElement>(".mx_WysiwygComposer_Editor_content[contenteditable]");
     if (!editor) return;
+
+    const caret = saveCaret(editor);
 
     isReapplying = true;
     try {
@@ -290,6 +318,10 @@ function reapplyRanges(): void {
         }
     } finally {
         isReapplying = false;
+    }
+
+    if (caret) {
+        restoreCaret(editor, caret);
     }
 }
 
