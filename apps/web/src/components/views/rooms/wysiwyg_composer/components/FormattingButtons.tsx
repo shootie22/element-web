@@ -31,7 +31,7 @@ import { type KeyCombo } from "../../../../../KeyBindingsManager";
 import { openColorPicker } from "./ColorPicker";
 import { applySolidColorToSelection, applyGradientToSelection } from "../utils/color";
 import { setSelection } from "../utils/selection";
-import { storeRange } from "../hooks/useColorPersistence";
+import { storeRange, setDefaultStyle } from "../hooks/useColorPersistence";
 import SettingsStore from "../../../../../settings/SettingsStore";
 import { MatrixClientPeg } from "../../../../../MatrixClientPeg";
 import {
@@ -109,12 +109,14 @@ function computeAndStoreRange(
     const sel = document.getSelection();
     if (!sel || !sel.rangeCount) return;
     const range = sel.getRangeAt(0);
+    const text = range.toString();
+    if (!text) return;
     const preRange = document.createRange();
     preRange.selectNodeContents(editor);
     preRange.setEnd(range.startContainer, range.startOffset);
     const startOffset = preRange.toString().length;
-    const endOffset = startOffset + range.toString().length;
-    storeRange({ startOffset, endOffset, color, direction, stops });
+    const endOffset = startOffset + text.length;
+    storeRange({ startOffset, endOffset, text, color, direction, stops });
 }
 
 interface FormattingButtonsProps {
@@ -217,16 +219,30 @@ export function FormattingButtons({ composer, actionStates, disabled }: Formatti
                     actionState={disabled ? "disabled" : "enabled"}
                     label={_t("composer|color_picker|text_color")}
                     onClick={async () => {
+                        const sel = document.getSelection();
+                        const hasSelection = sel && !sel.isCollapsed && sel.rangeCount > 0;
+                        const savedSelection = hasSelection && sel
+                            ? {
+                                  anchorNode: sel.anchorNode,
+                                  anchorOffset: sel.anchorOffset,
+                                  focusNode: sel.focusNode,
+                                  focusOffset: sel.focusOffset,
+                                  isForward: sel.getRangeAt(0).startContainer === sel.anchorNode &&
+                                      sel.getRangeAt(0).startOffset === sel.anchorOffset,
+                              }
+                            : composerContext.selection;
                         const result = await openColorPicker("solid");
                         if (!result) return;
                         await new Promise((resolve) => setTimeout(resolve, 0));
-                        await setSelection(composerContext.selection);
                         document.querySelector<HTMLElement>("[contenteditable]")?.focus();
+                        await setSelection(savedSelection);
                         await new Promise((resolve) => setTimeout(resolve, 0));
                         if (result.kind === "solid") {
+                            setDefaultStyle({ color: result.color });
                             computeAndStoreRange(result.color);
                             applySolidColorToSelection(result.color);
                         } else {
+                            setDefaultStyle({ direction: result.direction, stops: result.stops });
                             computeAndStoreRange(undefined, result.direction, result.stops);
                             applyGradientToSelection(result.direction, result.stops);
                         }
