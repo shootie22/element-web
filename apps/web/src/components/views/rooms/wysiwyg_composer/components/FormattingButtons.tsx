@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, type MouseEventHandler, type ReactNode, type SVGProps } from "react";
+import React, { type JSX, type MouseEventHandler, type ReactNode, type SVGProps, useState, useEffect, useId } from "react";
 import { type FormattingFunctions, type AllActionStates, type ActionState } from "@vector-im/matrix-wysiwyg";
 import classNames from "classnames";
 import BoldIcon from "@vector-im/compound-design-tokens/assets/web/icons/bold";
@@ -31,12 +31,14 @@ import { type KeyCombo } from "../../../../../KeyBindingsManager";
 import { openColorPicker } from "./ColorPicker";
 import { applySolidColorToSelection, applyGradientToSelection } from "../utils/color";
 import { setSelection } from "../utils/selection";
-import { storeRange, setDefaultStyle } from "../hooks/useColorPersistence";
+import { storeRange, setDefaultStyle, getDefaultStyle, onDefaultStyleChange } from "../hooks/useColorPersistence";
 import SettingsStore from "../../../../../settings/SettingsStore";
 import { MatrixClientPeg } from "../../../../../MatrixClientPeg";
 import {
     MESSAGE_STYLE_ACCOUNT_DATA_TYPE,
     type MessageStyle,
+    type GradientDirection,
+    type GradientStop,
 } from "../../../../../@types/message_style.ts";
 
 interface ButtonProps {
@@ -47,7 +49,44 @@ interface ButtonProps {
     keyCombo?: KeyCombo;
 }
 
-function ColorIcon(props: SVGProps<SVGSVGElement>): JSX.Element {
+interface DefaultStyle {
+    color?: string;
+    direction?: GradientDirection;
+    stops?: GradientStop[];
+}
+
+const GRADIENT_SVG_COORDS: Record<string, { x1: string; y1: string; x2: string; y2: string }> = {
+    "left-to-right": { x1: "0", y1: "0", x2: "1", y2: "0" },
+    "top-to-bottom": { x1: "0", y1: "0", x2: "0", y2: "1" },
+    "diagonal-down": { x1: "0", y1: "0", x2: "1", y2: "1" },
+    "diagonal-up": { x1: "0", y1: "1", x2: "1", y2: "0" },
+};
+
+function ColorIcon({ currentStyle, ...props }: SVGProps<SVGSVGElement> & { currentStyle: DefaultStyle | null }): JSX.Element {
+    const gradId = `cig-${useId()}`;
+    const fillColor = currentStyle?.color ?? currentStyle?.stops?.[0]?.color ?? "currentColor";
+
+    if (currentStyle?.direction && currentStyle?.stops && currentStyle.stops.length >= 2) {
+        const coords = GRADIENT_SVG_COORDS[currentStyle.direction] ?? GRADIENT_SVG_COORDS["left-to-right"];
+        return (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" {...props}>
+                <defs>
+                    <linearGradient id={gradId} x1={coords.x1} y1={coords.y1} x2={coords.x2} y2={coords.y2}>
+                        {currentStyle.stops.map((s, i) => (
+                            <stop key={i} offset={`${Math.round(s.position * 100)}%`} stopColor={s.color} />
+                        ))}
+                    </linearGradient>
+                </defs>
+                <path
+                    d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                />
+                <circle cx="12" cy="12" r="4" fill={`url(#${gradId})`} />
+            </svg>
+        );
+    }
+
     return (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" {...props}>
             <path
@@ -55,21 +94,7 @@ function ColorIcon(props: SVGProps<SVGSVGElement>): JSX.Element {
                 stroke="currentColor"
                 strokeWidth="1.5"
             />
-            <circle cx="12" cy="12" r="4" fill="currentColor" />
-        </svg>
-    );
-}
-
-function StyleIcon(props: SVGProps<SVGSVGElement>): JSX.Element {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" {...props}>
-            <path
-                d="M4 17L8 5H10L14 17M6 13H12M16 5H20V17H16V5Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
+            <circle cx="12" cy="12" r="4" fill={fillColor} />
         </svg>
     );
 }
@@ -132,6 +157,10 @@ export function FormattingButtons({ composer, actionStates, disabled }: Formatti
     const composerContext = useComposerContext();
     const isInList = actionStates.unorderedList === "reversed" || actionStates.orderedList === "reversed";
     const enableColoredMessages = SettingsStore.getValue("Tweaks.enableColoredMessages");
+    const [currentStyle, setCurrentStyle] = useState<DefaultStyle | null>(getDefaultStyle);
+
+    useEffect(() => onDefaultStyleChange(() => setCurrentStyle(getDefaultStyle())), []);
+
     return (
         <div className="mx_FormattingButtons">
             <Button
@@ -246,42 +275,6 @@ export function FormattingButtons({ composer, actionStates, disabled }: Formatti
                             computeAndStoreRange(undefined, result.direction, result.stops);
                             applyGradientToSelection(result.direction, result.stops);
                         }
-                    }}
-                    icon={<ColorIcon className="mx_FormattingButtons_Icon" />}
-                />
-            )}
-            {enableColoredMessages && (
-                <Button
-                    actionState={disabled ? "disabled" : "enabled"}
-                    label={_t("composer|color_picker|default_style")}
-                    onClick={async () => {
-                        const sel = document.getSelection();
-                        const hasSelection = sel && !sel.isCollapsed && sel.rangeCount > 0;
-                        const savedSelection = hasSelection && sel
-                            ? {
-                                  anchorNode: sel.anchorNode,
-                                  anchorOffset: sel.anchorOffset,
-                                  focusNode: sel.focusNode,
-                                  focusOffset: sel.focusOffset,
-                                  isForward: sel.getRangeAt(0).startContainer === sel.anchorNode &&
-                                      sel.getRangeAt(0).startOffset === sel.anchorOffset,
-                              }
-                            : composerContext.selection;
-                        const result = await openColorPicker("gradient");
-                        if (!result) return;
-                        await new Promise((resolve) => setTimeout(resolve, 0));
-                        document.querySelector<HTMLElement>("[contenteditable]")?.focus();
-                        await setSelection(savedSelection);
-                        await new Promise((resolve) => setTimeout(resolve, 0));
-                        if (result.kind === "solid") {
-                            setDefaultStyle({ color: result.color });
-                            computeAndStoreRange(result.color);
-                            applySolidColorToSelection(result.color);
-                        } else {
-                            setDefaultStyle({ direction: result.direction, stops: result.stops });
-                            computeAndStoreRange(undefined, result.direction, result.stops);
-                            applyGradientToSelection(result.direction, result.stops);
-                        }
                         const client = MatrixClientPeg.get();
                         if (!client) return;
                         const currentData = client.getAccountData(MESSAGE_STYLE_ACCOUNT_DATA_TYPE)?.getContent() ?? {};
@@ -291,7 +284,7 @@ export function FormattingButtons({ composer, actionStates, disabled }: Formatti
                             defaultStyle: result as MessageStyle | null,
                         });
                     }}
-                    icon={<StyleIcon className="mx_FormattingButtons_Icon" />}
+                    icon={<ColorIcon currentStyle={currentStyle} className="mx_FormattingButtons_Icon" />}
                 />
             )}
         </div>

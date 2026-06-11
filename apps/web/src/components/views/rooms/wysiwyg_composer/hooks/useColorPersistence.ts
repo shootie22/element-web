@@ -123,6 +123,17 @@ export function clearColorRanges(): void {
     /* defaultStyle intentionally NOT cleared — persists across sends */
 }
 
+const styleListeners = new Set<() => void>();
+
+export function onDefaultStyleChange(listener: () => void): () => void {
+    styleListeners.add(listener);
+    return () => styleListeners.delete(listener);
+}
+
+function notifyStyleListeners(): void {
+    styleListeners.forEach(fn => fn());
+}
+
 export function setDefaultStyle(style: DefaultStyle): void {
     defaultStyle = style;
     persistDefaultStyle(style);
@@ -131,6 +142,7 @@ export function setDefaultStyle(style: DefaultStyle): void {
     if (editor) {
         applyStyleToEditor(style, editor);
     }
+    notifyStyleListeners();
 }
 
 export function getDefaultStyle(): DefaultStyle | null {
@@ -150,6 +162,7 @@ export function clearDefaultStyle(): void {
         removeGradientWrap(editor);
     }
     removePlaceholderOverride();
+    notifyStyleListeners();
 }
 
 export function storeRange(action: ColorAction): void {
