@@ -10,12 +10,6 @@ import { useEffect } from "react";
 import type { GradientDirection, GradientStop } from "../../../../../@types/message_style.ts";
 import { encodeGradientPayload } from "../../../../../@types/message_style.ts";
 
-const DIRECTION_MAP: Record<GradientDirection, string> = {
-    "left-to-right": "to right",
-    "top-to-bottom": "to bottom",
-    "diagonal-down": "to bottom right",
-    "diagonal-up": "to top right",
-};
 
 export interface ColorAction {
     startOffset: number;
@@ -71,12 +65,10 @@ function applyStyleToEditor(style: DefaultStyle, editor: HTMLElement): void {
         editor.style.webkitTextFillColor = "";
         editor.style.backgroundClip = "";
     } else if (style.direction && style.stops) {
-        const cssDir = DIRECTION_MAP[style.direction] ?? "to right";
-        const stops = style.stops.map(s => `${s.color} ${Math.round(s.position * 100)}%`).join(", ");
-        editor.style.background = `linear-gradient(${cssDir}, ${stops})`;
-        editor.style.backgroundClip = "text";
-        editor.style.webkitTextFillColor = "transparent";
         editor.style.color = style.stops[0]?.color ?? "#000000";
+        editor.style.background = "";
+        editor.style.webkitTextFillColor = "";
+        editor.style.backgroundClip = "";
     } else {
         editor.style.color = "";
         editor.style.background = "";
