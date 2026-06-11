@@ -4,7 +4,7 @@ exports[`ReactionsRowButton > renders the default reaction button 1`] = `
 <div>
   <button
     aria-label="Alice and Bob reacted with 👍"
-    class="ReactionsRowButton-module_reactionsRowButton"
+    class="ReactionsRowButton-module_reactionsRowButton ReactionsRowButton-module_reactionsRowButtonEnter"
     tabindex="0"
     type="button"
   >
@@ -28,7 +28,7 @@ exports[`ReactionsRowButton > renders the selected reaction button 1`] = `
 <div>
   <button
     aria-label="Alice and Bob reacted with 👍"
-    class="ReactionsRowButton-module_reactionsRowButton ReactionsRowButton-module_reactionsRowButtonSelected"
+    class="ReactionsRowButton-module_reactionsRowButton ReactionsRowButton-module_reactionsRowButtonSelected ReactionsRowButton-module_reactionsRowButtonEnter"
     tabindex="0"
     type="button"
   >

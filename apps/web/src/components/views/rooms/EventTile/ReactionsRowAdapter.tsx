@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { useCallback, useContext, useEffect, useMemo, useState, type JSX } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { MatrixEventEvent, type MatrixEvent, type Relations, RelationsEvent } from "matrix-js-sdk/src/matrix";
 import { uniqBy } from "lodash";
 import {
@@ -42,8 +42,14 @@ interface ReactionsRowButtonAdapterProps {
     myReactionEvent?: MatrixEvent;
     /** Disables interaction when true. */
     disabled?: boolean;
+    /** Marks the button as visually exiting before removal. */
+    isExiting?: boolean;
     /** Enables rendering custom reaction images. */
     customReactionImagesEnabled?: boolean;
+    /** Enables the entry animation for newly added reaction buttons. */
+    animateReactionEntries?: boolean;
+    /** Enables the number roll animation when the reaction count changes. */
+    animateReactionCountChanges?: boolean;
     /** Forces animated reaction images to animate only while hovered. */
     playAnimatedReactionImagesOnHover?: boolean;
 }
@@ -63,8 +69,11 @@ function ReactionsRowButtonAdapter(props: Readonly<ReactionsRowButtonAdapterProp
                 count: props.count,
                 reactionEvents: props.reactionEvents,
                 myReactionEvent: props.myReactionEvent,
-                disabled: props.disabled,
+                disabled: props.disabled || props.isExiting,
+                isExiting: props.isExiting,
                 customReactionImagesEnabled: props.customReactionImagesEnabled,
+                animateReactionEntries: props.animateReactionEntries,
+                animateReactionCountChanges: props.animateReactionCountChanges,
                 playAnimatedReactionImagesOnHover: props.playAnimatedReactionImagesOnHover,
             }),
     );
@@ -74,9 +83,21 @@ function ReactionsRowButtonAdapter(props: Readonly<ReactionsRowButtonAdapterProp
             props.content,
             props.reactionEvents,
             props.customReactionImagesEnabled,
+            props.isExiting,
+            props.animateReactionEntries,
+            props.animateReactionCountChanges,
             props.playAnimatedReactionImagesOnHover,
         );
-    }, [props.content, props.reactionEvents, props.customReactionImagesEnabled, props.playAnimatedReactionImagesOnHover, vm]);
+    }, [
+        props.content,
+        props.reactionEvents,
+        props.customReactionImagesEnabled,
+        props.isExiting,
+        props.animateReactionEntries,
+        props.animateReactionCountChanges,
+        props.playAnimatedReactionImagesOnHover,
+        vm,
+    ]);
 
     useEffect(() => {
         vm.setCount(props.count);
@@ -87,8 +108,8 @@ function ReactionsRowButtonAdapter(props: Readonly<ReactionsRowButtonAdapterProp
     }, [props.myReactionEvent, vm]);
 
     useEffect(() => {
-        vm.setDisabled(props.disabled);
-    }, [props.disabled, vm]);
+        vm.setDisabled(props.disabled || props.isExiting);
+    }, [props.disabled, props.isExiting, vm]);
 
     return <ReactionsRowButtonView vm={vm} />;
 }
@@ -96,7 +117,10 @@ function ReactionsRowButtonAdapter(props: Readonly<ReactionsRowButtonAdapterProp
 interface ReactionGroup {
     content: string;
     events: MatrixEvent[];
+    isExiting?: boolean;
 }
+
+const REACTION_EXIT_ANIMATION_MS = 160;
 
 const getReactionGroups = (reactions?: Relations | null): ReactionGroup[] =>
     reactions
@@ -147,6 +171,8 @@ export function ReactionsRowAdapter({
     const [menuDisplayed, setMenuDisplayed] = useState(false);
     const [menuAnchorRect, setMenuAnchorRect] = useState<DOMRect | null>(null);
     const playAnimatedReactionImagesOnHover = useSettingValue("Tweaks.playAnimatedReactionImagesOnHover");
+    const animateReactionEntries = useSettingValue("Tweaks.animateReactionEntries");
+    const reactionExitTimeoutsRef = useRef<Map<string, number>>(new Map());
 
     const vm = eventTileViewModel.getReactionsRowViewModel({
         isActionable: isContentActionable(mxEvent),
@@ -157,7 +183,12 @@ export function ReactionsRowAdapter({
 
     useEffect(() => {
         // This child VM is owned by EventTileViewModel, but scoped to this rendered adapter surface.
-        return () => eventTileViewModel.releaseReactionsRowViewModel();
+        const reactionExitTimeouts = reactionExitTimeoutsRef.current;
+        return () => {
+            reactionExitTimeouts.forEach((timeout) => window.clearTimeout(timeout));
+            reactionExitTimeouts.clear();
+            eventTileViewModel.releaseReactionsRowViewModel();
+        };
     }, [eventTileViewModel]);
 
     const openReactionMenu = useCallback((event: React.MouseEvent<HTMLButtonElement>): void => {
@@ -171,10 +202,56 @@ export function ReactionsRowAdapter({
 
     const updateReactionsState = useCallback((): void => {
         const nextReactionGroups = getReactionGroups(reactions);
-        setReactionGroups(nextReactionGroups);
         setMyReactions(getMyReactions(reactions, userId));
-        vm.setReactionGroupCount(nextReactionGroups.length);
-    }, [reactions, userId, vm]);
+        setReactionGroups((previousReactionGroups) => {
+            if (!animateReactionEntries) {
+                reactionExitTimeoutsRef.current.forEach((timeout) => window.clearTimeout(timeout));
+                reactionExitTimeoutsRef.current.clear();
+                return nextReactionGroups;
+            }
+
+            const nextByContent = new Map(nextReactionGroups.map((group) => [group.content, group]));
+            const previousContents = new Set(previousReactionGroups.map((group) => group.content));
+            const mergedGroups: ReactionGroup[] = [];
+
+            for (const previousGroup of previousReactionGroups) {
+                const nextGroup = nextByContent.get(previousGroup.content);
+                if (nextGroup) {
+                    const timeout = reactionExitTimeoutsRef.current.get(previousGroup.content);
+                    if (timeout !== undefined) {
+                        window.clearTimeout(timeout);
+                        reactionExitTimeoutsRef.current.delete(previousGroup.content);
+                    }
+                    mergedGroups.push(nextGroup);
+                    continue;
+                }
+
+                if (!previousGroup.isExiting) {
+                    const content = previousGroup.content;
+                    const timeout = window.setTimeout(() => {
+                        reactionExitTimeoutsRef.current.delete(content);
+                        setReactionGroups((groups) =>
+                            groups.filter((group) => group.content !== content || !group.isExiting),
+                        );
+                    }, REACTION_EXIT_ANIMATION_MS);
+                    reactionExitTimeoutsRef.current.set(content, timeout);
+                }
+                mergedGroups.push({ ...previousGroup, isExiting: true });
+            }
+
+            for (const nextGroup of nextReactionGroups) {
+                if (!previousContents.has(nextGroup.content)) {
+                    mergedGroups.push(nextGroup);
+                }
+            }
+
+            return mergedGroups;
+        });
+    }, [animateReactionEntries, reactions, userId]);
+
+    useEffect(() => {
+        vm.setReactionGroupCount(reactionGroups.length);
+    }, [reactionGroups.length, vm]);
 
     useEffect(() => {
         vm.setActionable(isContentActionable(mxEvent));
@@ -232,16 +309,21 @@ export function ReactionsRowAdapter({
 
     const snapshot = useViewModel(vm);
     const customReactionImagesEnabled = SettingsStore.getValue("feature_render_reaction_images");
+    const animateReactionCountChanges = useSettingValue("Tweaks.animateReactionCountChanges");
     const items = useMemo((): JSX.Element[] | undefined => {
-        const mappedItems = reactionGroups.map(({ content, events }) => {
+        const mappedItems = reactionGroups.map(({ content, events, isExiting }) => {
             // Deduplicate reaction events by sender per Matrix spec.
             const deduplicatedEvents = uniqBy(events, (event: MatrixEvent) => event.getSender());
-            const myReactionEvent = myReactions?.find((reactionEvent) => {
-                if (reactionEvent.isRedacted()) {
-                    return false;
-                }
-                return reactionEvent.getRelation()?.key === content;
-            });
+            const myReactionEvent =
+                myReactions?.find((reactionEvent) => {
+                    if (reactionEvent.isRedacted()) {
+                        return false;
+                    }
+                    return reactionEvent.getRelation()?.key === content;
+                }) ??
+                (isExiting
+                    ? deduplicatedEvents.find((reactionEvent) => reactionEvent.getSender() === userId)
+                    : undefined);
 
             return (
                 <ReactionsRowButtonAdapter
@@ -251,7 +333,10 @@ export function ReactionsRowAdapter({
                     mxEvent={mxEvent}
                     reactionEvents={deduplicatedEvents}
                     myReactionEvent={myReactionEvent}
+                    isExiting={isExiting}
                     customReactionImagesEnabled={customReactionImagesEnabled}
+                    animateReactionEntries={animateReactionEntries}
+                    animateReactionCountChanges={animateReactionCountChanges}
                     playAnimatedReactionImagesOnHover={playAnimatedReactionImagesOnHover}
                     disabled={
                         !roomContext.canReact ||
@@ -271,10 +356,13 @@ export function ReactionsRowAdapter({
         myReactions,
         mxEvent,
         customReactionImagesEnabled,
+        animateReactionEntries,
+        animateReactionCountChanges,
         playAnimatedReactionImagesOnHover,
         roomContext.canReact,
         roomContext.canSelfRedact,
         snapshot.showAllButtonVisible,
+        userId,
     ]);
 
     if (!snapshot.isVisible || !items?.length) {

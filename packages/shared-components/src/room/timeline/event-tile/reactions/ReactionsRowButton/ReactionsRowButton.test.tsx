@@ -66,4 +66,12 @@ describe("ReactionsRowButton", () => {
         fireEvent.focus(button);
         expect(image).toHaveAttribute("src", "https://example.org/reaction.gif");
     });
+
+    it("animates the count when it increments", () => {
+        const { rerender } = render(<Default count={1} />);
+
+        rerender(<Default count={2} />);
+
+        expect(screen.getByRole("button").className).toContain("reactionsRowButtonCountIncremented");
+    });
 });

@@ -54,9 +54,21 @@ export interface ReactionsRowButtonViewModelProps {
      */
     disabled?: boolean;
     /**
+     * Whether the reaction button is being removed.
+     */
+    isExiting?: boolean;
+    /**
      * Whether to render custom image reactions.
      */
     customReactionImagesEnabled?: boolean;
+    /**
+     * Whether to animate newly added reaction buttons.
+     */
+    animateReactionEntries?: boolean;
+    /**
+     * Whether to animate changes to the reaction count.
+     */
+    animateReactionCountChanges?: boolean;
     /**
      * Whether animated reaction images should only play while hovered.
      */
@@ -84,7 +96,10 @@ export class ReactionsRowButtonViewModel
             reactionEvents,
             myReactionEvent,
             disabled,
+            isExiting,
             customReactionImagesEnabled,
+            animateReactionEntries,
+            animateReactionCountChanges,
             playAnimatedReactionImagesOnHover,
         } = props;
 
@@ -121,7 +136,11 @@ export class ReactionsRowButtonViewModel
             const src = media.srcHttp ?? undefined;
             const thumbnail = media.getThumbnailOfSourceHttp(32, 32) ?? undefined;
             const autoplayGifs = SettingsStore.getValue("autoplayGifs") as boolean;
-            const resolved = playAnimatedReactionImagesOnHover ? (thumbnail ?? src) : autoplayGifs ? src : (thumbnail ?? src);
+            const resolved = playAnimatedReactionImagesOnHover
+                ? (thumbnail ?? src)
+                : autoplayGifs
+                  ? src
+                  : (thumbnail ?? src);
             if (resolved) {
                 imageSrc = resolved;
                 imageHoverSrc = src && src !== resolved ? src : undefined;
@@ -136,10 +155,13 @@ export class ReactionsRowButtonViewModel
             ariaLabel,
             isSelected: !!myReactionEvent,
             isDisabled: !!disabled,
+            isExiting: !!isExiting,
             imageSrc,
             imageHoverSrc,
             imageAlt,
             tooltipVm,
+            animateEntry: animateReactionEntries,
+            animateCountChanges: animateReactionCountChanges,
         };
 
         return snapshot;
@@ -172,9 +194,12 @@ export class ReactionsRowButtonViewModel
                 ReactionsRowButtonViewModel.getAriaLabel(currentSnapshot) &&
             nextSnapshot.isSelected === currentSnapshot.isSelected &&
             nextSnapshot.isDisabled === currentSnapshot.isDisabled &&
+            nextSnapshot.isExiting === currentSnapshot.isExiting &&
             nextSnapshot.imageSrc === currentSnapshot.imageSrc &&
             nextSnapshot.imageHoverSrc === currentSnapshot.imageHoverSrc &&
-            nextSnapshot.imageAlt === currentSnapshot.imageAlt
+            nextSnapshot.imageAlt === currentSnapshot.imageAlt &&
+            nextSnapshot.animateEntry === currentSnapshot.animateEntry &&
+            nextSnapshot.animateCountChanges === currentSnapshot.animateCountChanges
         ) {
             return;
         }
@@ -186,6 +211,9 @@ export class ReactionsRowButtonViewModel
         content: string,
         reactionEvents: MatrixEvent[],
         customReactionImagesEnabled?: boolean,
+        isExiting?: boolean,
+        animateReactionEntries?: boolean,
+        animateReactionCountChanges?: boolean,
         playAnimatedReactionImagesOnHover?: boolean,
     ): void {
         this.props = {
@@ -193,6 +221,9 @@ export class ReactionsRowButtonViewModel
             content,
             reactionEvents,
             customReactionImagesEnabled,
+            isExiting,
+            animateReactionEntries,
+            animateReactionCountChanges,
             playAnimatedReactionImagesOnHover,
         };
 
