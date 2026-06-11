@@ -155,6 +155,72 @@ export function storeRange(action: ColorAction): void {
 let colorObserver: MutationObserver | null = null;
 let isReapplying = false;
 
+/**
+ * Regex matching any emoji codepoint (Extended_Pictographic).
+ * Used to detect text nodes containing emoji so they can be excluded from the
+ * `background-clip: text` gradient preview and rendered with a solid fallback.
+ */
+const EMOJI_RE = /\p{Extended_Pictographic}/u;
+
+function wrapEmojiNodes(editor: HTMLElement, fallbackColor: string): void {
+    // Collect text nodes before any DOM mutations so the walker stays valid
+    const textNodes: Text[] = [];
+    {
+        const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+        let node: Text | null;
+        while ((node = walker.nextNode() as Text | null)) {
+            textNodes.push(node);
+        }
+    }
+
+    for (const textNode of textNodes) {
+        const text = textNode.textContent || "";
+        if (!EMOJI_RE.test(text)) continue;
+
+        // Don't touch nodes already inside a protected span or an explicit color span
+        let parent: Node | null = textNode.parentNode;
+        let isProtected = false;
+        while (parent && parent !== editor) {
+            if (
+                parent instanceof HTMLElement &&
+                (parent.hasAttribute("data-emoji-protected") ||
+                    parent.hasAttribute("data-mx-color") ||
+                    parent.hasAttribute("data-mx-gradient"))
+            ) {
+                isProtected = true;
+                break;
+            }
+            parent = parent.parentNode;
+        }
+        if (isProtected) continue;
+
+        // Split the text node at each emoji boundary so only emoji get the solid fallback
+        const frag = document.createDocumentFragment();
+        let lastIndex = 0;
+        const regex = /\p{Extended_Pictographic}/gu;
+        let match: RegExpExecArray | null;
+        while ((match = regex.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+            }
+            const span = document.createElement("span");
+            span.style.color = fallbackColor;
+            span.style.webkitTextFillColor = fallbackColor;
+            span.setAttribute("data-emoji-protected", "");
+            span.textContent = match[0];
+            frag.appendChild(span);
+            lastIndex = match.index + match[0].length;
+        }
+        if (lastIndex < text.length) {
+            frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        if (frag.childNodes.length > 0) {
+            textNode.parentNode?.replaceChild(frag, textNode);
+        }
+    }
+}
+
 function reapplyRanges(): void {
     if (pendingRanges.length === 0 && !defaultStyle) return;
     if (isReapplying) return;
@@ -162,21 +228,26 @@ function reapplyRanges(): void {
         document.querySelector<HTMLElement>(".mx_WysiwygComposer_Editor_content[contenteditable]");
     if (!editor) return;
 
-    if (defaultStyle) {
-        applyStyleToEditor(defaultStyle, editor);
-    }
-
-    if (pendingRanges.length === 0) return;
-    const ranges = [...pendingRanges];
-    ranges.sort((a, b) => b.startOffset - a.startOffset);
-
-    const toApply = ranges.filter(r => !isAlreadyColored(editor, r));
-    if (toApply.length === 0) return;
-
     isReapplying = true;
     try {
-        for (const range of toApply) {
-            applyColorRange(editor, range);
+        if (defaultStyle) {
+            applyStyleToEditor(defaultStyle, editor);
+        }
+
+        if (pendingRanges.length > 0) {
+            const ranges = [...pendingRanges];
+            ranges.sort((a, b) => b.startOffset - a.startOffset);
+
+            const toApply = ranges.filter(r => !isAlreadyColored(editor, r));
+            for (const range of toApply) {
+                applyColorRange(editor, range);
+            }
+        }
+
+        // Wrap emoji in a solid fallback color so they aren't affected by
+        // the `background-clip: text` gradient on the editor element.
+        if (defaultStyle?.direction && defaultStyle?.stops) {
+            wrapEmojiNodes(editor, defaultStyle.stops[0]?.color ?? "#000000");
         }
     } finally {
         isReapplying = false;
