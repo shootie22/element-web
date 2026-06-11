@@ -260,7 +260,21 @@ export function FormattingButtons({ composer, actionStates, disabled }: Formatti
                                       sel.getRangeAt(0).startOffset === sel.anchorOffset,
                               }
                             : composerContext.selection;
-                        const result = await openColorPicker("solid");
+                        const curStyle = getDefaultStyle();
+                        const isGradient = curStyle && "direction" in curStyle && curStyle.direction;
+                        const initialStyle = curStyle
+                            ? isGradient
+                                ? {
+                                      kind: "gradient" as const,
+                                      direction: curStyle.direction!,
+                                      stops: curStyle.stops!,
+                                  }
+                                : { kind: "solid" as const, color: curStyle.color ?? "#ff0000" }
+                            : undefined;
+                        const result = await openColorPicker(
+                            isGradient ? "gradient" : "solid",
+                            initialStyle,
+                        );
                         if (!result) return;
                         await new Promise((resolve) => setTimeout(resolve, 0));
                         document.querySelector<HTMLElement>("[contenteditable]")?.focus();

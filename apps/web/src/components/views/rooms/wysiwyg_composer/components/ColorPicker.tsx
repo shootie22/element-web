@@ -13,9 +13,14 @@ import BaseDialog from "../../../dialogs/BaseDialog";
 import DialogButtons from "../../../elements/DialogButtons";
 import { validateColor, validateGradientStops, type GradientDirection } from "../../../../../@types/message_style.ts";
 
+interface PickerResultSolid { kind: "solid"; color: string }
+interface PickerResultGradient { kind: "gradient"; direction: GradientDirection; stops: { color: string; position: number }[] }
+type PickerResult = PickerResultSolid | PickerResultGradient;
+
 interface ColorPickerProps {
     mode: "solid" | "gradient";
-    onFinished: (result?: { kind: "solid"; color: string } | { kind: "gradient"; direction: GradientDirection; stops: { color: string; position: number }[] }) => void;
+    initialStyle?: PickerResult;
+    onFinished: (result?: PickerResult) => void;
 }
 
 const PRESET_COLORS = [
@@ -40,10 +45,11 @@ const DEFAULT_STOPS = [
 
 export function openColorPicker(
     mode: "solid" | "gradient",
-): Promise<{ kind: "solid"; color: string } | { kind: "gradient"; direction: GradientDirection; stops: { color: string; position: number }[] } | undefined> {
+    initialStyle?: PickerResult,
+): Promise<PickerResult | undefined> {
     const { finished } = Modal.createDialog(
         ColorPicker,
-        { mode },
+        { mode, initialStyle },
         "mx_CompoundDialog",
         false,
         true,
@@ -173,11 +179,19 @@ const GradientTab: React.FC<{
     );
 };
 
-const ColorPicker: React.FC<ColorPickerProps> = ({ mode, onFinished }) => {
-    const [tab, setTab] = useState<"solid" | "gradient">(mode);
-    const [solidColor, setSolidColor] = useState("#ff0000");
-    const [gradientDirection, setGradientDirection] = useState<GradientDirection>("left-to-right");
-    const [gradientStops, setGradientStops] = useState(DEFAULT_STOPS);
+const ColorPicker: React.FC<ColorPickerProps> = ({ mode, initialStyle, onFinished }) => {
+    const [tab, setTab] = useState<"solid" | "gradient">(
+        initialStyle?.kind === "gradient" ? "gradient" : mode,
+    );
+    const [solidColor, setSolidColor] = useState(
+        initialStyle?.kind === "solid" ? initialStyle.color : "#ff0000",
+    );
+    const [gradientDirection, setGradientDirection] = useState<GradientDirection>(
+        initialStyle?.kind === "gradient" ? initialStyle.direction : "left-to-right",
+    );
+    const [gradientStops, setGradientStops] = useState(
+        initialStyle?.kind === "gradient" ? initialStyle.stops : DEFAULT_STOPS,
+    );
 
     const handleApply = (): void => {
         if (tab === "solid") {
