@@ -41,7 +41,7 @@ type PickerEmoji = IEmoji & Partial<ICustomEmojiData>;
 
 interface IProps {
     selectedEmojis?: Set<string>;
-    onChoose(unicode: string, customEmoji?: ICustomEmojiData): boolean;
+    onChoose(unicode: string, customEmoji?: ICustomEmojiData, ev?: ButtonEvent): boolean;
     onFinished(): void;
     isEmojiDisabled?: (unicode: string) => boolean;
     customEmoji?: ICustomEmojiData[];
@@ -151,7 +151,7 @@ class EmojiPicker extends React.Component<IProps, IState> {
             ...emoji,
             shortcodes: [emoji.shortcode],
             hexcode: emoji.recentKey ?? emoji.shortcode,
-            unicode: `:${emoji.shortcode}:`,
+            unicode: emoji.unicode ?? `:${emoji.shortcode}:`,
         } as PickerEmoji;
     }
 
@@ -381,8 +381,12 @@ class EmojiPicker extends React.Component<IProps, IState> {
 
     private onClickEmoji = (ev: ButtonEvent, emoji: IEmoji): void => {
         const custom = "imgSrc" in emoji ? (emoji as unknown as ICustomEmojiData) : undefined;
-        const value = custom ? `:${custom.shortcode}:` : emoji.unicode;
-        if (this.props.onChoose(value, custom) !== false) {
+        const value = custom ? (custom.unicode ?? `:${custom.shortcode}:`) : emoji.unicode;
+        const result =
+            this.props.onChoose.length >= 3
+                ? this.props.onChoose(value, custom, ev)
+                : this.props.onChoose(value, custom);
+        if (result !== false) {
             recent.add(custom ? EmojiPicker.recentKeyForCustomEmoji(custom) : emoji.unicode);
         }
         if ((ev as React.KeyboardEvent).key === Key.ENTER) {

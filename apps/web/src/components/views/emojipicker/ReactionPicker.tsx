@@ -28,14 +28,10 @@ import dis from "../../../dispatcher/dispatcher";
 import { Action } from "../../../dispatcher/actions";
 import RoomContext from "../../../contexts/RoomContext";
 import { type FocusComposerPayload } from "../../../dispatcher/payloads/FocusComposerPayload";
-import {
-    getFavoriteImagePackRoomIds,
-    getImagePackEntries,
-    isImagePackEventType,
-    type ImagePackEntry,
-} from "../../../image-packs";
-import AccessibleButton from "../elements/AccessibleButton";
+import { getFavoriteImagePackRoomIds, getImagePackEntries, isImagePackEventType } from "../../../image-packs";
+import * as recent from "../../../emojipicker/recent";
 import { REACTION_SHORTCODE_KEY } from "../../../viewmodels/room/timeline/event-tile/reactions/reactionShortcode";
+import { type ButtonEvent } from "../elements/AccessibleButton";
 
 interface IProps {
     mxEvent: MatrixEvent;
@@ -153,26 +149,26 @@ class ReactionPicker extends React.Component<IProps, IState> {
         }
     };
 
-    private onChooseCustomReaction = (entry: ImagePackEntry): void => {
-        this.onChooseReaction(entry.url, entry.shortcode);
+    private onChooseEmoji = (reaction: string, customEmoji?: ICustomEmojiData, ev?: ButtonEvent): boolean => {
+        return this.onChooseReaction(reaction, customEmoji?.shortcode, !!ev && "shiftKey" in ev && ev.shiftKey);
     };
 
-    private onChooseEmoji = (reaction: string, customEmoji?: ICustomEmojiData): boolean => {
-        return this.onChooseReaction(reaction, customEmoji?.shortcode);
-    };
-
-    private onChooseReaction = (reaction: string, shortcode?: string): boolean => {
-        this.componentWillUnmount();
-        this.props.onFinished();
+    private onChooseReaction = (reaction: string, shortcode?: string, keepOpen = false): boolean => {
+        if (!keepOpen) {
+            this.componentWillUnmount();
+            this.props.onFinished();
+        }
         const myReactions = this.getReactions();
         if (myReactions.hasOwnProperty(reaction)) {
             if (this.props.mxEvent.isRedacted() || !this.context.canSelfRedact) return false;
 
             MatrixClientPeg.safeGet().redactEvent(this.props.mxEvent.getRoomId()!, myReactions[reaction]);
-            dis.dispatch<FocusComposerPayload>({
-                action: Action.FocusAComposer,
-                context: this.context.timelineRenderingType,
-            });
+            if (!keepOpen) {
+                dis.dispatch<FocusComposerPayload>({
+                    action: Action.FocusAComposer,
+                    context: this.context.timelineRenderingType,
+                });
+            }
             // Tell the emoji picker not to bump this in the more frequently used list.
             return false;
         } else {
@@ -192,10 +188,12 @@ class ReactionPicker extends React.Component<IProps, IState> {
                 ...content,
             });
             dis.dispatch({ action: "message_sent" });
-            dis.dispatch<FocusComposerPayload>({
-                action: Action.FocusAComposer,
-                context: this.context.timelineRenderingType,
-            });
+            if (!keepOpen) {
+                dis.dispatch<FocusComposerPayload>({
+                    action: Action.FocusAComposer,
+                    context: this.context.timelineRenderingType,
+                });
+            }
             return true;
         }
     };
@@ -209,32 +207,22 @@ class ReactionPicker extends React.Component<IProps, IState> {
 
     public render(): React.ReactNode {
         const room = MatrixClientPeg.safeGet().getRoom(this.props.mxEvent.getRoomId());
-        const customReactions = getImagePackEntries(MatrixClientPeg.safeGet(), room, "emoticon");
+        const customReactions = getImagePackEntries(MatrixClientPeg.safeGet(), room, "emoticon").map((entry) => ({
+            shortcode: entry.shortcode,
+            label: entry.body || entry.shortcode,
+            imgSrc: entry.httpUrl,
+            unicode: entry.url,
+            recentKey: recent.customEmojiKey(entry.shortcode, entry.url),
+        }));
         return (
-            <>
-                {customReactions.length > 0 && (
-                    <div className="mx_ReactionPicker_custom" aria-label="Custom reactions">
-                        {customReactions.slice(0, 32).map((entry) => (
-                            <AccessibleButton
-                                key={`${entry.pack.id}:${entry.shortcode}:${entry.url}`}
-                                className="mx_ReactionPicker_customItem"
-                                onClick={() => this.onChooseCustomReaction(entry)}
-                                title={`${entry.shortcode} · ${entry.label}`}
-                                disabled={!!this.getReactions()[entry.url] && !this.context.canSelfRedact}
-                            >
-                                {entry.httpUrl && <img src={entry.httpUrl} alt="" />}
-                            </AccessibleButton>
-                        ))}
-                    </div>
-                )}
-                <EmojiPicker
-                    onChoose={this.onChooseEmoji}
-                    isEmojiDisabled={this.isEmojiDisabled}
-                    onFinished={this.props.onFinished}
-                    selectedEmojis={this.state.selectedEmojis}
-                    allowTextReaction
-                />
-            </>
+            <EmojiPicker
+                onChoose={this.onChooseEmoji}
+                isEmojiDisabled={this.isEmojiDisabled}
+                onFinished={this.props.onFinished}
+                selectedEmojis={this.state.selectedEmojis}
+                customEmoji={customReactions}
+                allowTextReaction
+            />
         );
     }
 }

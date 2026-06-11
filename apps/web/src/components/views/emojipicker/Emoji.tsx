@@ -18,6 +18,7 @@ export interface ICustomEmojiData {
     label: string;
     imgSrc?: string;
     recentKey?: string;
+    unicode?: string;
 }
 
 type EmojiData = IEmoji | (ICustomEmojiData & Pick<IEmoji, "shortcodes">);

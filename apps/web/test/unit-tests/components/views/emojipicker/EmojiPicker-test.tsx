@@ -220,6 +220,37 @@ describe("EmojiPicker", function () {
         expect(SettingsStore.getValue("recent_emoji")).toEqual([{ emoji: recentKey, total: 1 }]);
     });
 
+    it("should use custom emoji unicode override when selected", async () => {
+        const recentKey = recent.customEmojiKey("party", "mxc://example.org/party");
+        const onChoose = jest.fn().mockReturnValue(true);
+        const { container } = render(
+            <EmojiPicker
+                onChoose={onChoose}
+                onFinished={jest.fn()}
+                customEmoji={[
+                    {
+                        shortcode: "party",
+                        label: "Party",
+                        imgSrc: "https://example.org/party.gif",
+                        unicode: "mxc://example.org/party",
+                        recentKey,
+                    },
+                ]}
+            />,
+        );
+
+        const customEmoji = container.querySelector('[data-category-id="custom"] img[alt="Party"]');
+        await userEvent.click(customEmoji!.closest("button")!);
+
+        expect(onChoose).toHaveBeenCalledWith(
+            "mxc://example.org/party",
+            expect.objectContaining({
+                shortcode: "party",
+                unicode: "mxc://example.org/party",
+            }),
+        );
+    });
+
     it("should not mangle default order after filtering", async () => {
         const ref = createRef<EmojiPicker>();
         const { container } = render(
