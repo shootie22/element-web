@@ -73,5 +73,14 @@ describe("ReactionsRowButton", () => {
         rerender(<Default count={2} />);
 
         expect(screen.getByRole("button").className).toContain("reactionsRowButtonCountIncremented");
+        expect(screen.getByRole("button").className).toContain("reactionsRowButtonChanged");
+    });
+
+    it("animates the button when the current user adds an existing reaction", () => {
+        const { rerender } = render(<Default isSelected={false} />);
+
+        rerender(<Default isSelected />);
+
+        expect(screen.getByRole("button").className).toContain("reactionsRowButtonChanged");
     });
 });

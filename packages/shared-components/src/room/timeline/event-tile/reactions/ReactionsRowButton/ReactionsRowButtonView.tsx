@@ -91,7 +91,9 @@ export function ReactionsRowButtonView({ vm }: Readonly<ReactionsRowButtonViewPr
         snapshot;
     const [isImageHovered, setIsImageHovered] = useState(false);
     const previousCountRef = useRef(count);
+    const previousSelectedRef = useRef(isSelected);
     const [countAnimation, setCountAnimation] = useState<"increment" | "decrement" | undefined>();
+    const [buttonAnimation, setButtonAnimation] = useState(false);
     const animateEntry = snapshot.animateEntry !== false;
     const animateCountChanges = snapshot.animateCountChanges !== false;
     const ariaLabel = snapshot["aria-label"] ?? snapshot.ariaLabel;
@@ -100,6 +102,7 @@ export function ReactionsRowButtonView({ vm }: Readonly<ReactionsRowButtonViewPr
         [styles.reactionsRowButtonSelected]: isSelected,
         [styles.reactionsRowButtonDisabled]: isDisabled,
         [styles.reactionsRowButtonExit]: snapshot.isExiting,
+        [styles.reactionsRowButtonChanged]: buttonAnimation && !snapshot.isExiting,
         [styles.reactionsRowButtonCountIncremented]: countAnimation === "increment",
         [styles.reactionsRowButtonCountDecremented]: countAnimation === "decrement",
     });
@@ -117,14 +120,32 @@ export function ReactionsRowButtonView({ vm }: Readonly<ReactionsRowButtonViewPr
         if (previousCount === count) return;
 
         setCountAnimation(count > previousCount ? "increment" : "decrement");
+        setButtonAnimation(true);
         const timeout = window.setTimeout(() => {
             setCountAnimation(undefined);
+            setButtonAnimation(false);
         }, 220);
 
         return () => {
             window.clearTimeout(timeout);
         };
     }, [animateCountChanges, count]);
+
+    useEffect(() => {
+        const previousSelected = previousSelectedRef.current;
+        previousSelectedRef.current = isSelected;
+
+        if (!animateCountChanges || previousSelected || !isSelected) return;
+
+        setButtonAnimation(true);
+        const timeout = window.setTimeout(() => {
+            setButtonAnimation(false);
+        }, 220);
+
+        return () => {
+            window.clearTimeout(timeout);
+        };
+    }, [animateCountChanges, isSelected]);
 
     const reactionContent = imageSrc ? (
         <img

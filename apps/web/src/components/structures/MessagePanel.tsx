@@ -282,7 +282,8 @@ export default class MessagePanel extends React.Component<IProps, IState> {
     private animateMessageEntriesWatcherRef?: string;
     private useLegacyTypingIndicatorWatcherRef?: string;
     private eventTiles: Record<string, UnwrappedEventTile> = {};
-    private seenEventTileKeys = new Set<string>();
+    private currentRenderEventTileKeys = new Set<string>();
+    private previousRenderEventTileKeys = new Set<string>();
     private hasRenderedEventTiles = false;
 
     // A map to allow groupers to maintain consistent keys even if their first event is uprooted due to back-pagination.
@@ -652,6 +653,8 @@ export default class MessagePanel extends React.Component<IProps, IState> {
     }
 
     private getEventTiles(): ReactNode[] {
+        this.currentRenderEventTileKeys = new Set();
+
         // first figure out which is the last event in the list which we're
         // actually going to show; this allows us to behave slightly
         // differently for the last event in the list. (eg show timestamp)
@@ -771,6 +774,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             ret.push(...grouper.getTiles());
         }
 
+        this.previousRenderEventTileKeys = this.currentRenderEventTileKeys;
         this.hasRenderedEventTiles = true;
         return ret;
     }
@@ -840,10 +844,10 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         const animateEntry =
             this.state.animateMessageEntries &&
             this.hasRenderedEventTiles &&
-            !this.seenEventTileKeys.has(eventTileKey) &&
+            !this.previousRenderEventTileKeys.has(eventTileKey) &&
             isRecentEvent &&
             this.shouldShowEvent(mxEv);
-        this.seenEventTileKeys.add(eventTileKey);
+        this.currentRenderEventTileKeys.add(eventTileKey);
 
         const readReceipts = this.readReceiptsByEvent.get(eventId);
 

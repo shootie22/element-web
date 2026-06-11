@@ -59,6 +59,10 @@ img.reactionsRowButtonContent {
     animation: reactionsRowButtonEnter 160ms ease-out;
 }
 
+.reactionsRowButtonChanged {
+    animation: reactionsRowButtonChanged 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 .reactionsRowButtonExit {
     pointer-events: none;
     animation: reactionsRowButtonExit 160ms ease-in both;
@@ -88,6 +92,20 @@ img.reactionsRowButtonContent {
     }
 }
 
+@keyframes reactionsRowButtonChanged {
+    0% {
+        transform: translateY(0) scale(1);
+    }
+
+    45% {
+        transform: translateY(-1px) scale(1.06);
+    }
+
+    100% {
+        transform: translateY(0) scale(1);
+    }
+}
+
 @keyframes reactionsRowButtonCountRollUp {
     from {
         opacity: 0;
@@ -114,6 +132,7 @@ img.reactionsRowButtonContent {
 
 @media (prefers-reduced-motion: reduce) {
     .reactionsRowButtonEnter,
+    .reactionsRowButtonChanged,
     .reactionsRowButtonExit,
     .reactionsRowButtonCountIncremented .reactionsRowButtonCount,
     .reactionsRowButtonCountDecremented .reactionsRowButtonCount {
