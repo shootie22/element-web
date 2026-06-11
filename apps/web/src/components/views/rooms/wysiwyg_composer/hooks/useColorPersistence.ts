@@ -10,6 +10,30 @@ import { useEffect } from "react";
 import type { GradientDirection, GradientStop } from "../../../../../@types/message_style.ts";
 import { encodeGradientPayload } from "../../../../../@types/message_style.ts";
 
+const DIRECTION_MAP: Record<GradientDirection, string> = {
+    "left-to-right": "to right",
+    "top-to-bottom": "to bottom",
+    "diagonal-down": "to bottom right",
+    "diagonal-up": "to top right",
+};
+
+const PLACEHOLDER_STYLE_ID = "mx-wysiwyg-placeholder-style";
+
+function setPlaceholderColor(color: string): void {
+    let el = document.getElementById(PLACEHOLDER_STYLE_ID) as HTMLStyleElement | null;
+    if (!el) {
+        el = document.createElement("style");
+        el.id = PLACEHOLDER_STYLE_ID;
+        document.head.appendChild(el);
+    }
+    el.textContent = `.mx_WysiwygComposer_Editor_content[contenteditable]::placeholder { color: ${color} !important; }`;
+}
+
+function removePlaceholderOverride(): void {
+    const el = document.getElementById(PLACEHOLDER_STYLE_ID);
+    if (el) el.remove();
+}
+
 
 export interface ColorAction {
     startOffset: number;
@@ -64,16 +88,22 @@ function applyStyleToEditor(style: DefaultStyle, editor: HTMLElement): void {
         editor.style.background = "";
         editor.style.webkitTextFillColor = "";
         editor.style.backgroundClip = "";
+        removePlaceholderOverride();
     } else if (style.direction && style.stops) {
-        editor.style.color = style.stops[0]?.color ?? "#000000";
-        editor.style.background = "";
-        editor.style.webkitTextFillColor = "";
-        editor.style.backgroundClip = "";
+        const cssDir = DIRECTION_MAP[style.direction] ?? "to right";
+        const stops = style.stops.map(s => `${s.color} ${Math.round(s.position * 100)}%`).join(", ");
+        const fallback = style.stops[0]?.color ?? "#000000";
+        editor.style.color = fallback;
+        editor.style.background = `linear-gradient(${cssDir}, ${stops})`;
+        editor.style.backgroundClip = "text";
+        editor.style.webkitTextFillColor = "transparent";
+        setPlaceholderColor(fallback);
     } else {
         editor.style.color = "";
         editor.style.background = "";
         editor.style.webkitTextFillColor = "";
         editor.style.backgroundClip = "";
+        removePlaceholderOverride();
     }
 }
 
@@ -107,6 +137,7 @@ export function clearDefaultStyle(): void {
         editor.style.webkitTextFillColor = "";
         editor.style.backgroundClip = "";
     }
+    removePlaceholderOverride();
 }
 
 export function storeRange(action: ColorAction): void {
