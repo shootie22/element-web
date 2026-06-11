@@ -255,8 +255,33 @@ export function FormattingButtons({ composer, actionStates, disabled }: Formatti
                     actionState={disabled ? "disabled" : "enabled"}
                     label={_t("composer|color_picker|default_style")}
                     onClick={async () => {
+                        const sel = document.getSelection();
+                        const hasSelection = sel && !sel.isCollapsed && sel.rangeCount > 0;
+                        const savedSelection = hasSelection && sel
+                            ? {
+                                  anchorNode: sel.anchorNode,
+                                  anchorOffset: sel.anchorOffset,
+                                  focusNode: sel.focusNode,
+                                  focusOffset: sel.focusOffset,
+                                  isForward: sel.getRangeAt(0).startContainer === sel.anchorNode &&
+                                      sel.getRangeAt(0).startOffset === sel.anchorOffset,
+                              }
+                            : composerContext.selection;
                         const result = await openColorPicker("gradient");
                         if (!result) return;
+                        await new Promise((resolve) => setTimeout(resolve, 0));
+                        document.querySelector<HTMLElement>("[contenteditable]")?.focus();
+                        await setSelection(savedSelection);
+                        await new Promise((resolve) => setTimeout(resolve, 0));
+                        if (result.kind === "solid") {
+                            setDefaultStyle({ color: result.color });
+                            computeAndStoreRange(result.color);
+                            applySolidColorToSelection(result.color);
+                        } else {
+                            setDefaultStyle({ direction: result.direction, stops: result.stops });
+                            computeAndStoreRange(undefined, result.direction, result.stops);
+                            applyGradientToSelection(result.direction, result.stops);
+                        }
                         const client = MatrixClientPeg.get();
                         if (!client) return;
                         const currentData = client.getAccountData(MESSAGE_STYLE_ACCOUNT_DATA_TYPE)?.getContent() ?? {};

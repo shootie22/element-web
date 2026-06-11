@@ -204,15 +204,22 @@ function isAlreadyColored(editor: HTMLElement, range: StoredRange): boolean {
         return false;
     };
 
-    const startInfo = findTextNodeAtOffset(editor, range.startOffset);
-    if (startInfo && textAtOffsetMatches(editor, range.startOffset, range.startOffset + range.text.length, range.text)) {
-        if (checkNode(startInfo.node)) return true;
-    }
+    const fullText = editor.textContent || "";
+    if (fullText.slice(range.startOffset, range.endOffset) !== range.text) return false;
 
-    const found = findTextInEditor(editor, range.text);
-    if (found === null) return false;
-    const fallback = findTextNodeAtOffset(editor, found);
-    return checkNode(fallback?.node ?? null);
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+    let offset = 0;
+    let textNode: Text | null;
+    while ((textNode = walker.nextNode() as Text | null)) {
+        const len = textNode.textContent?.length ?? 0;
+        const nodeStart = offset;
+        const nodeEnd = offset + len;
+        if (nodeStart < range.endOffset && nodeEnd > range.startOffset) {
+            if (checkNode(textNode)) return true;
+        }
+        offset += len;
+    }
+    return false;
 }
 
 function applyColorRange(editor: HTMLElement, range: StoredRange): void {
