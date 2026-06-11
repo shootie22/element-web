@@ -82,12 +82,19 @@ function persistDefaultStyle(style: DefaultStyle | null): void {
     }
 }
 
+function resetGradientSizing(editor: HTMLElement): void {
+    editor.style.backgroundSize = "";
+    editor.style.backgroundRepeat = "";
+    editor.style.backgroundPosition = "";
+}
+
 function applyStyleToEditor(style: DefaultStyle, editor: HTMLElement): void {
     if (style.color) {
         editor.style.color = style.color;
         editor.style.background = "";
         editor.style.webkitTextFillColor = "";
         editor.style.backgroundClip = "";
+        resetGradientSizing(editor);
         removePlaceholderOverride();
     } else if (style.direction && style.stops) {
         const cssDir = DIRECTION_MAP[style.direction] ?? "to right";
@@ -97,12 +104,16 @@ function applyStyleToEditor(style: DefaultStyle, editor: HTMLElement): void {
         editor.style.background = `linear-gradient(${cssDir}, ${stops})`;
         editor.style.backgroundClip = "text";
         editor.style.webkitTextFillColor = "transparent";
+        editor.style.backgroundRepeat = "no-repeat";
+        editor.style.backgroundPosition = "left top";
+        editor.style.backgroundSize = "";
         setPlaceholderColor(fallback);
     } else {
         editor.style.color = "";
         editor.style.background = "";
         editor.style.webkitTextFillColor = "";
         editor.style.backgroundClip = "";
+        resetGradientSizing(editor);
         removePlaceholderOverride();
     }
 }
@@ -136,6 +147,7 @@ export function clearDefaultStyle(): void {
         editor.style.background = "";
         editor.style.webkitTextFillColor = "";
         editor.style.backgroundClip = "";
+        resetGradientSizing(editor);
     }
     removePlaceholderOverride();
 }
@@ -221,6 +233,15 @@ function wrapEmojiNodes(editor: HTMLElement, fallbackColor: string): void {
     }
 }
 
+function fitGradientToText(editor: HTMLElement): void {
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    const rect = range.getBoundingClientRect();
+    if (rect.width > 0) {
+        editor.style.backgroundSize = `${rect.width}px 100%`;
+    }
+}
+
 function reapplyRanges(): void {
     if (pendingRanges.length === 0 && !defaultStyle) return;
     if (isReapplying) return;
@@ -248,6 +269,7 @@ function reapplyRanges(): void {
         // the `background-clip: text` gradient on the editor element.
         if (defaultStyle?.direction && defaultStyle?.stops) {
             wrapEmojiNodes(editor, defaultStyle.stops[0]?.color ?? "#000000");
+            fitGradientToText(editor);
         }
     } finally {
         isReapplying = false;
