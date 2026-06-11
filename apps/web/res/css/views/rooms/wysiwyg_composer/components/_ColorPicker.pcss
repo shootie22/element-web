@@ -36,6 +36,12 @@ Please see LICENSE files in the repository root for full details.
         min-height: 200px;
     }
 
+    .mx_ColorPicker_gradient {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
     .mx_ColorPicker_presets {
         display: flex;
         flex-wrap: wrap;
@@ -84,18 +90,21 @@ Please see LICENSE files in the repository root for full details.
 
     .mx_ColorPicker_directions {
         margin-bottom: 16px;
+        width: 100%;
 
         label {
             display: block;
             font-size: 13px;
             color: $secondary-content;
             margin-bottom: 8px;
+            text-align: center;
         }
     }
 
     .mx_ColorPicker_direction_buttons {
         display: flex;
         gap: 4px;
+        justify-content: center;
     }
 
     .mx_ColorPicker_direction_btn {
@@ -111,8 +120,9 @@ Please see LICENSE files in the repository root for full details.
         justify-content: center;
 
         &_active {
+            background: $accent;
             border-color: $accent;
-            border-width: 2px;
+            color: #fff;
         }
     }
 
@@ -120,6 +130,7 @@ Please see LICENSE files in the repository root for full details.
         display: flex;
         flex-direction: column;
         gap: 8px;
+        width: 100%;
     }
 
     .mx_ColorPicker_stop {
@@ -172,5 +183,6 @@ Please see LICENSE files in the repository root for full details.
         color: $accent;
         font-size: 13px;
         width: fit-content;
+        align-self: center;
     }
 }
