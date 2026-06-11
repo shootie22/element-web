@@ -34,6 +34,7 @@ export default function TweaksUserSettingsTab(): React.ReactNode {
                 </SettingsSubsection>
 
                 <SettingsSubsection heading={_t("settings|tweaks|composer_heading")} formWrap>
+                    <SettingsFlag name="Tweaks.enableColoredMessages" level={SettingLevel.ACCOUNT} />
                     <SettingsFlag name="MessageComposerInput.insertTrailingColon" level={SettingLevel.ACCOUNT} />
                 </SettingsSubsection>
 

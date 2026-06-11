@@ -2840,6 +2840,7 @@
             "show_quick_reactions_on_hover": "Show quick reactions on hover",
             "timeline_heading": "Timeline",
             "use_legacy_typing_indicator": "Use the old non-animated typing indicator",
+            "enable_colored_messages": "Colored text",
             "title": "Tweaks"
         },
         "media_preview": {

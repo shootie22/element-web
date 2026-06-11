@@ -9,6 +9,7 @@ import { useEffect } from "react";
 
 import type { GradientDirection, GradientStop } from "../../../../../@types/message_style.ts";
 import { encodeGradientPayload } from "../../../../../@types/message_style.ts";
+import SettingsStore from "../../../../../settings/SettingsStore";
 
 const DIRECTION_MAP: Record<GradientDirection, string> = {
     "left-to-right": "to right",
@@ -94,6 +95,15 @@ function removeGradientWrap(editor: HTMLElement): void {
 }
 
 function applyStyleToEditor(style: DefaultStyle, editor: HTMLElement): void {
+    if (!SettingsStore.getValue("Tweaks.enableColoredMessages")) {
+        editor.style.color = "";
+        editor.style.background = "";
+        editor.style.webkitTextFillColor = "";
+        editor.style.backgroundClip = "";
+        removeGradientWrap(editor);
+        removePlaceholderOverride();
+        return;
+    }
     if (style.color) {
         editor.style.color = style.color;
         editor.style.background = "";
@@ -308,11 +318,13 @@ function reapplyRanges(): void {
 
     isReapplying = true;
     try {
+        const coloredEnabled = SettingsStore.getValue("Tweaks.enableColoredMessages");
+
         if (defaultStyle) {
             applyStyleToEditor(defaultStyle, editor);
         }
 
-        if (pendingRanges.length > 0) {
+        if (coloredEnabled && pendingRanges.length > 0) {
             const ranges = [...pendingRanges];
             ranges.sort((a, b) => b.startOffset - a.startOffset);
 
@@ -325,7 +337,7 @@ function reapplyRanges(): void {
         // Wrap emoji in a solid fallback color so they aren't affected by
         // the gradient effect, then wrap all editor content in an inline-block
         // span so the gradient background-size matches the text width exactly.
-        if (defaultStyle?.direction && defaultStyle?.stops) {
+        if (defaultStyle?.direction && defaultStyle?.stops && SettingsStore.getValue("Tweaks.enableColoredMessages")) {
             wrapEmojiNodes(editor, defaultStyle.stops[0]?.color ?? "#000000");
             applyGradientWrap(editor, defaultStyle);
         }
@@ -350,7 +362,7 @@ export function useColorPersistence(
 
         if (defaultStyle) {
             applyStyleToEditor(defaultStyle, editor);
-            if (defaultStyle.direction && defaultStyle.stops) {
+            if (defaultStyle.direction && defaultStyle.stops && SettingsStore.getValue("Tweaks.enableColoredMessages")) {
                 applyGradientWrap(editor, defaultStyle);
             }
         }
