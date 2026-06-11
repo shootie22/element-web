@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, type MouseEventHandler, type ReactNode } from "react";
+import React, { type JSX, type MouseEventHandler, type ReactNode, type SVGProps } from "react";
 import { type FormattingFunctions, type AllActionStates, type ActionState } from "@vector-im/matrix-wysiwyg";
 import classNames from "classnames";
 import BoldIcon from "@vector-im/compound-design-tokens/assets/web/icons/bold";
@@ -28,6 +28,15 @@ import { openLinkModal } from "./LinkModal";
 import { useComposerContext } from "../ComposerContext";
 import { KeyboardShortcut } from "../../../settings/KeyboardShortcut";
 import { type KeyCombo } from "../../../../../KeyBindingsManager";
+import { openColorPicker } from "./ColorPicker";
+import { applySolidColorToSelection, applyGradientToSelection } from "../utils/color";
+import { setSelection } from "../utils/selection";
+import SettingsStore from "../../../../../settings/SettingsStore";
+import { MatrixClientPeg } from "../../../../../MatrixClientPeg";
+import {
+    MESSAGE_STYLE_ACCOUNT_DATA_TYPE,
+    type MessageStyle,
+} from "../../../../../@types/message_style.ts";
 
 interface ButtonProps {
     icon: ReactNode;
@@ -35,6 +44,33 @@ interface ButtonProps {
     onClick: MouseEventHandler<HTMLButtonElement>;
     label: string;
     keyCombo?: KeyCombo;
+}
+
+function ColorIcon(props: SVGProps<SVGSVGElement>): JSX.Element {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" {...props}>
+            <path
+                d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+            />
+            <circle cx="12" cy="12" r="4" fill="currentColor" />
+        </svg>
+    );
+}
+
+function StyleIcon(props: SVGProps<SVGSVGElement>): JSX.Element {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" {...props}>
+            <path
+                d="M4 17L8 5H10L14 17M6 13H12M16 5H20V17H16V5Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
 }
 
 function Button({ label, keyCombo, onClick, actionState, icon }: ButtonProps): JSX.Element {
@@ -74,6 +110,7 @@ interface FormattingButtonsProps {
 export function FormattingButtons({ composer, actionStates, disabled }: FormattingButtonsProps): JSX.Element {
     const composerContext = useComposerContext();
     const isInList = actionStates.unorderedList === "reversed" || actionStates.orderedList === "reversed";
+    const enableColoredMessages = SettingsStore.getValue("Tweaks.enableColoredMessages");
     return (
         <div className="mx_FormattingButtons">
             <Button
@@ -156,6 +193,45 @@ export function FormattingButtons({ composer, actionStates, disabled }: Formatti
                 onClick={() => openLinkModal(composer, composerContext, actionStates.link === "reversed")}
                 icon={<LinkIcon className="mx_FormattingButtons_Icon" />}
             />
+            {enableColoredMessages && (
+                <Button
+                    actionState={disabled ? "disabled" : "enabled"}
+                    label={_t("composer|color_picker|text_color")}
+                    onClick={async () => {
+                        const result = await openColorPicker("solid");
+                        if (!result) return;
+                        // Wait for modal cleanup to restore focus to the editor
+                        await new Promise((resolve) => setTimeout(resolve, 0));
+                        // Restore the selection that was saved by useSelection hook
+                        await setSelection(composerContext.selection);
+                        if (result.kind === "solid") {
+                            applySolidColorToSelection(result.color);
+                        } else {
+                            applyGradientToSelection(result.direction, result.stops);
+                        }
+                    }}
+                    icon={<ColorIcon className="mx_FormattingButtons_Icon" />}
+                />
+            )}
+            {enableColoredMessages && (
+                <Button
+                    actionState={disabled ? "disabled" : "enabled"}
+                    label={_t("composer|color_picker|default_style")}
+                    onClick={async () => {
+                        const result = await openColorPicker("gradient");
+                        if (!result) return;
+                        const client = MatrixClientPeg.get();
+                        if (!client) return;
+                        const currentData = client.getAccountData(MESSAGE_STYLE_ACCOUNT_DATA_TYPE)?.getContent() ?? {};
+                        await client.setAccountData(MESSAGE_STYLE_ACCOUNT_DATA_TYPE, {
+                            ...currentData,
+                            version: 1,
+                            defaultStyle: result as MessageStyle | null,
+                        });
+                    }}
+                    icon={<StyleIcon className="mx_FormattingButtons_Icon" />}
+                />
+            )}
         </div>
     );
 }

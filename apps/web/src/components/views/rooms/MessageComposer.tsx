@@ -413,11 +413,13 @@ export class MessageComposer extends React.Component<IProps, IState> {
                 action: Action.ClearAndFocusSendMessageComposer,
                 timelineRenderingType: this.context.timelineRenderingType,
             });
+            const editorElement = document.querySelector<HTMLElement>(".mx_SendWysiwygComposer [contenteditable]");
             await sendMessage(composerContent, this.state.isRichTextEnabled, {
                 mxClient: this.props.mxClient,
                 roomContext: this.context,
                 relation,
                 replyToEvent,
+                editorElement,
             });
         }
     };

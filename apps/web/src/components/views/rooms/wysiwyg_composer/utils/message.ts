@@ -40,6 +40,7 @@ export interface SendMessageParams {
     relation?: IEventRelation;
     replyToEvent?: MatrixEvent;
     roomContext: Pick<IRoomState, "timelineRenderingType" | "room">;
+    editorElement?: HTMLElement | null;
 }
 
 export async function sendMessage(

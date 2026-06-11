@@ -235,7 +235,7 @@
             "generic_auth_error": "Something went wrong during authentication. Go to the sign in page and try again.",
             "missing_or_invalid_stored_state": "We asked the browser to remember which homeserver you use to let you sign in, but unfortunately your browser has forgotten it. Go to the sign in page and try again."
         },
-        "password_field_keep_going_prompt": "Keep going…",
+        "password_field_keep_going_prompt": "Keep going\u2026",
         "password_field_label": "Enter password",
         "password_field_strong_label": "Nice, strong password!",
         "password_field_weak_label": "Password is allowed, but unsafe",
@@ -258,7 +258,7 @@
             "error_insecure_channel_detected_instructions_2": "If you encounter the same problem, try a different wifi network or use your mobile data instead of wifi",
             "error_insecure_channel_detected_instructions_3": "If that doesn't work, sign in manually",
             "error_insecure_channel_detected_title": "Connection not secure",
-            "error_other_device_already_signed_in": "You don’t need to do anything else.",
+            "error_other_device_already_signed_in": "You don\u2019t need to do anything else.",
             "error_other_device_already_signed_in_title": "Your other device is already signed in",
             "error_rate_limited": "Too many attempts in a short time. Wait some time before trying again.",
             "error_unexpected": "An unexpected error occurred. The request to connect your other device has been cancelled.",
@@ -348,7 +348,7 @@
         "sign_in_or_register_description": "Use your account or create a new one to continue.",
         "sign_in_with_qr": "Sign in with QR code",
         "sign_in_with_sso": "Sign in with single sign-on",
-        "signing_in": "Signing In…",
+        "signing_in": "Signing In\u2026",
         "soft_logout": {
             "clear_data_button": "Clear all data",
             "clear_data_description": "Clearing all data from this session is permanent. Encrypted messages will be lost unless their keys have been backed up.",
@@ -365,7 +365,7 @@
         "sso_failed_missing_storage": "We asked the browser to remember which homeserver you use to let you sign in, but unfortunately your browser has forgotten it. Go to the sign in page and try again.",
         "sso_or_username_password": "%(ssoButtons)s Or %(usernamePassword)s",
         "sync_footer_subtitle": "If you've joined lots of rooms, this might take a while",
-        "syncing": "Syncing…",
+        "syncing": "Syncing\u2026",
         "uia": {
             "code": "Code",
             "email": "To create your account, open the link in the email we just sent to %(emailAddress)s.",
@@ -397,7 +397,7 @@
         "unsupported_auth_msisdn": "This server does not support authentication with a phone number.",
         "username_field_required_invalid": "Enter username",
         "username_in_use": "Someone already has that username, please try another.",
-        "verify_email_explainer": "We need to know it’s you before resetting your password. Click the link in the email we just sent to <b>%(email)s</b>",
+        "verify_email_explainer": "We need to know it\u2019s you before resetting your password. Click the link in the email we just sent to <b>%(email)s</b>",
         "verify_email_heading": "Verify your email to continue"
     },
     "bug_reporting": {
@@ -506,7 +506,7 @@
         "labs": "Labs",
         "legal": "Legal",
         "light": "Light",
-        "loading": "Loading…",
+        "loading": "Loading\u2026",
         "location": "Location",
         "low_priority": "Low priority",
         "matrix": "Matrix",
@@ -558,7 +558,7 @@
         "rooms": "Rooms",
         "save": "Save",
         "saved": "Saved",
-        "saving": "Saving…",
+        "saving": "Saving\u2026",
         "secure_backup": "Secure Backup",
         "select_all": "Select all",
         "server": "Server",
@@ -634,12 +634,12 @@
         "mode_plain": "Hide formatting",
         "mode_rich_text": "Show formatting",
         "no_perms_notice": "You do not have permission to post to this room",
-        "placeholder": "Send an unencrypted message…",
-        "placeholder_encrypted": "Send a message…",
-        "placeholder_reply": "Send an unencrypted reply…",
-        "placeholder_reply_encrypted": "Send a reply…",
-        "placeholder_thread": "Reply to unencrypted thread…",
-        "placeholder_thread_encrypted": "Reply to thread…",
+        "placeholder": "Send an unencrypted message\u2026",
+        "placeholder_encrypted": "Send a message\u2026",
+        "placeholder_reply": "Send an unencrypted reply\u2026",
+        "placeholder_reply_encrypted": "Send a reply\u2026",
+        "placeholder_thread": "Reply to unencrypted thread\u2026",
+        "placeholder_thread_encrypted": "Reply to thread\u2026",
         "poll_button": "Poll",
         "poll_button_no_perms_description": "You do not have permission to start polls in this room.",
         "poll_button_no_perms_title": "Permission Required",
@@ -651,7 +651,18 @@
         "send_button_voice_message": "Send voice message",
         "send_voice_message": "Send voice message",
         "stop_voice_message": "Stop recording",
-        "voice_message_button": "Voice Message"
+        "voice_message_button": "Voice Message",
+        "color_picker": {
+            "custom_color": "Custom color",
+            "direction": "Direction",
+            "position": "Position",
+            "add_stop": "Add stop",
+            "title": "Text color",
+            "solid": "Solid",
+            "gradient": "Gradient",
+            "text_color": "Text color",
+            "default_style": "Default style"
+        }
     },
     "console_dev_note": "If you know what you're doing, Element is open-source, be sure to check out our GitHub (https://github.com/vector-im/element-web/) and contribute!",
     "console_scam_warning": "If someone told you to copy/paste something here, there is a high likelihood you're being scammed!",
@@ -701,8 +712,8 @@
         "add_existing_rooms_heading": "What do you want to organise?",
         "address_label": "Address",
         "address_placeholder": "e.g. my-space",
-        "creating": "Creating…",
-        "creating_rooms": "Creating rooms…",
+        "creating": "Creating\u2026",
+        "creating_rooms": "Creating rooms\u2026",
         "done_action": "Go to my space",
         "done_action_first_room": "Go to my first room",
         "explainer": "Spaces are a way to organize and discover rooms. What kind of space do you want to create?",
@@ -711,7 +722,7 @@
         "invite_teammates_by_username": "Invite by username",
         "invite_teammates_description": "Make sure the right people have access. You can invite more later.",
         "invite_teammates_heading": "Invite your teammates",
-        "inviting_users": "Inviting…",
+        "inviting_users": "Inviting\u2026",
         "label": "Create a space",
         "name_required": "Please enter a name for the space",
         "personal_space": "Just me",
@@ -734,7 +745,7 @@
         "share_description": "It's just you at the moment, it will be even better with others.",
         "share_heading": "Share %(name)s",
         "skip_action": "Skip for now",
-        "subspace_adding": "Adding…",
+        "subspace_adding": "Adding\u2026",
         "subspace_beta_notice": "Add a space to a space you manage.",
         "subspace_dropdown_title": "Create a space",
         "subspace_existing_space_prompt": "Want to add an existing space instead?",
@@ -745,9 +756,9 @@
         "subspace_join_rule_restricted_description": "Anyone in <SpaceName/> can join."
     },
     "credits": {
-        "default_cover_photo": "The <photo>default cover photo</photo> is © <author>Jesús Roncero</author> used under the terms of <terms>CC-BY-SA 4.0</terms>.",
-        "twemoji": "The <twemoji>Twemoji</twemoji> emoji art is © <author>Twitter, Inc and other contributors</author> used under the terms of <terms>CC-BY 4.0</terms>.",
-        "twemoji_colr": "The <colr>twemoji-colr</colr> font is © <author>Mozilla Foundation</author> used under the terms of <terms>Apache 2.0</terms>."
+        "default_cover_photo": "The <photo>default cover photo</photo> is \u00a9 <author>Jes\u00fas Roncero</author> used under the terms of <terms>CC-BY-SA 4.0</terms>.",
+        "twemoji": "The <twemoji>Twemoji</twemoji> emoji art is \u00a9 <author>Twitter, Inc and other contributors</author> used under the terms of <terms>CC-BY 4.0</terms>.",
+        "twemoji_colr": "The <colr>twemoji-colr</colr> font is \u00a9 <author>Mozilla Foundation</author> used under the terms of <terms>Apache 2.0</terms>."
     },
     "decline_invitation_dialog": {
         "confirm": "Are you sure you want to decline the invitation to join \"%(roomName)s\"?",
@@ -853,9 +864,9 @@
         "only_joined_members": "Only joined users",
         "original_event_source": "Original event source",
         "restore_from_backup": "Restore from backup",
-        "room_encrypted": "Room is <strong>encrypted ✅</strong>",
+        "room_encrypted": "Room is <strong>encrypted \u2705</strong>",
         "room_id": "Room ID: %(roomId)s",
-        "room_not_encrypted": "Room is <strong>not encrypted 🚨</strong>",
+        "room_not_encrypted": "Room is <strong>not encrypted \ud83d\udea8</strong>",
         "room_notifications_dot": "Dot: ",
         "room_notifications_highlight": "Highlight: ",
         "room_notifications_last_event": "Last event:",
@@ -1070,14 +1081,14 @@
         },
         "unable_to_setup_keys_error": "Unable to set up keys",
         "verification": {
-            "accepting": "Accepting…",
+            "accepting": "Accepting\u2026",
             "after_new_login": {
                 "device_verified": "Device verified",
                 "skip_verification": "Skip verification for now",
                 "verify_this_device": "Verify this device"
             },
             "cancelled_verification": "Either the request timed out, the request was denied, or there was a verification mismatch.",
-            "cancelling": "Cancelling…",
+            "cancelling": "Cancelling\u2026",
             "cant_confirm": "Can't confirm?",
             "complete_action": "Got It",
             "complete_description": "You've successfully verified this user.",
@@ -1092,7 +1103,7 @@
             "incoming_sas_device_dialog_text_1": "Verify this device to mark it as trusted. Trusting this device gives you and other users extra peace of mind when using end-to-end encrypted messages.",
             "incoming_sas_device_dialog_text_2": "Verifying this device will mark it as trusted, and users who have verified with you will trust this device.",
             "incoming_sas_dialog_title": "Incoming Verification Request",
-            "incoming_sas_dialog_waiting": "Waiting for partner to confirm…",
+            "incoming_sas_dialog_waiting": "Waiting for partner to confirm\u2026",
             "incoming_sas_user_dialog_text_1": "Verify this user to mark them as trusted. Trusting users gives you extra peace of mind when using end-to-end encrypted messages.",
             "incoming_sas_user_dialog_text_2": "Verifying this user will mark their session as trusted, and also mark your session as trusted to them.",
             "manual": {
@@ -1161,10 +1172,10 @@
             "verify_emoji_prompt": "Verify by comparing unique emoji.",
             "verify_emoji_prompt_qr": "If you can't scan the code above, verify by comparing unique emoji.",
             "verify_later": "I'll verify later",
-            "waiting_for_user_accept": "Waiting for %(displayName)s to accept…",
-            "waiting_other_device": "Waiting for you to verify on your other device…",
-            "waiting_other_device_details": "Waiting for you to verify on your other device, %(deviceName)s (%(deviceId)s)…",
-            "waiting_other_user": "Waiting for %(displayName)s to verify…"
+            "waiting_for_user_accept": "Waiting for %(displayName)s to accept\u2026",
+            "waiting_other_device": "Waiting for you to verify on your other device\u2026",
+            "waiting_other_device_details": "Waiting for you to verify on your other device, %(deviceName)s (%(deviceId)s)\u2026",
+            "waiting_other_user": "Waiting for %(displayName)s to verify\u2026"
         },
         "verification_requested_toast_title": "Verification requested",
         "verified_identity_changed": "%(displayName)s's (<b>%(userId)s</b>) digital identity was reset. <a>Learn more</a>",
@@ -1206,7 +1217,7 @@
         "storage_evicted_description_1": "Some session data, including encrypted message keys, is missing. Remove this device and sign in again to fix this, restoring keys from backup.",
         "storage_evicted_description_2": "Your browser likely removed this data when running low on disk space.",
         "storage_evicted_title": "Missing session data",
-        "sync": "Unable to connect to Homeserver. Retrying…",
+        "sync": "Unable to connect to Homeserver. Retrying\u2026",
         "tls": "Can't connect to homeserver - please check your connectivity, ensure your <a>homeserver's SSL certificate</a> is trusted, and that a browser extension is not blocking requests.",
         "unknown": "Unknown error",
         "unknown_error_code": "unknown error code",
@@ -1266,8 +1277,8 @@
         "cancelled": "Export Cancelled",
         "cancelled_detail": "The export was cancelled successfully",
         "confirm_stop": "Are you sure you want to stop exporting your data? If you do, you'll need to start over.",
-        "creating_html": "Creating HTML…",
-        "creating_output": "Creating output…",
+        "creating_html": "Creating HTML\u2026",
+        "creating_output": "Creating output\u2026",
         "creator_summary": "%(creatorName)s created this room.",
         "current_timeline": "Current Timeline",
         "enter_number_between_min_max": "Enter a number between %(min)s and %(max)s",
@@ -1291,7 +1302,7 @@
             "one": "Fetched %(count)s event out of %(total)s",
             "other": "Fetched %(count)s events out of %(total)s"
         },
-        "fetching_events": "Fetching events…",
+        "fetching_events": "Fetching events\u2026",
         "file_attached": "File Attached",
         "format": "Format",
         "from_the_beginning": "From the beginning",
@@ -1308,13 +1319,13 @@
         "num_messages_min_max": "Number of messages can only be a number between %(min)s and %(max)s",
         "number_of_messages": "Specify a number of messages",
         "previous_page": "Previous group of messages",
-        "processing": "Processing…",
+        "processing": "Processing\u2026",
         "processing_event_n": "Processing event %(number)s out of %(total)s",
         "select_option": "Select from the options below to export chats from your timeline",
         "size_limit": "Size Limit",
         "size_limit_min_max": "Size can only be a number between %(min)s MB and %(max)s MB",
         "size_limit_postfix": "MB",
-        "starting_export": "Starting export…",
+        "starting_export": "Starting export\u2026",
         "successful": "Export Successful",
         "successful_detail": "Your export was successful. Find it in your Downloads folder.",
         "text": "Plain Text",
@@ -1401,7 +1412,7 @@
     },
     "info_tooltip_title": "Information",
     "integration_manager": {
-        "connecting": "Connecting to integration manager…",
+        "connecting": "Connecting to integration manager\u2026",
         "error_connecting": "The integration manager is offline or it cannot reach your homeserver.",
         "error_connecting_heading": "Cannot connect to integration manager",
         "explainer": "Integration managers receive configuration data, and can modify widgets, send room invites, and set power levels on your behalf.",
@@ -1648,7 +1659,7 @@
         "video_rooms_a_new_way_to_chat": "A new way to chat over voice and video in %(brand)s.",
         "video_rooms_always_on_voip_channels": "Video rooms are always-on VoIP channels embedded within a room in %(brand)s.",
         "video_rooms_beta": "Video rooms are a beta feature",
-        "video_rooms_faq1_answer": "Use the “+” button in the room section of the left panel.",
+        "video_rooms_faq1_answer": "Use the \u201c+\u201d button in the room section of the left panel.",
         "video_rooms_faq1_question": "How can I create a video room?",
         "video_rooms_faq2_answer": "Yes, the chat timeline is displayed alongside the video.",
         "video_rooms_faq2_question": "Can I use text chat alongside the video call?",
@@ -1656,7 +1667,7 @@
         "wysiwyg_composer": "Rich text editor"
     },
     "labs_mjolnir": {
-        "advanced_warning": "⚠ These settings are meant for advanced users.",
+        "advanced_warning": "\u26a0 These settings are meant for advanced users.",
         "ban_reason": "Ignored/Blocked",
         "error_adding_ignore": "Error adding ignored user/server",
         "error_adding_list_description": "Please verify the room ID or address and try again.",
@@ -1739,7 +1750,7 @@
         "live_toggle_label": "Enable live location sharing",
         "live_until": "Live until %(expiryTime)s",
         "live_update_time": "Updated %(humanizedUpdateTime)s",
-        "loading_live_location": "Loading live location…",
+        "loading_live_location": "Loading live location\u2026",
         "location_not_available": "Location not available",
         "map_feedback": "Map feedback",
         "mapbox_logo": "Mapbox logo",
@@ -1853,7 +1864,7 @@
         "poll_label": "Poll",
         "topic_heading": "What is your poll question or topic?",
         "topic_label": "Question or topic",
-        "topic_placeholder": "Write something…",
+        "topic_placeholder": "Write something\u2026",
         "total_decryption_errors": "Due to decryption errors, some votes may not be counted",
         "total_n_votes": {
             "one": "%(count)s vote cast. Vote to see the results",
@@ -1910,7 +1921,7 @@
         "confirm_description": "Are you sure you wish to remove (delete) this event?",
         "confirm_description_state": "Note that removing room changes like this could undo the change.",
         "error": "You cannot delete this message. (%(code)s)",
-        "ongoing": "Removing…",
+        "ongoing": "Removing\u2026",
         "reason_label": "Reason (optional)"
     },
     "remove_section_dialog": {
@@ -1940,7 +1951,7 @@
         "incorrect_security_phrase_dialog": "Backup could not be decrypted with this Security Phrase: please verify that you entered the correct Security Phrase.",
         "incorrect_security_phrase_title": "Incorrect Security Phrase",
         "key_backup_warning": "<b>Warning</b>: you should only set up key backup from a trusted computer.",
-        "key_fetch_in_progress": "Fetching keys from server…",
+        "key_fetch_in_progress": "Fetching keys from server\u2026",
         "key_forgotten_text": "If you've forgotten your Recovery Key you can <button>set up new recovery options</button>",
         "key_is_invalid": "Not a valid Recovery Key",
         "key_is_valid": "This looks like a valid Recovery Key!",
@@ -1957,11 +1968,11 @@
         "add_integrations": "Add extensions",
         "add_topic": "Add topic",
         "extensions_button": "Extensions",
-        "extensions_empty_description": "Select “%(addIntegrations)s” to browse and add extensions to this room",
+        "extensions_empty_description": "Select \u201c%(addIntegrations)s\u201d to browse and add extensions to this room",
         "extensions_empty_title": "Boost productivity with more tools, widgets and bots",
         "files_button": "Files",
         "pinned_messages": {
-            "empty_description": "Select a message and choose “%(pinAction)s” to it include here.",
+            "empty_description": "Select a message and choose \u201c%(pinAction)s\u201d to it include here.",
             "empty_title": "Pin important messages so that they can be easily discovered",
             "header": {
                 "one": "1 Pinned message",
@@ -1975,7 +1986,7 @@
             "reply_thread": "Reply to a <link>thread message</link>",
             "unpin_all": {
                 "button": "Unpin all messages",
-                "content": "Make sure that you really want to remove all pinned messages. This action can’t be undone.",
+                "content": "Make sure that you really want to remove all pinned messages. This action can\u2019t be undone.",
                 "title": "Unpin all messages?"
             },
             "view": "View in timeline"
@@ -2100,7 +2111,7 @@
             "dm_caption": "Only the two of you are in this conversation, unless either of you invites anyone to join.",
             "edit_topic": "Topic: <topic/> (<a>edit</a>)",
             "enable_encryption_prompt": "Enable encryption in settings.",
-            "encrypted_3pid_dm_pending_join": "Once everyone has joined, you’ll be able to chat",
+            "encrypted_3pid_dm_pending_join": "Once everyone has joined, you\u2019ll be able to chat",
             "no_avatar_label": "Add a photo, so people can easily spot your room.",
             "no_topic": "<a>Add a topic</a> to help people know what it is about.",
             "private_unencrypted_warning": "Your private messages are normally encrypted, but this room isn't. Usually this is due to an unsupported device or method being used, like email invites.",
@@ -2125,9 +2136,9 @@
         "join_the_discussion": "Join the discussion",
         "join_title": "Join the room to participate",
         "join_title_account": "Join the conversation with an account",
-        "joining": "Joining…",
-        "joining_room": "Joining room…",
-        "joining_space": "Joining space…",
+        "joining": "Joining\u2026",
+        "joining_room": "Joining room\u2026",
+        "joining_space": "Joining space\u2026",
         "jump_read_marker": "Jump to first unread message.",
         "jump_to_bottom_button": "Scroll to most recent messages",
         "kick_reason": "Reason: %(reason)s",
@@ -2164,16 +2175,16 @@
             "title": "<bold>%(index)s of %(length)s</bold> Pinned messages"
         },
         "read_topic": "Click to read topic",
-        "rejecting": "Rejecting invite…",
+        "rejecting": "Rejecting invite\u2026",
         "rejoin_button": "Re-join",
         "room_content": "Room content",
         "room_is_low_priority": "This is a low priority room",
         "search": {
             "all_rooms_button": "Search all rooms",
-            "placeholder": "Search messages…",
+            "placeholder": "Search messages\u2026",
             "summary": {
-                "one": "1 result found for “<query/>”",
-                "other": "%(count)s results found for “<query/>”"
+                "one": "1 result found for \u201c<query/>\u201d",
+                "other": "%(count)s results found for \u201c<query/>\u201d"
             },
             "this_room_button": "Search this room"
         },
@@ -2349,7 +2360,7 @@
         },
         "permissions": {
             "add_privileged_user_description": "Give one or multiple users in this room more privileges",
-            "add_privileged_user_filter_placeholder": "Search users in this room…",
+            "add_privileged_user_filter_placeholder": "Search users in this room\u2026",
             "add_privileged_user_heading": "Add privileged users",
             "ban": "Ban users",
             "ban_reason": "Reason",
@@ -2566,7 +2577,7 @@
             "custom_font_name": "System font name",
             "custom_font_size": "Use custom size",
             "custom_theme_add": "Add custom theme",
-            "custom_theme_downloading": "Downloading custom theme…",
+            "custom_theme_downloading": "Downloading custom theme\u2026",
             "custom_theme_error_downloading": "Error downloading theme",
             "custom_theme_help": "Enter the URL of a custom theme you want to apply.",
             "custom_theme_invalid": "Invalid theme schema.",
@@ -2598,11 +2609,11 @@
             "advanced": {
                 "breadcrumb_first_description": "Your account details, contacts, preferences, and chat list will be kept",
                 "breadcrumb_page": "Reset encryption",
-                "breadcrumb_second_description": "You will lose any message history that’s stored only on the server",
+                "breadcrumb_second_description": "You will lose any message history that\u2019s stored only on the server",
                 "breadcrumb_third_description": "You will need to verify all your existing devices and contacts again",
                 "breadcrumb_title": "Are you sure you want to reset your digital identity?",
                 "breadcrumb_title_cant_confirm": "You need to reset your digital identity",
-                "breadcrumb_title_forgot": "Forgot your recovery key? You’ll need to reset your digital identity.",
+                "breadcrumb_title_forgot": "Forgot your recovery key? You\u2019ll need to reset your digital identity.",
                 "breadcrumb_title_sync_failed": "Failed to sync key storage. You need to reset your digital identity.",
                 "breadcrumb_warning": "Only do this if you believe your account has been compromised.",
                 "details_title": "Encryption details",
@@ -2611,7 +2622,7 @@
                 "import_keys": "Import keys",
                 "other_people_device_description": "Warning: users who have not explicitly verified with you (e.g. using emoji) will not receive your encrypted messages. Also, unverified devices of verified users will not receive your encrypted messages. Changes require an application restart to take effect.",
                 "other_people_device_label": "In encrypted rooms, only send messages to verified users",
-                "other_people_device_title": "Other people’s devices",
+                "other_people_device_title": "Other people\u2019s devices",
                 "reset_identity": "Reset cryptographic identity",
                 "reset_in_progress": "Reset in progress...",
                 "session_id": "Session ID:",
@@ -2655,10 +2666,10 @@
                 "set_up_recovery_confirm_button": "Finish set up",
                 "set_up_recovery_confirm_description": "Enter the recovery key shown on the previous screen to finish setting up recovery.",
                 "set_up_recovery_confirm_title": "Enter your recovery key to confirm",
-                "set_up_recovery_description": "Your key storage is protected by a recovery key. If you need a new recovery key after setup, you can recreate it by selecting ‘%(changeRecoveryKeyButton)s’.",
+                "set_up_recovery_description": "Your key storage is protected by a recovery key. If you need a new recovery key after setup, you can recreate it by selecting \u2018%(changeRecoveryKeyButton)s\u2019.",
                 "set_up_recovery_save_key_description": "Write down this recovery key somewhere safe, like a password manager, encrypted note, or a physical safe.",
                 "set_up_recovery_save_key_title": "Save your recovery key somewhere safe",
-                "set_up_recovery_secondary_description": "After clicking continue, we’ll generate a recovery key for you.",
+                "set_up_recovery_secondary_description": "After clicking continue, we\u2019ll generate a recovery key for you.",
                 "title": "Backup"
             },
             "title": "Encryption"
@@ -2698,7 +2709,7 @@
             "deactivate_confirm_continue": "Confirm account deactivation",
             "deactivate_confirm_erase_label": "Hide my messages from new joiners",
             "deactivate_section": "Deactivate Account",
-            "deactivate_warning": "Deactivating your account is a permanent action — be careful!",
+            "deactivate_warning": "Deactivating your account is a permanent action \u2014 be careful!",
             "discovery_email_empty": "Discovery options will appear once you have added an email.",
             "discovery_email_verification_instructions": "Verify the link in your inbox",
             "discovery_msisdn_empty": "Discovery options will appear once you have added a phone number.",
@@ -2740,11 +2751,11 @@
             "msisdn_verification_instructions": "Please enter verification code sent via text.",
             "msisdns_heading": "Phone numbers",
             "oidc_manage_button": "Manage account",
-            "password_change_section": "Set a new account password…",
+            "password_change_section": "Set a new account password\u2026",
             "password_change_success": "Your password was successfully changed.",
             "personal_info": "Personal info",
             "profile_subtitle": "This is how you appear to others on the app.",
-            "profile_subtitle_oidc": "Your account is managed separately by an identity provider and so some of your personal information can’t be changed here.",
+            "profile_subtitle_oidc": "Your account is managed separately by an identity provider and so some of your personal information can\u2019t be changed here.",
             "remove_email_prompt": "Remove %(email)s?",
             "remove_msisdn_prompt": "Remove %(phone)s?",
             "spell_check_locale_placeholder": "Choose a locale",
@@ -2864,7 +2875,7 @@
             "invites": "Invited to a room",
             "keywords": "Show a badge <badge/> when keywords are used in a room.",
             "keywords_prompt": "Enter keywords here, or use for spelling variations or nicknames",
-            "labs_notice_prompt": "<strong>Update:</strong>We’ve simplified Notifications Settings to make options easier to find. Some custom settings you’ve chosen in the past are not shown here, but they’re still active. If you proceed, some of your settings may change. <a>Learn more</a>",
+            "labs_notice_prompt": "<strong>Update:</strong>We\u2019ve simplified Notifications Settings to make options easier to find. Some custom settings you\u2019ve chosen in the past are not shown here, but they\u2019re still active. If you proceed, some of your settings may change. <a>Learn more</a>",
             "mentions_keywords": "Mentions and Keywords",
             "mentions_keywords_only": "Mentions and Keywords only",
             "messages_containing_keywords": "Messages containing keywords",
@@ -3187,7 +3198,7 @@
         "join": "Joins room with given address",
         "jumptodate": "Jump to the given date in the timeline",
         "jumptodate_invalid_input": "We were unable to understand the given date (%(inputDate)s). Try using the format YYYY-MM-DD.",
-        "lenny": "Prepends ( ͡° ͜ʖ ͡°) to a plain-text message",
+        "lenny": "Prepends ( \u0361\u00b0 \u035c\u0296 \u0361\u00b0) to a plain-text message",
         "manual_device_verification_confirm_description": "This will allow another device to send and receive messages as you. IF SOMEONE TOLD YOU TO PASTE SOMETHING HERE, IT IS LIKELY YOU ARE BEING SCAMMED! Are you sure you want to verify this other device?",
         "manual_device_verification_confirm_title": "Caution: manual device verification",
         "me": "Displays action",
@@ -3210,7 +3221,7 @@
         "roomname": "Sets the room name",
         "server_error": "Server error",
         "server_error_detail": "Server unavailable, overloaded, or something else went wrong.",
-        "shrug": "Prepends ¯\\_(ツ)_/¯ to a plain-text message",
+        "shrug": "Prepends \u00af\\_(\u30c4)_/\u00af to a plain-text message",
         "spoiler": "Sends the given message as a spoiler",
         "status": {
             "description": "Set your current status",
@@ -3220,12 +3231,12 @@
             "too_long_emoji": "The first argument must be an emoji",
             "too_long_text": "The text you provided was too long."
         },
-        "tableflip": "Prepends (╯°□°）╯︵ ┻━┻ to a plain-text message",
+        "tableflip": "Prepends (\u256f\u00b0\u25a1\u00b0\uff09\u256f\ufe35 \u253b\u2501\u253b to a plain-text message",
         "topic": "Gets or sets the room topic",
         "topic_none": "This room has no topic.",
         "topic_room_error": "Failed to get room topic: Unable to find room (%(roomId)s",
         "unban": "Unbans user with given ID",
-        "unflip": "Prepends ┬──┬ ノ( ゜-゜ノ) to a plain-text message",
+        "unflip": "Prepends \u252c\u2500\u2500\u252c \u30ce( \u309c-\u309c\u30ce) to a plain-text message",
         "unholdcall": "Takes the call in the current room off hold",
         "unignore": "Stops ignoring a user, showing their messages going forward",
         "unignore_dialog_description": "You are no longer ignoring %(userId)s",
@@ -3320,11 +3331,11 @@
             "network_dropdown_add_dialog_description": "Enter the name of a new server you want to explore.",
             "network_dropdown_add_dialog_placeholder": "Server name",
             "network_dropdown_add_dialog_title": "Add a new server",
-            "network_dropdown_add_server_option": "Add new server…",
+            "network_dropdown_add_server_option": "Add new server\u2026",
             "network_dropdown_available_invalid": "Can't find this server or its room list",
             "network_dropdown_available_invalid_forbidden": "You are not allowed to view this server's rooms list",
             "network_dropdown_available_valid": "Looks good",
-            "network_dropdown_remove_server_adornment": "Remove server “%(roomServer)s”",
+            "network_dropdown_remove_server_adornment": "Remove server \u201c%(roomServer)s\u201d",
             "network_dropdown_required_invalid": "Enter a server name",
             "network_dropdown_selected_label": "Show: Matrix rooms",
             "network_dropdown_selected_label_instance": "Show: %(instance)s rooms (%(server)s)",
@@ -3395,7 +3406,7 @@
             "one": "%(count)s reply",
             "other": "%(count)s replies"
         },
-        "empty_description": "Use “%(replyInThread)s” when hovering over a message.",
+        "empty_description": "Use \u201c%(replyInThread)s\u201d when hovering over a message.",
         "empty_title": "Threads help keep your conversations on-topic and easy to track.",
         "mark_all_read": "Mark all as read",
         "my_threads": "My threads",
@@ -3687,9 +3698,9 @@
             "dialog_title": "Add an Integration"
         },
         "self_redaction": "Message deleted",
-        "send_state_encrypting": "Encrypting your message…",
+        "send_state_encrypting": "Encrypting your message\u2026",
         "send_state_failed": "Failed to send",
-        "send_state_sending": "Sending your message…",
+        "send_state_sending": "Sending your message\u2026",
         "send_state_sent": "Your message was sent",
         "summary": {
             "banned": {
@@ -3825,11 +3836,11 @@
         "thread_info_basic": "From a thread",
         "typing_indicator": {
             "more_users": {
-                "one": "%(names)s and one other is typing …",
-                "other": "%(names)s and %(count)s others are typing …"
+                "one": "%(names)s and one other is typing \u2026",
+                "other": "%(names)s and %(count)s others are typing \u2026"
             },
-            "one_user": "%(displayName)s is typing …",
-            "two_users": "%(names)s and %(lastPerson)s are typing …"
+            "one_user": "%(displayName)s is typing \u2026",
+            "two_users": "%(names)s and %(lastPerson)s are typing \u2026"
         },
         "undecryptable_tooltip": "This message could not be decrypted"
     },
@@ -3845,8 +3856,8 @@
     "update": {
         "changelog": "Changelog",
         "check_action": "Check for update",
-        "checking": "Checking for an update…",
-        "downloading": "Downloading update…",
+        "checking": "Checking for an update\u2026",
+        "downloading": "Downloading update\u2026",
         "error_encountered": "Error encountered (%(errorDetail)s).",
         "error_unable_load_commit": "Unable to load commit detail: %(msg)s",
         "new_version_available": "New version available. <a>Update now.</a>",
@@ -3928,7 +3939,7 @@
                 "other": "You are about to remove %(count)s messages by %(user)s. This will remove them permanently for everyone in the conversation. Do you wish to continue?"
             },
             "confirm_description_2": "For a large amount of messages, this might take some time. Please don't refresh your client in the meantime.",
-            "confirm_keep_state_explainer": "Uncheck if you also want to remove system messages on this user (e.g. membership change, profile change…)",
+            "confirm_keep_state_explainer": "Uncheck if you also want to remove system messages on this user (e.g. membership change, profile change\u2026)",
             "confirm_keep_state_label": "Preserve system messages",
             "confirm_title": "Remove recent messages by %(user)s",
             "no_recent_messages_description": "Try scrolling up in the timeline to see if there are any earlier ones.",
@@ -3970,12 +3981,12 @@
         "call_held_switch": "You held the call <a>Switch</a>",
         "call_members": {
             "exhaustive": {
-                "one": "<avatars/> on the call",
-                "other": "<avatars/> on the call"
+                "one": "<avatars/>\u2002on the call",
+                "other": "<avatars/>\u2002on the call"
             },
             "overflow": {
-                "one": "<avatars/> +%(overflowCount)s on the call",
-                "other": "<avatars/> +%(overflowCount)s on the call"
+                "one": "<avatars/>\u2002+%(overflowCount)s on the call",
+                "other": "<avatars/>\u2002+%(overflowCount)s on the call"
             }
         },
         "call_toast_unknown_room": "Unknown room",

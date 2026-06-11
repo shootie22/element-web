@@ -260,6 +260,7 @@ export interface Settings {
     "Tweaks.showQuickReactionsOnContextMenu": IBaseSetting<boolean>;
     "Tweaks.animateMessageEntries": IBaseSetting<boolean>;
     "Tweaks.useLegacyTypingIndicator": IBaseSetting<boolean>;
+    "Tweaks.enableColoredMessages": IBaseSetting<boolean>;
     "Notifications.alwaysShowBadgeCounts": IBaseSetting<boolean>;
     "Notifications.showbold": IBaseSetting<boolean>;
     "Notifications.tac_only_notifications": IBaseSetting<boolean>;
@@ -492,7 +493,7 @@ export const SETTINGS: Settings = {
         description: _td("labs|feature_wysiwyg_composer_description"),
         supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS_WITH_CONFIG_PRIORITISED,
         supportedLevelsAreOrdered: true,
-        default: false,
+        default: true,
     },
     "feature_mjolnir": {
         isFeature: true,
@@ -810,6 +811,11 @@ export const SETTINGS: Settings = {
         displayName: _td("settings|tweaks|use_legacy_typing_indicator"),
         default: false,
     },
+    "Tweaks.enableColoredMessages": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|enable_colored_messages"),
+        default: true,
+    },
     // TODO: Wire up appropriately to UI (FTUE notifications)
     "Notifications.alwaysShowBadgeCounts": {
         supportedLevels: LEVELS_ROOM_OR_ACCOUNT,
@@ -1011,7 +1017,7 @@ export const SETTINGS: Settings = {
     },
     "MessageComposerInput.isRichTextEnabled": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
-        default: false,
+        default: true,
     },
     "MessageComposer.showFormatting": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,

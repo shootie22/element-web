@@ -21,6 +21,7 @@ import { getHttpUriForMxc, User } from "matrix-js-sdk/src/matrix";
 import { ELEMENT_URL_PATTERN } from "./linkify-matrix";
 import { mediaFromMxc } from "./customisations/Media";
 import SettingsStore from "./settings/SettingsStore";
+import { decodeGradientPayload } from "./@types/message_style.ts";
 import {
     parsePermalink,
     tryTransformEntityToPermalink,
@@ -118,13 +119,45 @@ export const transformTags: NonNullable<IOptions["transformTags"]> = {
             delete attribs.style;
         }
 
+        const enableColoredMessages = SettingsStore.getValue("Tweaks.enableColoredMessages");
+
+        if (!enableColoredMessages) {
+            delete attribs["data-mx-color"];
+            delete attribs["data-mx-bg-color"];
+            delete attribs["data-mx-gradient"];
+            return { tagName, attribs };
+        }
+
         // Sanitise and transform data-mx-color and data-mx-bg-color to their CSS
         // equivalents
         const customCSSMapper: Record<string, string> = {
             "data-mx-color": "color",
             "data-mx-bg-color": "background-color",
-            // $customAttributeKey: $cssAttributeKey
         };
+
+        // Handle data-mx-gradient for client-specific gradient support
+        const gradientValue = attribs["data-mx-gradient"];
+        if (gradientValue && typeof gradientValue === "string") {
+            const decoded = decodeGradientPayload(gradientValue);
+            if (decoded) {
+                const dirMap: Record<string, string> = {
+                    "left-to-right": "to right",
+                    "top-to-bottom": "to bottom",
+                    "diagonal-down": "to bottom right",
+                    "diagonal-up": "to top right",
+                };
+                const stops = decoded.stops
+                    .map((stop) => `${stop.color} ${Math.round(stop.position * 100)}%`)
+                    .join(", ");
+                const cssGradient = `linear-gradient(${dirMap[decoded.direction]}, ${stops})`;
+                delete attribs["data-mx-gradient"];
+                attribs.style =
+                    `background-image: ${cssGradient}; background-clip: text; -webkit-background-clip: text; color: transparent;` +
+                    (attribs.style || "");
+            } else {
+                delete attribs["data-mx-gradient"];
+            }
+        }
 
         let style = "";
         Object.keys(customCSSMapper).forEach((customAttributeKey) => {
@@ -197,7 +230,7 @@ export const sanitizeHtmlParams: IOptions = {
         // but strip during the transformation.
         // custom ones first:
         font: ["color", "data-mx-bg-color", "data-mx-color", "style"], // custom to matrix
-        span: ["data-mx-maths", "data-mx-bg-color", "data-mx-color", "data-mx-spoiler", "style"], // custom to matrix
+        span: ["data-mx-maths", "data-mx-bg-color", "data-mx-color", "data-mx-spoiler", "data-mx-gradient", "style"], // custom to matrix
         div: ["data-mx-maths"],
         a: ["href", "name", "target", "rel"], // remote target: custom to matrix
         // img tags also accept width/height, we just map those to max-width & max-height during transformation
