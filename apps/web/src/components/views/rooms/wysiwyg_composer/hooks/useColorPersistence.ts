@@ -82,27 +82,38 @@ function persistDefaultStyle(style: DefaultStyle | null): void {
     }
 }
 
+const GRADIENT_WRAP_ATTR = "data-gradient-wrap";
+
+function removeGradientWrap(editor: HTMLElement): void {
+    const wrap = editor.querySelector(`:scope > [${GRADIENT_WRAP_ATTR}]`);
+    if (!wrap) return;
+    while (wrap.firstChild) {
+        editor.insertBefore(wrap.firstChild, wrap);
+    }
+    editor.removeChild(wrap);
+}
+
 function applyStyleToEditor(style: DefaultStyle, editor: HTMLElement): void {
     if (style.color) {
         editor.style.color = style.color;
         editor.style.background = "";
         editor.style.webkitTextFillColor = "";
         editor.style.backgroundClip = "";
+        removeGradientWrap(editor);
         removePlaceholderOverride();
     } else if (style.direction && style.stops) {
-        const cssDir = DIRECTION_MAP[style.direction] ?? "to right";
-        const stops = style.stops.map(s => `${s.color} ${Math.round(s.position * 100)}%`).join(", ");
         const fallback = style.stops[0]?.color ?? "#000000";
         editor.style.color = fallback;
-        editor.style.background = `linear-gradient(${cssDir}, ${stops})`;
-        editor.style.backgroundClip = "text";
-        editor.style.webkitTextFillColor = "transparent";
+        editor.style.background = "";
+        editor.style.webkitTextFillColor = "";
+        editor.style.backgroundClip = "";
         setPlaceholderColor(fallback);
     } else {
         editor.style.color = "";
         editor.style.background = "";
         editor.style.webkitTextFillColor = "";
         editor.style.backgroundClip = "";
+        removeGradientWrap(editor);
         removePlaceholderOverride();
     }
 }
@@ -136,6 +147,7 @@ export function clearDefaultStyle(): void {
         editor.style.background = "";
         editor.style.webkitTextFillColor = "";
         editor.style.backgroundClip = "";
+        removeGradientWrap(editor);
     }
     removePlaceholderOverride();
 }
@@ -221,6 +233,31 @@ function wrapEmojiNodes(editor: HTMLElement, fallbackColor: string): void {
     }
 }
 
+function applyGradientWrap(editor: HTMLElement, defaultStyle: DefaultStyle): void {
+    if (!defaultStyle.direction || !defaultStyle.stops) return;
+    if (editor.querySelector(`:scope > [${GRADIENT_WRAP_ATTR}]`)) return;
+
+    const cssDir = DIRECTION_MAP[defaultStyle.direction] ?? "to right";
+    const stops = defaultStyle.stops.map(s => `${s.color} ${Math.round(s.position * 100)}%`).join(", ");
+    const fallback = defaultStyle.stops[0]?.color ?? "#000000";
+
+    const wrap = document.createElement("span");
+    wrap.setAttribute(GRADIENT_WRAP_ATTR, "");
+    wrap.style.cssText = [
+        `background: linear-gradient(${cssDir}, ${stops})`,
+        "background-clip: text",
+        "-webkit-text-fill-color: transparent",
+        `color: ${fallback}`,
+        "display: inline-block",
+        "width: fit-content",
+    ].join(";");
+
+    while (editor.firstChild) {
+        wrap.appendChild(editor.firstChild);
+    }
+    editor.appendChild(wrap);
+}
+
 function reapplyRanges(): void {
     if (pendingRanges.length === 0 && !defaultStyle) return;
     if (isReapplying) return;
@@ -245,9 +282,11 @@ function reapplyRanges(): void {
         }
 
         // Wrap emoji in a solid fallback color so they aren't affected by
-        // the `background-clip: text` gradient on the editor element.
+        // the gradient effect, then wrap all editor content in an inline-block
+        // span so the gradient background-size matches the text width exactly.
         if (defaultStyle?.direction && defaultStyle?.stops) {
             wrapEmojiNodes(editor, defaultStyle.stops[0]?.color ?? "#000000");
+            applyGradientWrap(editor, defaultStyle);
         }
     } finally {
         isReapplying = false;
@@ -266,6 +305,9 @@ export function useColorPersistence(
 
         if (defaultStyle) {
             applyStyleToEditor(defaultStyle, editor);
+            if (defaultStyle.direction && defaultStyle.stops) {
+                applyGradientWrap(editor, defaultStyle);
+            }
         }
 
         if (!colorObserver) {
