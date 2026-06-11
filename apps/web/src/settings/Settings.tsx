@@ -815,6 +815,7 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|tweaks|enable_colored_messages"),
         default: true,
+        controller: new ReloadOnChangeController(),
     },
     // TODO: Wire up appropriately to UI (FTUE notifications)
     "Notifications.alwaysShowBadgeCounts": {
