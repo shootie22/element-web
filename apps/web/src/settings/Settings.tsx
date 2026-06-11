@@ -252,10 +252,14 @@ export interface Settings {
     "Tweaks.accentEmojiStickerButtons": IBaseSetting<boolean>;
     "Tweaks.resizableEmojiStickerPickers": IBaseSetting<boolean>;
     "Tweaks.mixCustomEmojisWithFrequentlyUsed": IBaseSetting<boolean>;
+    "Tweaks.animateReactionEntries": IBaseSetting<boolean>;
+    "Tweaks.animateReactionCountChanges": IBaseSetting<boolean>;
     "Tweaks.playAnimatedReactionImagesOnHover": IBaseSetting<boolean>;
     "Tweaks.playAnimatedStickersOnHover": IBaseSetting<boolean>;
     "Tweaks.showQuickReactionsOnHover": IBaseSetting<boolean>;
     "Tweaks.showQuickReactionsOnContextMenu": IBaseSetting<boolean>;
+    "Tweaks.animateMessageEntries": IBaseSetting<boolean>;
+    "Tweaks.useLegacyTypingIndicator": IBaseSetting<boolean>;
     "Notifications.alwaysShowBadgeCounts": IBaseSetting<boolean>;
     "Notifications.showbold": IBaseSetting<boolean>;
     "Notifications.tac_only_notifications": IBaseSetting<boolean>;
@@ -766,6 +770,16 @@ export const SETTINGS: Settings = {
         displayName: _td("settings|tweaks|mix_custom_emojis_with_frequently_used"),
         default: true,
     },
+    "Tweaks.animateReactionEntries": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|animate_reaction_additions"),
+        default: true,
+    },
+    "Tweaks.animateReactionCountChanges": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|animate_reaction_count_changes"),
+        default: true,
+    },
     "Tweaks.playAnimatedReactionImagesOnHover": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|tweaks|play_animated_reaction_images_on_hover"),
@@ -785,6 +799,16 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|tweaks|show_quick_reactions_on_context_menu"),
         default: true,
+    },
+    "Tweaks.animateMessageEntries": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|animate_message_entries"),
+        default: true,
+    },
+    "Tweaks.useLegacyTypingIndicator": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|use_legacy_typing_indicator"),
+        default: false,
     },
     // TODO: Wire up appropriately to UI (FTUE notifications)
     "Notifications.alwaysShowBadgeCounts": {

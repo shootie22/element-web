@@ -16,6 +16,7 @@ import React, {
     type MouseEvent,
     type ReactNode,
 } from "react";
+import classNames from "classnames";
 import {
     type EventStatus,
     type MatrixEvent,
@@ -252,6 +253,10 @@ export interface EventTileProps {
 
     /** Whether the timestamp should be hidden for preview rendering. */
     hideTimestamp?: boolean;
+
+    /** Whether this tile should play its entrance animation on mount. */
+    animateEntry?: boolean;
+
     /** Whether interactive controls inside the tile should be inhibited. */
     inhibitInteraction?: boolean;
 
@@ -784,7 +789,9 @@ export class UnwrappedEventTile extends React.Component<EventTileProps, IState> 
         scrollToken,
     }: EventTileRootRenderState): Record<string, unknown> {
         return {
-            "className": tileClasses,
+            "className": classNames(tileClasses, {
+                mx_EventTile_animateEntry: this.props.animateEntry,
+            }),
             "aria-live": tileAriaLive,
             "aria-atomic": true,
             "data-scroll-tokens": scrollToken,

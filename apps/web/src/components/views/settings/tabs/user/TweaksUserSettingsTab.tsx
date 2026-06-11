@@ -38,8 +38,15 @@ export default function TweaksUserSettingsTab(): React.ReactNode {
                 </SettingsSubsection>
 
                 <SettingsSubsection heading={_t("settings|tweaks|reactions_heading")} formWrap>
+                    <SettingsFlag name="Tweaks.animateReactionEntries" level={SettingLevel.ACCOUNT} />
+                    <SettingsFlag name="Tweaks.animateReactionCountChanges" level={SettingLevel.ACCOUNT} />
                     <SettingsFlag name="Tweaks.showQuickReactionsOnHover" level={SettingLevel.ACCOUNT} />
                     <SettingsFlag name="Tweaks.showQuickReactionsOnContextMenu" level={SettingLevel.ACCOUNT} />
+                </SettingsSubsection>
+
+                <SettingsSubsection heading={_t("settings|tweaks|timeline_heading")} formWrap>
+                    <SettingsFlag name="Tweaks.animateMessageEntries" level={SettingLevel.ACCOUNT} />
+                    <SettingsFlag name="Tweaks.useLegacyTypingIndicator" level={SettingLevel.ACCOUNT} />
                 </SettingsSubsection>
             </SettingsSection>
         </SettingsTab>

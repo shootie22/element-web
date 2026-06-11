@@ -7,6 +7,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { type JSX } from "react";
+import classNames from "classnames";
 import { type Room, RoomEvent, type RoomMember, RoomMemberEvent, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 
 import * as WhoIsTyping from "../../../WhoIsTyping";
@@ -17,6 +18,8 @@ import MemberAvatar from "../avatars/MemberAvatar";
 interface IProps {
     // the room this statusbar is representing.
     room: Room;
+    // Whether the typing dots should animate.
+    animateDots?: boolean;
     onShown?: () => void;
     onHidden?: () => void;
     // Number of names to display in typing indication. E.g. set to 3, will
@@ -37,6 +40,7 @@ interface IState {
 export default class WhoIsTypingTile extends React.Component<IProps, IState> {
     public static defaultProps = {
         whoIsTypingLimit: 3,
+        animateDots: true,
     };
 
     public state: IState = {
@@ -215,7 +219,11 @@ export default class WhoIsTypingTile extends React.Component<IProps, IState> {
                 </div>
                 <div className="mx_WhoIsTypingTile_label">
                     {textWithoutDots}
-                    <span className="mx_WhoIsTypingTile_dots">
+                    <span
+                        className={classNames("mx_WhoIsTypingTile_dots", {
+                            mx_WhoIsTypingTile_dotsStatic: !this.props.animateDots,
+                        })}
+                    >
                         <span className="mx_WhoIsTypingTile_dot" />
                         <span className="mx_WhoIsTypingTile_dot" />
                         <span className="mx_WhoIsTypingTile_dot" />

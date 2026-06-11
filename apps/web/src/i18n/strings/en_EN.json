@@ -2813,6 +2813,9 @@
         },
         "tweaks": {
             "accent_emoji_sticker_buttons": "Use Element green for emoji and sticker buttons",
+            "animate_message_entries": "Animate new messages",
+            "animate_reaction_additions": "Animate new reactions",
+            "animate_reaction_count_changes": "Animate reaction count changes",
             "animated_media_heading": "Animated media",
             "composer_heading": "Composer",
             "dialog_title": "<strong>Settings:</strong> Tweaks",
@@ -2825,6 +2828,7 @@
             "show_quick_reactions_on_context_menu": "Show quick reactions in message menu",
             "show_quick_reactions_on_hover": "Show quick reactions on hover",
             "timeline_heading": "Timeline",
+            "use_legacy_typing_indicator": "Use the old non-animated typing indicator",
             "title": "Tweaks"
         },
         "media_preview": {

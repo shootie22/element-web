@@ -214,6 +214,8 @@ interface IProps {
 interface IState {
     ghostReadMarkers: string[];
     showTypingNotifications: boolean;
+    animateMessageEntries: boolean;
+    useLegacyTypingIndicator: boolean;
     hideSender: boolean;
 }
 
@@ -277,7 +279,11 @@ export default class MessagePanel extends React.Component<IProps, IState> {
     public scrollPanel = createRef<ScrollPanel>();
 
     private showTypingNotificationsWatcherRef?: string;
+    private animateMessageEntriesWatcherRef?: string;
+    private useLegacyTypingIndicatorWatcherRef?: string;
     private eventTiles: Record<string, UnwrappedEventTile> = {};
+    private seenEventTileKeys = new Set<string>();
+    private hasRenderedEventTiles = false;
 
     // A map to allow groupers to maintain consistent keys even if their first event is uprooted due to back-pagination.
     public grouperKeyMap = new WeakMap<MatrixEvent, string>();
@@ -290,6 +296,8 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             // display 'ghost' read markers that are animating away
             ghostReadMarkers: [],
             showTypingNotifications: SettingsStore.getValue("showTypingNotifications"),
+            animateMessageEntries: SettingsStore.getValue("Tweaks.animateMessageEntries"),
+            useLegacyTypingIndicator: SettingsStore.getValue("Tweaks.useLegacyTypingIndicator"),
             hideSender: this.shouldHideSender(),
         };
 
@@ -306,6 +314,16 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             null,
             this.onShowTypingNotificationsChange,
         );
+        this.animateMessageEntriesWatcherRef = SettingsStore.watchSetting(
+            "Tweaks.animateMessageEntries",
+            null,
+            this.onAnimateMessageEntriesChange,
+        );
+        this.useLegacyTypingIndicatorWatcherRef = SettingsStore.watchSetting(
+            "Tweaks.useLegacyTypingIndicator",
+            null,
+            this.onUseLegacyTypingIndicatorChange,
+        );
         this.calculateRoomMembersCount();
         this.props.room?.currentState.on(RoomStateEvent.Update, this.calculateRoomMembersCount);
     }
@@ -314,6 +332,8 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         this.unmounted = true;
         this.props.room?.currentState.off(RoomStateEvent.Update, this.calculateRoomMembersCount);
         SettingsStore.unwatchSetting(this.showTypingNotificationsWatcherRef);
+        SettingsStore.unwatchSetting(this.animateMessageEntriesWatcherRef);
+        SettingsStore.unwatchSetting(this.useLegacyTypingIndicatorWatcherRef);
         this.readReceiptMap = {};
         this.resizeObserver.disconnect();
     }
@@ -363,6 +383,18 @@ export default class MessagePanel extends React.Component<IProps, IState> {
     private onShowTypingNotificationsChange = (): void => {
         this.setState({
             showTypingNotifications: SettingsStore.getValue("showTypingNotifications"),
+        });
+    };
+
+    private onAnimateMessageEntriesChange = (): void => {
+        this.setState({
+            animateMessageEntries: SettingsStore.getValue("Tweaks.animateMessageEntries"),
+        });
+    };
+
+    private onUseLegacyTypingIndicatorChange = (): void => {
+        this.setState({
+            useLegacyTypingIndicator: SettingsStore.getValue("Tweaks.useLegacyTypingIndicator"),
         });
     };
 
@@ -739,6 +771,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             ret.push(...grouper.getTiles());
         }
 
+        this.hasRenderedEventTiles = true;
         return ret;
     }
 
@@ -799,7 +832,18 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             shouldFormContinuation(prevEvent, mxEv, cli, this.showHiddenEvents, this.context.timelineRenderingType);
 
         const eventId = mxEv.getId()!;
+        const eventTileKey = mxEv.getTxnId() || eventId;
         const highlight = eventId === this.props.highlightedEventId;
+        const isLocalEcho = !!mxEv.getAssociatedStatus();
+        const eventAgeMs = Date.now() - (mxEv.getTs() ?? Date.now());
+        const isRecentEvent = isLocalEcho || (eventAgeMs >= 0 && eventAgeMs < 10000);
+        const animateEntry =
+            this.state.animateMessageEntries &&
+            this.hasRenderedEventTiles &&
+            !this.seenEventTileKeys.has(eventTileKey) &&
+            isRecentEvent &&
+            this.shouldShowEvent(mxEv);
+        this.seenEventTileKeys.add(eventTileKey);
 
         const readReceipts = this.readReceiptsByEvent.get(eventId);
 
@@ -807,9 +851,10 @@ export default class MessagePanel extends React.Component<IProps, IState> {
         // use txnId as key if available so that we don't remount during sending
         ret.push(
             <EventTile
-                key={mxEv.getTxnId() || eventId}
+                key={eventTileKey}
                 as="li"
                 ref={this.collectEventTile.bind(this, eventId)}
+                animateEntry={animateEntry}
                 alwaysShowTimestamps={this.props.alwaysShowTimestamps}
                 mxEvent={mxEv}
                 continuation={continuation}
@@ -1051,6 +1096,7 @@ export default class MessagePanel extends React.Component<IProps, IState> {
             whoIsTyping = (
                 <WhoIsTypingTile
                     room={this.props.room}
+                    animateDots={!this.state.useLegacyTypingIndicator}
                     onShown={this.onTypingShown}
                     onHidden={this.onTypingHidden}
                     ref={this.whoIsTyping}
