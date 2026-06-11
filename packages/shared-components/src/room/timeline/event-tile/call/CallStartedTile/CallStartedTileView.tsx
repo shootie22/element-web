@@ -36,15 +36,16 @@ function getIconForCallType(type: CallType): React.ReactNode {
  */
 export function CallStartedTileView({ vm, className }: CallStartedTileViewProps): React.ReactNode {
     const { translate: _t } = useI18n();
-    const { type, timestamp } = useViewModel(vm);
+    const { type, timestamp, senderName } = useViewModel(vm);
     const classNames = classnames(className, styles.container);
+    const title = type === CallType.Voice
+        ? _t("timeline|call_tile|voice_call_title")
+        : _t("timeline|call_tile|video_call_title");
     return (
         <Flex className={classNames} align="center" gap="var(--cpd-space-2x)">
             {getIconForCallType(type)}
             <div className={styles.title}>
-                {type === CallType.Voice
-                    ? _t("timeline|call_tile|voice_call_title")
-                    : _t("timeline|call_tile|video_call_title")}
+                {senderName ? `${title} by ${senderName}` : title}
             </div>
 
             <div className={styles.time}>{timestamp}</div>

@@ -74,7 +74,9 @@ function generateSnapshot(
     }
     const showTwelveHour = SettingsStore.getValue("showTwelveHourTimestamps");
     const timestamp = getTimeFromEvent(declineEvent ?? event, showTwelveHour);
-    return { snapshot: { type, timestamp, isCallDeclinedByUs }, declineEvent };
+    const rawName = event.sender?.name ?? event.getSender()?.split(":")[0]?.substring(1) ?? "";
+    const senderName = rawName.length > 16 ? rawName.slice(0, 16) + "…" : rawName;
+    return { snapshot: { type, timestamp, senderName, isCallDeclinedByUs }, declineEvent };
 }
 
 function isSettingsChangedPayload(payload: ActionPayload): payload is SettingUpdatedPayload {
