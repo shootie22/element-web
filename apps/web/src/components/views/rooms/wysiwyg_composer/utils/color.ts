@@ -8,24 +8,33 @@ Please see LICENSE files in the repository root for full details.
 import type { GradientStop, GradientDirection } from "../../../../../@types/message_style.ts";
 import { encodeGradientPayload } from "../../../../../@types/message_style.ts";
 
-/**
- * Apply a solid color to the current text selection.
- * Uses execCommand('insertHTML') which inserts HTML through the browser's contenteditable
- * pipeline. The WYSIWYG library ignores 'insertHTML' events (falls through to default handler),
- * so the span stays in the DOM until the next library-processed input event.
- */
+export function buildColorTag(color: string): string {
+    return `<span style="color: ${color}" data-mx-color="${color}">`;
+}
+
+export function buildGradientTag(direction: GradientDirection, stops: GradientStop[]): string {
+    const payload = encodeGradientPayload({ kind: "gradient", direction, stops });
+    const fallback = stops[0]?.color ?? "#000000";
+    return `<span style="color: ${fallback}" data-mx-gradient="${payload}">`;
+}
+
+function ensureEditorFocus(): void {
+    const active = document.activeElement;
+    if (!active || !(active instanceof HTMLElement) || !active.hasAttribute("contenteditable")) {
+        const editor = document.querySelector<HTMLElement>("[contenteditable]");
+        editor?.focus();
+    }
+}
+
 export function applySolidColorToSelection(color: string): void {
     const sel = document.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
     const text = sel.toString();
     if (!text) return;
-    document.execCommand("insertHTML", false, `<span data-mx-color="${color}">${text}</span>`);
+    ensureEditorFocus();
+    document.execCommand("insertHTML", false, buildColorTag(color) + text + "</span>");
 }
 
-/**
- * Apply a gradient to the current text selection.
- * Same approach as applySolidColorToSelection.
- */
 export function applyGradientToSelection(
     direction: GradientDirection,
     stops: GradientStop[],
@@ -34,17 +43,15 @@ export function applyGradientToSelection(
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
     const text = sel.toString();
     if (!text) return;
-    const payload = encodeGradientPayload({ kind: "gradient", direction, stops });
-    document.execCommand("insertHTML", false, `<span data-mx-gradient="${payload}">${text}</span>`);
+    ensureEditorFocus();
+    document.execCommand("insertHTML", false, buildGradientTag(direction, stops) + text + "</span>");
 }
 
-/**
- * Remove color/gradient from the current selection by replacing with plain text.
- */
 export function removeColorFromSelection(): void {
     const sel = document.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
     const text = sel.toString();
     if (!text) return;
+    ensureEditorFocus();
     document.execCommand("insertHTML", false, text);
 }

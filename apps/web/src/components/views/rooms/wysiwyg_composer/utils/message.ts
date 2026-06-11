@@ -16,6 +16,7 @@ import {
 } from "matrix-js-sdk/src/matrix";
 import { type RoomMessageEventContent } from "matrix-js-sdk/src/types";
 
+import { clearColorRanges } from "../hooks/useColorPersistence";
 import { PosthogAnalytics } from "../../../../../PosthogAnalytics";
 import SettingsStore from "../../../../../settings/SettingsStore";
 import { decorateStartSendingTime, sendRoundTripMetric } from "../../../../../sendTimePerformanceMetrics";
@@ -48,6 +49,7 @@ export async function sendMessage(
     isHTML: boolean,
     { roomContext, mxClient, ...params }: SendMessageParams,
 ): Promise<ISendEventResponse | undefined> {
+    clearColorRanges();
     const { relation, replyToEvent } = params;
     const { room } = roomContext;
     const roomId = room?.roomId;

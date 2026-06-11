@@ -19,6 +19,7 @@ import { Editor } from "./Editor";
 import { useInputEventProcessor } from "../hooks/useInputEventProcessor";
 import { useSetCursorPosition } from "../hooks/useSetCursorPosition";
 import { useIsFocused } from "../hooks/useIsFocused";
+import { useColorPersistence } from "../hooks/useColorPersistence";
 import defaultDispatcher from "../../../../../dispatcher/dispatcher";
 import { Action } from "../../../../../dispatcher/actions";
 import { parsePermalink } from "../../../../../utils/permalinks/Permalinks";
@@ -85,6 +86,8 @@ export const WysiwygComposer = memo(function WysiwygComposer({
     );
 
     const { isFocused, onFocus } = useIsFocused();
+
+    useColorPersistence(ref, messageContent);
 
     const isReady = isWysiwygReady && !disabled;
     const computedPlaceholder = (!content && placeholder) || undefined;

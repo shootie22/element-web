@@ -31,6 +31,7 @@ import { type KeyCombo } from "../../../../../KeyBindingsManager";
 import { openColorPicker } from "./ColorPicker";
 import { applySolidColorToSelection, applyGradientToSelection } from "../utils/color";
 import { setSelection } from "../utils/selection";
+import { storeRange } from "../hooks/useColorPersistence";
 import SettingsStore from "../../../../../settings/SettingsStore";
 import { MatrixClientPeg } from "../../../../../MatrixClientPeg";
 import {
@@ -96,6 +97,24 @@ function Button({ label, keyCombo, onClick, actionState, icon }: ButtonProps): J
             {icon}
         </AccessibleButton>
     );
+}
+
+function computeAndStoreRange(
+    color?: string,
+    direction?: "left-to-right" | "top-to-bottom" | "diagonal-down" | "diagonal-up",
+    stops?: { color: string; position: number }[],
+): void {
+    const editor = document.querySelector<HTMLElement>("[contenteditable]");
+    if (!editor) return;
+    const sel = document.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const preRange = document.createRange();
+    preRange.selectNodeContents(editor);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    const startOffset = preRange.toString().length;
+    const endOffset = startOffset + range.toString().length;
+    storeRange({ startOffset, endOffset, color, direction, stops });
 }
 
 interface FormattingButtonsProps {
@@ -200,13 +219,15 @@ export function FormattingButtons({ composer, actionStates, disabled }: Formatti
                     onClick={async () => {
                         const result = await openColorPicker("solid");
                         if (!result) return;
-                        // Wait for modal cleanup to restore focus to the editor
                         await new Promise((resolve) => setTimeout(resolve, 0));
-                        // Restore the selection that was saved by useSelection hook
                         await setSelection(composerContext.selection);
+                        document.querySelector<HTMLElement>("[contenteditable]")?.focus();
+                        await new Promise((resolve) => setTimeout(resolve, 0));
                         if (result.kind === "solid") {
+                            computeAndStoreRange(result.color);
                             applySolidColorToSelection(result.color);
                         } else {
+                            computeAndStoreRange(undefined, result.direction, result.stops);
                             applyGradientToSelection(result.direction, result.stops);
                         }
                     }}
