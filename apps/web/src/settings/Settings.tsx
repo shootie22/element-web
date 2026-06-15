@@ -261,6 +261,7 @@ export interface Settings {
     "Tweaks.animateMessageEntries": IBaseSetting<boolean>;
     "Tweaks.useLegacyTypingIndicator": IBaseSetting<boolean>;
     "Tweaks.enableColoredMessages": IBaseSetting<boolean>;
+    "Tweaks.startWithCameraMuted": IBaseSetting<boolean>;
     "Notifications.alwaysShowBadgeCounts": IBaseSetting<boolean>;
     "Notifications.showbold": IBaseSetting<boolean>;
     "Notifications.tac_only_notifications": IBaseSetting<boolean>;
@@ -816,6 +817,11 @@ export const SETTINGS: Settings = {
         displayName: _td("settings|tweaks|enable_colored_messages"),
         default: true,
         controller: new ReloadOnChangeController(),
+    },
+    "Tweaks.startWithCameraMuted": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|start_with_camera_muted"),
+        default: false,
     },
     // TODO: Wire up appropriately to UI (FTUE notifications)
     "Notifications.alwaysShowBadgeCounts": {

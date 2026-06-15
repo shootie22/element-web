@@ -49,6 +49,10 @@ export default function TweaksUserSettingsTab(): React.ReactNode {
                     <SettingsFlag name="Tweaks.animateMessageEntries" level={SettingLevel.ACCOUNT} />
                     <SettingsFlag name="Tweaks.useLegacyTypingIndicator" level={SettingLevel.ACCOUNT} />
                 </SettingsSubsection>
+
+                <SettingsSubsection heading={_t("settings|tweaks|calls_heading")} formWrap>
+                    <SettingsFlag name="Tweaks.startWithCameraMuted" level={SettingLevel.ACCOUNT} />
+                </SettingsSubsection>
             </SettingsSection>
         </SettingsTab>
     );

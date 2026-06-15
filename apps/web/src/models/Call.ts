@@ -765,6 +765,10 @@ export class ElementCall extends Call {
             params.set("skipLobby", opts.skipLobby.toString());
         }
 
+        if (!SettingsStore.getValue("Tweaks.startWithCameraMuted")) {
+            params.set("startWithCameraMuted", "false");
+        }
+
         const rageshakeSubmitUrl = SdkConfig.get("bug_report_endpoint_url");
         if (rageshakeSubmitUrl && rageshakeSubmitUrl !== BugReportEndpointURLLocal) {
             params.append("rageshakeSubmitUrl", rageshakeSubmitUrl);

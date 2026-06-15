@@ -2841,6 +2841,8 @@
             "timeline_heading": "Timeline",
             "use_legacy_typing_indicator": "Use the old non-animated typing indicator",
             "enable_colored_messages": "Colored text",
+            "start_with_camera_muted": "Start calls with camera muted",
+            "calls_heading": "Calls",
             "title": "Tweaks"
         },
         "media_preview": {
