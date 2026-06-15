@@ -2844,6 +2844,8 @@
             "enable_colored_messages": "Colored text",
             "start_with_camera_muted": "Start calls with camera muted",
             "calls_heading": "Calls",
+            "room_list_heading": "Room list",
+            "show_room_list_filters": "Show room list filters",
             "title": "Tweaks"
         },
         "media_preview": {

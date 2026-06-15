@@ -262,6 +262,7 @@ export interface Settings {
     "Tweaks.useLegacyTypingIndicator": IBaseSetting<boolean>;
     "Tweaks.enableColoredMessages": IBaseSetting<boolean>;
     "Tweaks.startWithCameraMuted": IBaseSetting<boolean>;
+    "Tweaks.showRoomListFilters": IBaseSetting<boolean>;
     "Notifications.alwaysShowBadgeCounts": IBaseSetting<boolean>;
     "Notifications.showbold": IBaseSetting<boolean>;
     "Notifications.tac_only_notifications": IBaseSetting<boolean>;
@@ -822,6 +823,11 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|tweaks|start_with_camera_muted"),
         default: false,
+    },
+    "Tweaks.showRoomListFilters": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|show_room_list_filters"),
+        default: true,
     },
     // TODO: Wire up appropriately to UI (FTUE notifications)
     "Notifications.alwaysShowBadgeCounts": {

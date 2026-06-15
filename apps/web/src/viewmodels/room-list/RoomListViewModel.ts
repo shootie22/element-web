@@ -107,11 +107,8 @@ export class RoomListViewModel
         const roomsResult = RoomListStoreV3.instance.getSortedRoomsInActiveSpace(undefined);
         const canCreateRoom = hasCreateRoomRights(props.client, activeSpace);
 
-        // Remove favourite and low priority filters if sections are enabled, as they are redundant with the sections
         const areSectionsEnabled = SettingsStore.getValue("feature_room_list_sections");
-        const filterIds = [...filterKeyToIdMap.values()].filter(
-            (id) => !areSectionsEnabled || (id !== "favourite" && id !== "low_priority"),
-        );
+        const filterIds = computeFilterIds(areSectionsEnabled);
 
         // By default, all sections are expanded
         const { sections, isFlatList } = computeSections(roomsResult, (tag) => true);
@@ -171,6 +168,16 @@ export class RoomListViewModel
         const dispatcherRef = dispatcher.register(this.onDispatch);
         this.disposables.track(() => {
             dispatcher.unregister(dispatcherRef);
+        });
+
+        // React to changes in the show room list filters setting
+        const showRoomListFiltersWatcherRef = SettingsStore.watchSetting(
+            "Tweaks.showRoomListFilters",
+            null,
+            () => this.updateRoomListData(),
+        );
+        this.disposables.track(() => {
+            SettingsStore.unwatchSetting(showRoomListFiltersWatcherRef);
         });
 
         // Track cleanup of all child view models
@@ -589,10 +596,14 @@ export class RoomListViewModel
         const isLoadingRooms = RoomListStoreV3.instance.isLoadingRooms;
         const previousSections = this.snapshot.current.sections;
 
+        const areSectionsEnabled = SettingsStore.getValue("feature_room_list_sections");
+        const filterIds = computeFilterIds(areSectionsEnabled);
+
         // Single atomic snapshot update
         this.snapshot.merge({
             isLoadingRooms,
             isRoomListEmpty,
+            filterIds,
             activeFilterId,
             roomListState: keepIfSame(this.snapshot.current.roomListState, roomListState),
             sections: keepIfSame(previousSections, viewSections),
@@ -712,6 +723,19 @@ function computeSections(
     const isFlatList = sections.length === 1 && sections[0].tag === CHATS_TAG;
 
     return { sections, isFlatList };
+}
+
+/**
+ * Compute the list of filter IDs to display in the room list filter bar.
+ * Removes favourite and low priority filters if sections are enabled (they are redundant with sections),
+ * and returns an empty array if the "Show room list filters" setting is disabled.
+ */
+function computeFilterIds(areSectionsEnabled: boolean): FilterId[] {
+    if (!SettingsStore.getValue("Tweaks.showRoomListFilters")) return [];
+
+    return [...filterKeyToIdMap.values()].filter(
+        (id) => !areSectionsEnabled || (id !== "favourite" && id !== "low_priority"),
+    );
 }
 
 /**
