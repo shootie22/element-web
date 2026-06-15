@@ -71,7 +71,7 @@ export class ReactionEventPreview implements Preview {
         const shortcode = (REACTION_SHORTCODE_KEY.findIn(event.getContent() as Record<string, unknown>) as string | undefined) || (_t("event_preview|m.reaction|custom_emoji") as string);
         const httpUrl = cli?.mxcUrlToHttp(reaction) ?? reaction;
 
-        const emojiImg = `<img src="${htmlEscape(httpUrl)}" alt="${htmlEscape(shortcode)}" style="height: 1em; vertical-align: middle;" />`;
+        const emojiImg = `<img src="${htmlEscape(httpUrl)}" alt="${htmlEscape(shortcode)}" style="height: 1em; vertical-align: center;" />`;
         const message = htmlEscape(MessagePreviewStore.instance.generatePreviewForEvent(relatedEvent));
 
         if (isSelf(event)) {
