@@ -155,7 +155,7 @@ function computeAndStoreRange(
     preRange.setEnd(range.startContainer, range.startOffset);
     const startOffset = preRange.toString().length;
     const endOffset = startOffset + text.length;
-    storeRange({ startOffset, endOffset, text, color, direction, stops });
+    storeRange({ editor, startOffset, endOffset, text, color, direction, stops });
 }
 
 interface FormattingButtonsProps {

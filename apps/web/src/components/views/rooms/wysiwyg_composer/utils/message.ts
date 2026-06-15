@@ -49,7 +49,6 @@ export async function sendMessage(
     isHTML: boolean,
     { roomContext, mxClient, ...params }: SendMessageParams,
 ): Promise<ISendEventResponse | undefined> {
-    clearColorRanges();
     const { relation, replyToEvent } = params;
     const { room } = roomContext;
     const roomId = room?.roomId;
@@ -115,6 +114,7 @@ export async function sendMessage(
 
     // if content is null, we haven't done any slash command processing, so generate some content
     content ??= await createMessageContent(message, isHTML, { ...params, room });
+    clearColorRanges(params.editorElement);
 
     // TODO replace emotion end of message ?
 

@@ -27,63 +27,14 @@ import {
     encodeGradientPayload,
 } from "../../../../../@types/message_style.ts";
 import { getDefaultStyle } from "../hooks/useColorPersistence";
+import {
+    applyColorDecorationsToHtml,
+    applyDefaultColorToHtml,
+    getColorDecorations,
+    type ColorDecoration,
+} from "./colorDecorations";
 
 export const EMOTE_PREFIX = "/me ";
-
-// Unicode emoji ranges — must match full emoji sequences including ZWJ, variation selectors, and flags
-const EMOJI_RE =
-    /[\u{1F1E0}-\u{1F1FF}\u{1F300}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{2B50}\u{2B55}\u{2934}\u{2935}\u{25AA}\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}\u{3030}\u{303D}\u{3297}\u{3299}]|\u{200D}|\u{FE0F}|\u{20E3}/gu;
-
-function splitAroundEmojis(text: string): Array<{ type: "text" | "emoji"; content: string }> {
-    const parts: Array<{ type: "text" | "emoji"; content: string }> = [];
-    let lastIndex = 0;
-    for (const match of text.matchAll(EMOJI_RE)) {
-        if (match.index! > lastIndex) {
-            parts.push({ type: "text", content: text.slice(lastIndex, match.index!) });
-        }
-        parts.push({ type: "emoji", content: match[0] });
-        lastIndex = match.index! + match[0].length;
-    }
-    if (lastIndex < text.length) {
-        parts.push({ type: "text", content: text.slice(lastIndex) });
-    }
-    return parts;
-}
-
-function wrapNonEmojiInColor(text: string, color?: string, gradient?: string): string {
-    if (!color && !gradient) return text;
-    const parts = splitAroundEmojis(text);
-    return parts
-        .map((p) => {
-            if (p.type === "emoji") return p.content;
-            if (color) return `<span data-mx-color="${color}">${p.content}</span>`;
-            if (gradient) return `<span data-mx-gradient="${gradient}">${p.content}</span>`;
-            return p.content;
-        })
-        .join("");
-}
-
-function applyColorToHtml(html: string, color?: string, gradient?: string): string {
-    if (!color && !gradient) return html;
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-    const body = doc.body;
-    const textNodes: Text[] = [];
-    {
-        const walker = doc.createTreeWalker(body, NodeFilter.SHOW_TEXT);
-        while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
-    }
-    for (const node of textNodes) {
-        const wrapped = wrapNonEmojiInColor(node.textContent ?? "", color, gradient);
-        if (wrapped === node.textContent) continue;
-        const fragment = doc.createDocumentFragment();
-        const temp = doc.createElement("div");
-        temp.innerHTML = wrapped;
-        while (temp.firstChild) fragment.appendChild(temp.firstChild);
-        node.parentNode?.replaceChild(fragment, node);
-    }
-    return body.innerHTML;
-}
 
 // Merges favouring the given relation
 function attachRelation(content: IContent, relation?: IEventRelation): void {
@@ -101,6 +52,7 @@ interface CreateMessageContentParams {
     editedEvent?: MatrixEvent;
     room?: Room;
     editorElement?: HTMLElement | null;
+    colorDecorations?: ColorDecoration[];
 }
 
 const isMatrixEvent = (e: MatrixEvent | undefined): e is MatrixEvent => e instanceof MatrixEvent;
@@ -108,7 +60,7 @@ const isMatrixEvent = (e: MatrixEvent | undefined): e is MatrixEvent => e instan
 export async function createMessageContent(
     message: string,
     isHTML: boolean,
-    { relation, replyToEvent, editedEvent, room, editorElement }: CreateMessageContentParams,
+    { relation, replyToEvent, editedEvent, room, editorElement, colorDecorations }: CreateMessageContentParams,
 ): Promise<RoomMessageEventContent> {
     const isEditing = isMatrixEvent(editedEvent);
 
@@ -161,8 +113,11 @@ export async function createMessageContent(
         if (!enableColoredMessages) {
             content.formatted_body = isEditing ? `* ${formattedBody}` : formattedBody;
         } else {
-            // Step 1: Inject explicit color spans from DOM (selection-based) — highest priority
-            formattedBody = injectColorSpansFromDOM(formattedBody, editorElement);
+            // Step 1: Apply explicit selection color decorations, which are stored independently of the DOM.
+            formattedBody = applyColorDecorationsToHtml(
+                formattedBody,
+                colorDecorations ?? getColorDecorations(editorElement),
+            );
 
             const hasExplicitColor = (html: string): boolean =>
                 html.includes("data-mx-color") || html.includes("data-mx-gradient");
@@ -171,14 +126,14 @@ export async function createMessageContent(
             const sessionDefault = getDefaultStyle();
             if (sessionDefault && !hasExplicitColor(formattedBody)) {
                 if (sessionDefault.color) {
-                    formattedBody = applyColorToHtml(formattedBody, sessionDefault.color);
+                    formattedBody = applyDefaultColorToHtml(formattedBody, sessionDefault.color);
                 } else if (sessionDefault.direction && sessionDefault.stops) {
                     const encoded = encodeGradientPayload({
                         kind: "gradient",
                         direction: sessionDefault.direction,
                         stops: sessionDefault.stops,
                     });
-                    formattedBody = applyColorToHtml(formattedBody, undefined, encoded);
+                    formattedBody = applyDefaultColorToHtml(formattedBody, undefined, encoded);
                 }
             }
 
@@ -190,7 +145,7 @@ export async function createMessageContent(
                 if (defaultStyle && validateMessageStyle(defaultStyle)) {
                     const color = defaultStyle.kind === "solid" ? defaultStyle.color : undefined;
                     const gradient = defaultStyle.kind === "gradient" ? encodeGradientPayload(defaultStyle) : undefined;
-                    formattedBody = applyColorToHtml(formattedBody, color, gradient);
+                    formattedBody = applyDefaultColorToHtml(formattedBody, color, gradient);
                 }
             }
 
@@ -221,61 +176,6 @@ export async function createMessageContent(
     }
 
     return content;
-}
-
-/**
- * Scan the editor DOM for color spans and inject them into the formatted body HTML.
- * This bridges the gap between the WYSIWYG library's DOM (which has color spans applied
- * via execCommand but not stored in the model) and the message content sent to the server.
- */
-function injectColorSpansFromDOM(formattedBody: string, editorElement?: HTMLElement | null): string {
-    if (!editorElement) return formattedBody;
-
-    const colorSpans = editorElement.querySelectorAll<HTMLElement>("[data-mx-color], [data-mx-gradient]");
-    if (colorSpans.length === 0) return formattedBody;
-
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(formattedBody, "text/html");
-    const body = doc.body;
-
-    for (const colorSpan of colorSpans) {
-        const text = colorSpan.textContent;
-        if (!text) continue;
-        const colorAttr = colorSpan.getAttribute("data-mx-color");
-        const gradientAttr = colorSpan.getAttribute("data-mx-gradient");
-
-        const textNodes: Text[] = [];
-        {
-            const walker = doc.createTreeWalker(body, NodeFilter.SHOW_TEXT);
-            while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
-        }
-        for (const node of textNodes) {
-            if (node.textContent === text) {
-                const wrapped = wrapNonEmojiInColor(text, colorAttr ?? undefined, gradientAttr ?? undefined);
-                const fragment = doc.createDocumentFragment();
-                const temp = doc.createElement("div");
-                temp.innerHTML = wrapped;
-                while (temp.firstChild) fragment.appendChild(temp.firstChild);
-                node.parentNode?.replaceChild(fragment, node);
-                break;
-            } else if (node.textContent?.includes(text)) {
-                const wrapped = wrapNonEmojiInColor(text, colorAttr ?? undefined, gradientAttr ?? undefined);
-                const idx = node.textContent.indexOf(text);
-                const before = node.textContent.substring(0, idx);
-                const after = node.textContent.substring(idx + text.length);
-                const fragment = doc.createDocumentFragment();
-                if (before) fragment.appendChild(doc.createTextNode(before));
-                const temp = doc.createElement("div");
-                temp.innerHTML = wrapped;
-                while (temp.firstChild) fragment.appendChild(temp.firstChild);
-                if (after) fragment.appendChild(doc.createTextNode(after));
-                node.parentNode?.replaceChild(fragment, node);
-                break;
-            }
-        }
-    }
-
-    return body.innerHTML;
 }
 
 /**

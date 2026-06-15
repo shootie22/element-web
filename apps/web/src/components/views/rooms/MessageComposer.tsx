@@ -408,12 +408,12 @@ export class MessageComposer extends React.Component<IProps, IState> {
         if (this.state.isWysiwygLabEnabled) {
             const { relation, replyToEvent } = this.props;
             const composerContent = this.state.composerContent;
+            const editorElement = document.querySelector<HTMLElement>(".mx_SendWysiwygComposer [contenteditable]");
             this.setState({ composerContent: "", initialComposerContent: "" });
             dis.dispatch({
                 action: Action.ClearAndFocusSendMessageComposer,
                 timelineRenderingType: this.context.timelineRenderingType,
             });
-            const editorElement = document.querySelector<HTMLElement>(".mx_SendWysiwygComposer [contenteditable]");
             await sendMessage(composerContent, this.state.isRichTextEnabled, {
                 mxClient: this.props.mxClient,
                 roomContext: this.context,
