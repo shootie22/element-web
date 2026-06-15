@@ -12,7 +12,7 @@ import {
     Room,
     RoomEvent,
     PendingEventOrdering,
-    type RoomMember,
+    RoomMember,
 } from "matrix-js-sdk/src/matrix";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
 import { waitFor } from "jest-matrix-react";
@@ -95,6 +95,12 @@ describe("RoomListItemViewModel", () => {
         viewModel?.dispose();
         jest.restoreAllMocks();
     });
+
+    const makeMember = (userId: string, name = userId): RoomMember => {
+        const member = new RoomMember(room.roomId, userId);
+        member.name = name;
+        return member;
+    };
 
     describe("Initialization", () => {
         it("should initialize with room data", async () => {
@@ -214,6 +220,32 @@ describe("RoomListItemViewModel", () => {
             expect(viewModel.getSnapshot().messagePreview).toBe("Updated message");
         });
 
+        it("should preserve rich message preview html when synchronous room data updates", async () => {
+            jest.spyOn(SettingsStore, "getValue").mockImplementation((setting) => {
+                if (setting === "RoomList.showMessagePreview") return true;
+                if (setting === "RoomList.OrderedCustomSections") return [];
+                if (setting === "RoomList.CustomSectionData") return {};
+                return false;
+            });
+            jest.spyOn(MessagePreviewStore.instance, "getPreviewForRoom").mockResolvedValue({
+                text: "Alice reacted blobcat to hello",
+                htmlText: 'Alice reacted <img src="https://example.org/blobcat.png" alt="blobcat" /> to hello',
+            } as MessagePreview);
+
+            viewModel = new RoomListItemViewModel({ room, client: matrixClient });
+            await flushPromises();
+
+            expect(viewModel.getSnapshot().messagePreviewHtml).toContain("<img");
+
+            room.name = "Updated Room";
+            room.emit(RoomEvent.Name, room);
+            await flushPromises();
+
+            expect(viewModel.getSnapshot().name).toBe("Updated Room");
+            expect(viewModel.getSnapshot().messagePreview).toBe("Alice reacted blobcat to hello");
+            expect(viewModel.getSnapshot().messagePreviewHtml).toContain("<img");
+        });
+
         it("should show/hide preview when setting changes", async () => {
             let showPreview = false;
             let watchCallback: any;
@@ -282,9 +314,10 @@ describe("RoomListItemViewModel", () => {
 
     describe("Call state", () => {
         it("should show voice call indicator", async () => {
+            const member = makeMember(matrixClient.getSafeUserId(), "Alice");
             const mockCall = {
                 callType: CallType.Voice,
-                participants: new Map([[matrixClient.getUserId()!, {}]]),
+                participants: new Map([[member, new Set<string>()]]),
                 off: jest.fn(),
                 on: jest.fn(),
             } as unknown as Call;
@@ -296,12 +329,17 @@ describe("RoomListItemViewModel", () => {
             await flushPromises();
 
             expect(viewModel.getSnapshot().notification.callType).toBe("voice");
+            expect(viewModel.getSnapshot().notification.callParticipants).toEqual([
+                expect.objectContaining({ userId: member.userId, displayName: "Alice" }),
+            ]);
+            expect(viewModel.getSnapshot().notification.hasAnyNotificationOrActivity).toBe(false);
         });
 
         it("should show video call indicator", async () => {
+            const member = makeMember(matrixClient.getSafeUserId(), "Alice");
             const mockCall = {
                 callType: CallType.Video,
-                participants: new Map([[matrixClient.getUserId()!, {}]]),
+                participants: new Map([[member, new Set<string>()]]),
                 off: jest.fn(),
                 on: jest.fn(),
             } as unknown as Call;
@@ -350,7 +388,7 @@ describe("RoomListItemViewModel", () => {
             callStateCallback();
 
             // Simulate participant joining
-            mockCall.participants.set(matrixClient.getUserId()! as unknown as RoomMember, new Set());
+            mockCall.participants.set(makeMember(matrixClient.getSafeUserId(), "Alice"), new Set());
 
             // Get the callback registered for participant changes
             const participantsChangeCallback = mockCall.on.mock.calls[0][1];
@@ -359,10 +397,12 @@ describe("RoomListItemViewModel", () => {
             expect(viewModel.getSnapshot().notification.callType).toBe("voice");
         });
 
-        it("should not update the item when there is already an active call and participants join", () => {
+        it("should update call participants when there is already an active call and participants join", () => {
+            const alice = makeMember("@alice:server", "Alice");
+            const bob = makeMember("@bob:server", "Bob");
             const mockCall = {
                 callType: CallType.Voice,
-                participants: new Map([[matrixClient.getUserId()! as unknown as RoomMember, new Set<string>()]]),
+                participants: new Map([[alice, new Set<string>()]]),
                 off: jest.fn(),
                 on: jest.fn(),
             };
@@ -376,17 +416,17 @@ describe("RoomListItemViewModel", () => {
             callStateCallback();
 
             expect(viewModel.getSnapshot().notification.callType).toBe("voice");
-
-            // Record the snapshot version before the participant event fires
-            const snapshotBefore = viewModel.getSnapshot();
+            expect(viewModel.getSnapshot().notification.callParticipants).toHaveLength(1);
 
             // Simulate another participant joining while the call is already active
-            mockCall.participants.set("@other:server" as unknown as RoomMember, new Set<string>());
+            mockCall.participants.set(bob, new Set<string>());
             const participantsChangeCallback = mockCall.on.mock.calls[0][1];
             participantsChangeCallback(mockCall.participants);
 
-            // Snapshot should not have changed
-            expect(viewModel.getSnapshot()).toBe(snapshotBefore);
+            expect(viewModel.getSnapshot().notification.callParticipants).toEqual([
+                expect.objectContaining({ userId: "@alice:server", displayName: "Alice" }),
+                expect.objectContaining({ userId: "@bob:server", displayName: "Bob" }),
+            ]);
         });
 
         it("should react to participant changes when a call already exists at instantiation time", () => {
@@ -402,7 +442,7 @@ describe("RoomListItemViewModel", () => {
             expect(viewModel.getSnapshot().notification.callType).toBeUndefined();
 
             // Simulate participant joining
-            mockCall.participants.set(matrixClient.getUserId()! as unknown as RoomMember, new Set());
+            mockCall.participants.set(makeMember(matrixClient.getSafeUserId(), "Alice"), new Set());
 
             // Get the callback registered for participant changes
             const participantsChangeCallback = mockCall.on.mock.calls[0][1];
@@ -412,15 +452,17 @@ describe("RoomListItemViewModel", () => {
         });
 
         it("should unsubscribe from old call participants when the call changes", () => {
+            const alice = makeMember("@alice:server", "Alice");
+            const bob = makeMember("@bob:server", "Bob");
             const firstCall = {
                 callType: CallType.Voice,
-                participants: new Map([[matrixClient.getUserId()! as unknown as RoomMember, new Set<string>()]]),
+                participants: new Map([[alice, new Set<string>()]]),
                 off: jest.fn(),
                 on: jest.fn(),
             };
             const secondCall = {
                 callType: CallType.Video,
-                participants: new Map([[matrixClient.getUserId()! as unknown as RoomMember, new Set<string>()]]),
+                participants: new Map([[bob, new Set<string>()]]),
                 off: jest.fn(),
                 on: jest.fn(),
             };
@@ -449,11 +491,12 @@ describe("RoomListItemViewModel", () => {
         it("should listen to call type changes", async () => {
             // Start with a voice call
             let callType = CallType.Voice;
+            const member = makeMember(matrixClient.getSafeUserId(), "Alice");
             const mockCall = new (class extends EventEmitter {
                 get callType() {
                     return callType;
                 }
-                participants = new Map([[matrixClient.getUserId()!, {}]]);
+                participants = new Map([[member, new Set<string>()]]);
             })() as unknown as Call;
             jest.spyOn(CallStore.instance, "getCall").mockReturnValue(mockCall);
 

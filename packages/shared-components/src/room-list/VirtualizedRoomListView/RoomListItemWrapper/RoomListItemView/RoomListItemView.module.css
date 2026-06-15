@@ -96,6 +96,41 @@
     text-overflow: ellipsis;
 }
 
+.messagePreviewEmoji {
+    height: 1em;
+    max-width: 1.4em;
+    vertical-align: -0.15em;
+}
+
+.callParticipants {
+    margin-left: var(--cpd-space-2x);
+}
+
+.callParticipantAvatar {
+    border-radius: 50%;
+    border: 1.5px solid var(--cpd-color-bg-canvas-default);
+    line-height: 0;
+}
+
+.callParticipantAvatar:not(:first-child) {
+    margin-left: -6px;
+}
+
+.callParticipantsOverflow {
+    margin-left: -4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--cpd-color-icon-accent-primary);
+    color: var(--cpd-color-text-on-solid-primary);
+    font-size: 9px;
+    font-weight: 600;
+    border: 1.5px solid var(--cpd-color-bg-canvas-default);
+}
+
 .selected {
     .container {
         background-color: var(--cpd-color-bg-action-tertiary-selected);

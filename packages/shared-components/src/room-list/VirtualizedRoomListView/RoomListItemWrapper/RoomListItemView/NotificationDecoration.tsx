@@ -17,6 +17,7 @@ import {
 import { UnreadCounter, Unread, Avatar } from "@vector-im/compound-web";
 
 import { Flex } from "../../../../core/utils/Flex";
+import styles from "./RoomListItemView.module.css";
 
 export interface CallParticipantData {
     userId: string;
@@ -86,48 +87,22 @@ export const NotificationDecoration: React.FC<NotificationDecorationProps> = ({
                 <ErrorSolidIcon width="20px" height="20px" fill="var(--cpd-color-icon-critical-primary)" />
             )}
             {callParticipants && callParticipants.length > 0 ? (
-                <Flex align="center" gap="0px" style={{ marginLeft: "var(--cpd-space-2x)" }}>
+                <Flex align="center" gap="0px" className={styles.callParticipants}>
                     {callParticipants.slice(0, MAX_VISIBLE_AVATARS).map((p, i) => (
-                        <div
-                            key={p.userId}
-                            style={{
-                                marginLeft: i > 0 ? "-6px" : undefined,
-                                borderRadius: "50%",
-                                border: "1.5px solid var(--cpd-color-bg-canvas-default)",
-                                lineHeight: 0,
-                            }}
-                        >
-                            <Avatar
-                                id={p.userId}
-                                name={p.displayName}
-                                src={p.avatarUrl}
-                                size="18px"
-                            />
+                        <div key={p.userId} className={styles.callParticipantAvatar}>
+                            <Avatar id={p.userId} name={p.displayName} src={p.avatarUrl} size="18px" />
                         </div>
                     ))}
                     {callParticipants.length > MAX_VISIBLE_AVATARS && (
-                        <div
-                            style={{
-                                marginLeft: "-4px",
-                                width: "18px",
-                                height: "18px",
-                                borderRadius: "50%",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                background: "var(--cpd-color-icon-accent-primary)",
-                                color: "var(--cpd-color-text-on-solid-primary)",
-                                fontSize: "9px",
-                                fontWeight: 600,
-                                border: "1.5px solid var(--cpd-color-bg-canvas-default)",
-                            }}
-                        >
+                        <div className={styles.callParticipantsOverflow}>
                             +{callParticipants.length - MAX_VISIBLE_AVATARS}
                         </div>
                     )}
                 </Flex>
-            ) : callType === "video" && (
-                <VideoCallSolidIcon width="20px" height="20px" fill="var(--cpd-color-icon-accent-primary)" />
+            ) : (
+                callType === "video" && (
+                    <VideoCallSolidIcon width="20px" height="20px" fill="var(--cpd-color-icon-accent-primary)" />
+                )
             )}
             {callType === "voice" && (
                 <VoiceCallSolidIcon width="20px" height="20px" fill="var(--cpd-color-icon-accent-primary)" />

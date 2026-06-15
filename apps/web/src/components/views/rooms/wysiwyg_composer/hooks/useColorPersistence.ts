@@ -11,6 +11,7 @@ import type { GradientDirection, GradientStop } from "../../../../../@types/mess
 import { encodeGradientPayload } from "../../../../../@types/message_style.ts";
 import SettingsStore from "../../../../../settings/SettingsStore";
 
+const EDITOR_SELECTOR = ".mx_WysiwygComposer_Editor_content[contenteditable]";
 const DIRECTION_MAP: Record<GradientDirection, string> = {
     "left-to-right": "to right",
     "top-to-bottom": "to bottom",
@@ -27,14 +28,13 @@ function setPlaceholderColor(color: string): void {
         el.id = PLACEHOLDER_STYLE_ID;
         document.head.appendChild(el);
     }
-    el.textContent = `.mx_WysiwygComposer_Editor_content[contenteditable]::placeholder { color: ${color} !important; }`;
+    el.textContent = `${EDITOR_SELECTOR}::placeholder { color: ${color} !important; }`;
 }
 
 function removePlaceholderOverride(): void {
     const el = document.getElementById(PLACEHOLDER_STYLE_ID);
     if (el) el.remove();
 }
-
 
 export interface ColorAction {
     startOffset: number;
@@ -141,14 +141,13 @@ export function onDefaultStyleChange(listener: () => void): () => void {
 }
 
 function notifyStyleListeners(): void {
-    styleListeners.forEach(fn => fn());
+    styleListeners.forEach((fn) => fn());
 }
 
 export function setDefaultStyle(style: DefaultStyle): void {
     defaultStyle = style;
     persistDefaultStyle(style);
-    const editor =
-        document.querySelector<HTMLElement>(".mx_WysiwygComposer_Editor_content[contenteditable]");
+    const editor = document.querySelector<HTMLElement>(EDITOR_SELECTOR);
     if (editor) {
         applyStyleToEditor(style, editor);
     }
@@ -162,8 +161,7 @@ export function getDefaultStyle(): DefaultStyle | null {
 export function clearDefaultStyle(): void {
     defaultStyle = null;
     persistDefaultStyle(null);
-    const editor =
-        document.querySelector<HTMLElement>(".mx_WysiwygComposer_Editor_content[contenteditable]");
+    const editor = document.querySelector<HTMLElement>(EDITOR_SELECTOR);
     if (editor) {
         editor.style.color = "";
         editor.style.background = "";
@@ -187,7 +185,6 @@ export function storeRange(action: ColorAction): void {
     pendingRanges.push({ startOffset, endOffset, text, color, direction, stops });
 }
 
-let colorObserver: MutationObserver | null = null;
 let isReapplying = false;
 
 /**
@@ -261,7 +258,7 @@ function applyGradientWrap(editor: HTMLElement, defaultStyle: DefaultStyle): voi
     if (editor.querySelector(`:scope > [${GRADIENT_WRAP_ATTR}]`)) return;
 
     const cssDir = DIRECTION_MAP[defaultStyle.direction] ?? "to right";
-    const stops = defaultStyle.stops.map(s => `${s.color} ${Math.round(s.position * 100)}%`).join(", ");
+    const stops = defaultStyle.stops.map((s) => `${s.color} ${Math.round(s.position * 100)}%`).join(", ");
     const fallback = defaultStyle.stops[0]?.color ?? "#000000";
 
     const wrap = document.createElement("span");
@@ -307,12 +304,9 @@ function restoreCaret(editor: HTMLElement, pos: { start: number; end: number }):
     sel.addRange(range);
 }
 
-function reapplyRanges(): void {
+function reapplyRanges(editor: HTMLElement): void {
     if (pendingRanges.length === 0 && !defaultStyle) return;
     if (isReapplying) return;
-    const editor =
-        document.querySelector<HTMLElement>(".mx_WysiwygComposer_Editor_content[contenteditable]");
-    if (!editor) return;
 
     const caret = saveCaret(editor);
 
@@ -328,7 +322,7 @@ function reapplyRanges(): void {
             const ranges = [...pendingRanges];
             ranges.sort((a, b) => b.startOffset - a.startOffset);
 
-            const toApply = ranges.filter(r => !isAlreadyColored(editor, r));
+            const toApply = ranges.filter((r) => !isAlreadyColored(editor, r));
             for (const range of toApply) {
                 applyColorRange(editor, range);
             }
@@ -355,30 +349,27 @@ export function useColorPersistence(
     _messageContent: string | null,
 ): void {
     useEffect(() => {
-        const editor =
-            editorRef.current ??
-            document.querySelector<HTMLElement>(".mx_WysiwygComposer_Editor_content[contenteditable]");
+        const editor = editorRef.current ?? document.querySelector<HTMLElement>(EDITOR_SELECTOR);
         if (!editor) return;
 
         if (defaultStyle) {
             applyStyleToEditor(defaultStyle, editor);
-            if (defaultStyle.direction && defaultStyle.stops && SettingsStore.getValue("Tweaks.enableColoredMessages")) {
+            if (
+                defaultStyle.direction &&
+                defaultStyle.stops &&
+                SettingsStore.getValue("Tweaks.enableColoredMessages")
+            ) {
                 applyGradientWrap(editor, defaultStyle);
             }
         }
 
-        if (!colorObserver) {
-            colorObserver = new MutationObserver(reapplyRanges);
-            console.debug("[useColorPersistence] observer created");
-        }
+        const colorObserver = new MutationObserver(() => reapplyRanges(editor));
         colorObserver.observe(editor, { childList: true, subtree: true });
-        console.debug("[useColorPersistence] observer connected, pendingRanges:", pendingRanges.length);
 
         return () => {
-            /* observer intentionally NOT disconnected — stays alive across re-renders
-               to avoid discarding queued mutation microtasks */
+            colorObserver.disconnect();
         };
-    }, [_messageContent]);
+    }, [editorRef, _messageContent]);
 }
 
 function isAlreadyColored(editor: HTMLElement, range: StoredRange): boolean {
@@ -420,17 +411,13 @@ function applyColorRange(editor: HTMLElement, range: StoredRange): void {
     let endInfo = findTextNodeAtOffset(editor, range.endOffset);
 
     if (!startInfo || !endInfo || !textAtOffsetMatches(editor, range.startOffset, range.endOffset, range.text)) {
-        if (!startInfo) console.debug("[useColorPersistence] startInfo null for", range.startOffset, range.text, "textContent:", editor.textContent);
-        if (!endInfo) console.debug("[useColorPersistence] endInfo null for", range.endOffset, range.text, "textContent:", editor.textContent);
         const found = findTextInEditor(editor, range.text);
         if (found === null) {
-            console.debug("[useColorPersistence] fallback: text not found");
             return;
         }
         startInfo = findTextNodeAtOffset(editor, found);
         endInfo = findTextNodeAtOffset(editor, found + range.text.length);
         if (!startInfo || !endInfo) {
-            console.debug("[useColorPersistence] fallback: startInfo or endInfo still null", found, range.text, "textContent:", editor.textContent);
             return;
         }
     }
@@ -466,10 +453,7 @@ function applyColorRange(editor: HTMLElement, range: StoredRange): void {
     }
 }
 
-function findTextNodeAtOffset(
-    editor: HTMLElement,
-    targetOffset: number,
-): { node: Text; localOffset: number } | null {
+function findTextNodeAtOffset(editor: HTMLElement, targetOffset: number): { node: Text; localOffset: number } | null {
     const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
     let offset = 0;
     let textNode: Text | null;

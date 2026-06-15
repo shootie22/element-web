@@ -16,7 +16,8 @@ import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { MessagePreviewStore } from "../MessagePreviewStore";
 import { REACTION_SHORTCODE_KEY } from "../../../viewmodels/room/timeline/event-tile/reactions/reactionShortcode";
 
-const htmlEscape = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const htmlEscape = (s: string): string =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export class ReactionEventPreview implements Preview {
     public getTextFor(event: MatrixEvent, tagId?: TagID, isThread?: boolean): string | null {
@@ -68,10 +69,12 @@ export class ReactionEventPreview implements Preview {
         const relatedEvent = relation.event_id ? room?.findEventById(relation.event_id) : null;
         if (!relatedEvent) return null;
 
-        const shortcode = (REACTION_SHORTCODE_KEY.findIn(event.getContent() as Record<string, unknown>) as string | undefined) || (_t("event_preview|m.reaction|custom_emoji") as string);
+        const shortcode =
+            (REACTION_SHORTCODE_KEY.findIn(event.getContent() as Record<string, unknown>) as string | undefined) ||
+            (_t("event_preview|m.reaction|custom_emoji") as string);
         const httpUrl = cli?.mxcUrlToHttp(reaction) ?? reaction;
 
-        const emojiImg = `<img src="${htmlEscape(httpUrl)}" alt="${htmlEscape(shortcode)}" style="height: 1em; vertical-align: center;" />`;
+        const emojiImg = `<img src="${htmlEscape(httpUrl)}" alt="${htmlEscape(shortcode)}" />`;
         const message = htmlEscape(MessagePreviewStore.instance.generatePreviewForEvent(relatedEvent));
 
         if (isSelf(event)) {

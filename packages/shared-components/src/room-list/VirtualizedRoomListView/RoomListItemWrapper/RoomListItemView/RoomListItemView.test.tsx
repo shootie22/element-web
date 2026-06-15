@@ -132,4 +132,22 @@ describe("<RoomListItemView />", () => {
         const { container } = render(<WithoutHoverMenu />);
         expect(container.querySelector('[aria-label="More Options"]')).toBeNull();
     });
+
+    it("renders rich message previews as constrained inline content", () => {
+        const { container } = render(
+            <Default
+                messagePreview="Alice reacted blobcat to hello"
+                messagePreviewHtml={
+                    'Alice reacted <img src="https://example.org/blobcat.png" alt="blobcat" onerror="alert(1)" /><script>alert(1)</script><strong>hello</strong>'
+                }
+            />,
+        );
+
+        const image = screen.getByAltText("blobcat");
+        expect(image).toHaveAttribute("src", "https://example.org/blobcat.png");
+        expect(image).not.toHaveAttribute("onerror");
+        expect(container.querySelector("script")).toBeNull();
+        expect(container.querySelector("strong")).toBeNull();
+        expect(screen.getByText(/hello/)).toBeInTheDocument();
+    });
 });

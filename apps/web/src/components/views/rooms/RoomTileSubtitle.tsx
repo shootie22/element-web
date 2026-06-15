@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
 import React from "react";
 import classNames from "classnames";
 import { ThreadsIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
-import parse from "html-react-parser";
+import parse, { domToReact, type DOMNode, type Element } from "html-react-parser";
 
 import { type MessagePreview } from "../../../stores/message-preview";
 import { type Call } from "../../../models/Call";
@@ -23,6 +23,35 @@ interface Props {
 }
 
 const messagePreviewId = (roomId: string): string => `mx_RoomTile_messagePreview_${roomId}`;
+const SAFE_IMAGE_SRC_RE = /^(https?:|mxc:)/;
+
+function renderPreviewHtml(html: string): React.ReactNode {
+    return parse(html, {
+        replace: (node: DOMNode) => {
+            const element = node as Element;
+            if (element.type !== "tag") return;
+
+            if (element.name !== "img") {
+                return <>{domToReact(element.children as DOMNode[])}</>;
+            }
+
+            const src = element.attribs?.src;
+            if (!src || !SAFE_IMAGE_SRC_RE.test(src)) {
+                return element.attribs?.alt ?? "";
+            }
+
+            return (
+                <img
+                    className="mx_RoomTile_subtitle_emoji"
+                    src={src}
+                    alt={element.attribs?.alt ?? ""}
+                    loading="lazy"
+                    decoding="async"
+                />
+            );
+        },
+    });
+}
 
 export const RoomTileSubtitle: React.FC<Props> = ({ call, messagePreview, roomId, showMessagePreview }) => {
     if (call) {
@@ -44,7 +73,7 @@ export const RoomTileSubtitle: React.FC<Props> = ({ call, messagePreview, roomId
             <div className={className} id={messagePreviewId(roomId)} title={messagePreview.text}>
                 {icon}
                 <span className="mx_RoomTile_subtitle_text">
-                    {messagePreview.htmlText ? parse(messagePreview.htmlText) : messagePreview.text}
+                    {messagePreview.htmlText ? renderPreviewHtml(messagePreview.htmlText) : messagePreview.text}
                 </span>
             </div>
         );

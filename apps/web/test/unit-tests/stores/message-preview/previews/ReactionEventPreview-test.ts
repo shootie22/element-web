@@ -124,9 +124,7 @@ describe("ReactionEventPreview", () => {
                 type: "m.reaction",
                 room: roomId,
             });
-            expect(preview.getTextFor(event)).toMatchInlineSnapshot(
-                `"You reacted blobcat to hello world"`,
-            );
+            expect(preview.getTextFor(event)).toMatchInlineSnapshot(`"You reacted blobcat to hello world"`);
         });
 
         it("should use fallback text for custom emoji without shortcode", () => {
@@ -163,9 +161,7 @@ describe("ReactionEventPreview", () => {
                 type: "m.reaction",
                 room: roomId,
             });
-            expect(preview.getTextFor(event)).toMatchInlineSnapshot(
-                `"You reacted a custom emoji to hello world"`,
-            );
+            expect(preview.getTextFor(event)).toMatchInlineSnapshot(`"You reacted a custom emoji to hello world"`);
         });
 
         it("getHtmlFor: returns null for standard emoji (non-MXC)", () => {
@@ -175,7 +171,7 @@ describe("ReactionEventPreview", () => {
 
             const message = mkEvent({
                 event: true,
-                content: { body: "test", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
+                content: { "body": "test", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
                 user: userId,
                 type: "m.room.message",
                 room: roomId,
@@ -201,7 +197,7 @@ describe("ReactionEventPreview", () => {
 
             const message = mkEvent({
                 event: true,
-                content: { body: "hello", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
+                content: { "body": "hello", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
                 user: userId,
                 type: "m.room.message",
                 room: roomId,
@@ -211,7 +207,11 @@ describe("ReactionEventPreview", () => {
             const event = mkEvent({
                 event: true,
                 content: {
-                    "m.relates_to": { rel_type: RelationType.Annotation, key: "mxc://example.org/custom", event_id: message.getId() },
+                    "m.relates_to": {
+                        rel_type: RelationType.Annotation,
+                        key: "mxc://example.org/custom",
+                        event_id: message.getId(),
+                    },
                     "com.beeper.reaction.shortcode": "blobcat",
                 },
                 user: cli.getSafeUserId(),
@@ -231,7 +231,7 @@ describe("ReactionEventPreview", () => {
 
             const message = mkEvent({
                 event: true,
-                content: { body: "hello", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
+                content: { "body": "hello", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
                 user: userId,
                 type: "m.room.message",
                 room: roomId,
@@ -241,7 +241,11 @@ describe("ReactionEventPreview", () => {
             const event = mkEvent({
                 event: true,
                 content: {
-                    "m.relates_to": { rel_type: RelationType.Annotation, key: "mxc://example.org/custom", event_id: message.getId() },
+                    "m.relates_to": {
+                        rel_type: RelationType.Annotation,
+                        key: "mxc://example.org/custom",
+                        event_id: message.getId(),
+                    },
                 },
                 user: cli.getSafeUserId(),
                 type: "m.reaction",
@@ -249,7 +253,7 @@ describe("ReactionEventPreview", () => {
             });
             const html = preview.getHtmlFor(event);
             expect(html).toContain("<img");
-            expect(html).toContain("alt=\"a custom emoji\"");
+            expect(html).toContain('alt="a custom emoji"');
         });
 
         it("getHtmlFor: returns html for other users reactions", () => {
@@ -259,7 +263,7 @@ describe("ReactionEventPreview", () => {
 
             const message = mkEvent({
                 event: true,
-                content: { body: "hello", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
+                content: { "body": "hello", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
                 user: userId,
                 type: "m.room.message",
                 room: roomId,
@@ -269,7 +273,11 @@ describe("ReactionEventPreview", () => {
             const event = mkEvent({
                 event: true,
                 content: {
-                    "m.relates_to": { rel_type: RelationType.Annotation, key: "mxc://example.org/custom", event_id: message.getId() },
+                    "m.relates_to": {
+                        rel_type: RelationType.Annotation,
+                        key: "mxc://example.org/custom",
+                        event_id: message.getId(),
+                    },
                     "com.beeper.reaction.shortcode": "blobcat",
                 },
                 user: userId,
@@ -282,6 +290,39 @@ describe("ReactionEventPreview", () => {
             expect(html).toContain("<img");
             expect(html).toContain('alt="blobcat"');
             expect(html).not.toContain("You");
+        });
+
+        it("getHtmlFor: escapes shortcode quotes in image attributes", () => {
+            const cli = MatrixClientPeg.safeGet();
+            const room = new Room(roomId, cli, userId);
+            mocked(cli.getRoom).mockReturnValue(room);
+
+            const message = mkEvent({
+                event: true,
+                content: { "body": "hello", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
+                user: userId,
+                type: "m.room.message",
+                room: roomId,
+            });
+            room.getUnfilteredTimelineSet().addLiveEvent(message, { addToState: true });
+
+            const event = mkEvent({
+                event: true,
+                content: {
+                    "m.relates_to": {
+                        rel_type: RelationType.Annotation,
+                        key: "mxc://example.org/custom",
+                        event_id: message.getId(),
+                    },
+                    "com.beeper.reaction.shortcode": 'blob" onerror="alert(1)',
+                },
+                user: cli.getSafeUserId(),
+                type: "m.reaction",
+                room: roomId,
+            });
+            const html = preview.getHtmlFor(event);
+            expect(html).toContain('alt="blob&quot; onerror=&quot;alert(1)"');
+            expect(html).not.toContain('onerror="alert(1)"');
         });
 
         it("should use display name for your others' reactions", () => {

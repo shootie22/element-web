@@ -46,6 +46,7 @@ export const LiveContentSummary: FC<Props> = ({ text, active, participantCount, 
 
     return (
         <span className="mx_LiveContentSummary">
+            <span className="mx_LiveContentSummary_srOnly">{text}</span>
             <span className="mx_LiveContentSummary_avatars">
                 {visible.map((member) => (
                     <MemberAvatar key={member.userId} member={member} size="18px" />

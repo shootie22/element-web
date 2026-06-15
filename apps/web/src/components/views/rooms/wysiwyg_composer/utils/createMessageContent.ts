@@ -31,11 +31,10 @@ import { getDefaultStyle } from "../hooks/useColorPersistence";
 export const EMOTE_PREFIX = "/me ";
 
 // Unicode emoji ranges — must match full emoji sequences including ZWJ, variation selectors, and flags
-const EMOJI_RE = /[\u{1F1E0}-\u{1F1FF}\u{1F300}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{2B50}\u{2B55}\u{2934}\u{2935}\u{25AA}\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}\u{3030}\u{303D}\u{3297}\u{3299}]|\u{200D}|\u{FE0F}|\u{20E3}/gu;
+const EMOJI_RE =
+    /[\u{1F1E0}-\u{1F1FF}\u{1F300}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{2B50}\u{2B55}\u{2934}\u{2935}\u{25AA}\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}\u{3030}\u{303D}\u{3297}\u{3299}]|\u{200D}|\u{FE0F}|\u{20E3}/gu;
 
-function splitAroundEmojis(
-    text: string,
-): Array<{ type: "text" | "emoji"; content: string }> {
+function splitAroundEmojis(text: string): Array<{ type: "text" | "emoji"; content: string }> {
     const parts: Array<{ type: "text" | "emoji"; content: string }> = [];
     let lastIndex = 0;
     for (const match of text.matchAll(EMOJI_RE)) {
@@ -165,12 +164,12 @@ export async function createMessageContent(
             // Step 1: Inject explicit color spans from DOM (selection-based) — highest priority
             formattedBody = injectColorSpansFromDOM(formattedBody, editorElement);
 
-            const hasExplicitColor = (): boolean =>
-                formattedBody.includes("data-mx-color") || formattedBody.includes("data-mx-gradient");
+            const hasExplicitColor = (html: string): boolean =>
+                html.includes("data-mx-color") || html.includes("data-mx-gradient");
 
             // Step 2: Apply session default style (setDefaultStyle) — overrides account data default
             const sessionDefault = getDefaultStyle();
-            if (sessionDefault && !hasExplicitColor()) {
+            if (sessionDefault && !hasExplicitColor(formattedBody)) {
                 if (sessionDefault.color) {
                     formattedBody = applyColorToHtml(formattedBody, sessionDefault.color);
                 } else if (sessionDefault.direction && sessionDefault.stops) {
@@ -184,7 +183,7 @@ export async function createMessageContent(
             }
 
             // Step 3: Apply account data default style — fallback only
-            if (room && !hasExplicitColor()) {
+            if (room && !hasExplicitColor(formattedBody)) {
                 const accountData = room.client.getAccountData(MESSAGE_STYLE_ACCOUNT_DATA_TYPE);
                 const messageStyleData = accountData?.getContent<MessageStyleAccountData>();
                 const defaultStyle = messageStyleData?.defaultStyle;

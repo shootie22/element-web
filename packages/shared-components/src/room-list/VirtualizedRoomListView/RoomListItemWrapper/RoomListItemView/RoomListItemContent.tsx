@@ -8,7 +8,7 @@
 import React, { type JSX, memo, type ReactNode } from "react";
 import { Text } from "@vector-im/compound-web";
 import classNames from "classnames";
-import parse from "html-react-parser";
+import parse, { domToReact, type DOMNode, type Element } from "html-react-parser";
 
 import { Flex } from "../../../../core/utils/Flex";
 import { useViewModel } from "../../../../core/viewmodel";
@@ -16,6 +16,36 @@ import { NotificationDecoration } from "./NotificationDecoration";
 import { RoomListItemHoverMenu } from "./RoomListItemHoverMenu";
 import { type Room, type RoomListItemViewModel } from "./RoomListItemView";
 import styles from "./RoomListItemView.module.css";
+
+const SAFE_IMAGE_SRC_RE = /^(https?:|mxc:)/;
+
+function renderPreviewHtml(html: string): ReactNode {
+    return parse(html, {
+        replace: (node: DOMNode) => {
+            const element = node as Element;
+            if (element.type !== "tag") return;
+
+            if (element.name !== "img") {
+                return <>{domToReact(element.children as DOMNode[])}</>;
+            }
+
+            const src = element.attribs?.src;
+            if (!src || !SAFE_IMAGE_SRC_RE.test(src)) {
+                return element.attribs?.alt ?? "";
+            }
+
+            return (
+                <img
+                    className={styles.messagePreviewEmoji}
+                    src={src}
+                    alt={element.attribs?.alt ?? ""}
+                    loading="lazy"
+                    decoding="async"
+                />
+            );
+        },
+    });
+}
 
 /**
  * Props for {@link RoomListItemContent}.
@@ -58,7 +88,7 @@ export const RoomListItemContent = memo(function RoomListItemContent({
                     </div>
                     {item.messagePreview && (
                         <Text as="div" size="sm" className={styles.ellipsis} title={item.messagePreview}>
-                            {item.messagePreviewHtml ? parse(item.messagePreviewHtml) : item.messagePreview}
+                            {item.messagePreviewHtml ? renderPreviewHtml(item.messagePreviewHtml) : item.messagePreview}
                         </Text>
                     )}
                 </div>

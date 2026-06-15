@@ -6,7 +6,16 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, type MouseEventHandler, type ReactNode, type SVGProps, useState, useEffect, useId } from "react";
+import React, {
+    type JSX,
+    type MouseEventHandler,
+    type ReactNode,
+    type RefObject,
+    type SVGProps,
+    useState,
+    useEffect,
+    useId,
+} from "react";
 import { type FormattingFunctions, type AllActionStates, type ActionState } from "@vector-im/matrix-wysiwyg";
 import classNames from "classnames";
 import BoldIcon from "@vector-im/compound-design-tokens/assets/web/icons/bold";
@@ -55,6 +64,8 @@ interface DefaultStyle {
     stops?: GradientStop[];
 }
 
+const EDITOR_SELECTOR = ".mx_WysiwygComposer_Editor_content[contenteditable]";
+
 const GRADIENT_SVG_COORDS: Record<string, { x1: string; y1: string; x2: string; y2: string }> = {
     "left-to-right": { x1: "0", y1: "0", x2: "1", y2: "0" },
     "top-to-bottom": { x1: "0", y1: "0", x2: "0", y2: "1" },
@@ -62,7 +73,10 @@ const GRADIENT_SVG_COORDS: Record<string, { x1: string; y1: string; x2: string; 
     "diagonal-up": { x1: "0", y1: "1", x2: "1", y2: "0" },
 };
 
-function ColorIcon({ currentStyle, ...props }: SVGProps<SVGSVGElement> & { currentStyle: DefaultStyle | null }): JSX.Element {
+function ColorIcon({
+    currentStyle,
+    ...props
+}: SVGProps<SVGSVGElement> & { currentStyle: DefaultStyle | null }): JSX.Element {
     const gradId = `cig-${useId()}`;
     const fillColor = currentStyle?.color ?? currentStyle?.stops?.[0]?.color ?? "currentColor";
 
@@ -125,11 +139,11 @@ function Button({ label, keyCombo, onClick, actionState, icon }: ButtonProps): J
 }
 
 function computeAndStoreRange(
+    editor: HTMLElement | null,
     color?: string,
     direction?: "left-to-right" | "top-to-bottom" | "diagonal-down" | "diagonal-up",
     stops?: { color: string; position: number }[],
 ): void {
-    const editor = document.querySelector<HTMLElement>("[contenteditable]");
     if (!editor) return;
     const sel = document.getSelection();
     if (!sel || !sel.rangeCount) return;
@@ -147,13 +161,23 @@ function computeAndStoreRange(
 interface FormattingButtonsProps {
     composer: FormattingFunctions;
     actionStates: AllActionStates;
+    editorRef?: RefObject<HTMLDivElement | null>;
     /**
      * Whether all buttons should be disabled
      */
     disabled?: boolean;
 }
 
-export function FormattingButtons({ composer, actionStates, disabled }: FormattingButtonsProps): JSX.Element {
+function getEditor(editorRef?: RefObject<HTMLDivElement | null>): HTMLElement | null {
+    return editorRef?.current ?? document.querySelector<HTMLElement>(EDITOR_SELECTOR);
+}
+
+export function FormattingButtons({
+    composer,
+    actionStates,
+    editorRef,
+    disabled,
+}: FormattingButtonsProps): JSX.Element {
     const composerContext = useComposerContext();
     const isInList = actionStates.unorderedList === "reversed" || actionStates.orderedList === "reversed";
     const enableColoredMessages = SettingsStore.getValue("Tweaks.enableColoredMessages");
@@ -250,16 +274,18 @@ export function FormattingButtons({ composer, actionStates, disabled }: Formatti
                     onClick={async () => {
                         const sel = document.getSelection();
                         const hasSelection = sel && !sel.isCollapsed && sel.rangeCount > 0;
-                        const savedSelection = hasSelection && sel
-                            ? {
-                                  anchorNode: sel.anchorNode,
-                                  anchorOffset: sel.anchorOffset,
-                                  focusNode: sel.focusNode,
-                                  focusOffset: sel.focusOffset,
-                                  isForward: sel.getRangeAt(0).startContainer === sel.anchorNode &&
-                                      sel.getRangeAt(0).startOffset === sel.anchorOffset,
-                              }
-                            : composerContext.selection;
+                        const savedSelection =
+                            hasSelection && sel
+                                ? {
+                                      anchorNode: sel.anchorNode,
+                                      anchorOffset: sel.anchorOffset,
+                                      focusNode: sel.focusNode,
+                                      focusOffset: sel.focusOffset,
+                                      isForward:
+                                          sel.getRangeAt(0).startContainer === sel.anchorNode &&
+                                          sel.getRangeAt(0).startOffset === sel.anchorOffset,
+                                  }
+                                : composerContext.selection;
                         const curStyle = getDefaultStyle();
                         const isGradient = curStyle && "direction" in curStyle && curStyle.direction;
                         const initialStyle = curStyle
@@ -271,22 +297,20 @@ export function FormattingButtons({ composer, actionStates, disabled }: Formatti
                                   }
                                 : { kind: "solid" as const, color: curStyle.color ?? "#ff0000" }
                             : undefined;
-                        const result = await openColorPicker(
-                            isGradient ? "gradient" : "solid",
-                            initialStyle,
-                        );
+                        const result = await openColorPicker(isGradient ? "gradient" : "solid", initialStyle);
                         if (!result) return;
                         await new Promise((resolve) => setTimeout(resolve, 0));
-                        document.querySelector<HTMLElement>("[contenteditable]")?.focus();
+                        const editor = getEditor(editorRef);
+                        editor?.focus();
                         await setSelection(savedSelection);
                         await new Promise((resolve) => setTimeout(resolve, 0));
                         if (result.kind === "solid") {
                             setDefaultStyle({ color: result.color });
-                            computeAndStoreRange(result.color);
+                            computeAndStoreRange(editor, result.color);
                             applySolidColorToSelection(result.color);
                         } else {
                             setDefaultStyle({ direction: result.direction, stops: result.stops });
-                            computeAndStoreRange(undefined, result.direction, result.stops);
+                            computeAndStoreRange(editor, undefined, result.direction, result.stops);
                             applyGradientToSelection(result.direction, result.stops);
                         }
                         const client = MatrixClientPeg.get();

@@ -192,6 +192,7 @@ export class RoomListItemViewModel
             sections: keepIfSame(this.snapshot.current.sections, newItem.sections),
             // Preserve message preview - it's managed separately by loadAndSetMessagePreview
             messagePreview: this.snapshot.current.messagePreview,
+            messagePreviewHtml: this.snapshot.current.messagePreviewHtml,
         });
     }
 
@@ -204,10 +205,7 @@ export class RoomListItemViewModel
      * Load the message preview for this room if enabled.
      * Returns undefined if previews are disabled or couldn't be loaded.
      */
-    private async loadMessagePreview(): Promise<
-        | { text: string; htmlText?: string }
-        | undefined
-    > {
+    private async loadMessagePreview(): Promise<{ text: string; htmlText?: string } | undefined> {
         const shouldShowMessagePreview = SettingsStore.getValue("RoomList.showMessagePreview");
         if (!shouldShowMessagePreview) {
             return undefined;
@@ -307,7 +305,7 @@ export class RoomListItemViewModel
                       userId: freshMember.userId,
                       displayName: name,
                       avatarUrl: mxcUrl
-                          ? (getHttpUriForMxc(
+                          ? getHttpUriForMxc(
                                 client.baseUrl,
                                 mxcUrl,
                                 avatarSize,
@@ -317,7 +315,7 @@ export class RoomListItemViewModel
                                 true,
                                 undefined,
                                 animated,
-                            ) || undefined)
+                            ) || undefined
                           : undefined,
                   };
               })
@@ -335,7 +333,7 @@ export class RoomListItemViewModel
             isBold: notifState.hasAnyNotificationOrActivity,
             messagePreview,
             notification: {
-                hasAnyNotificationOrActivity: notifState.hasAnyNotificationOrActivity || hasParticipantsInCall,
+                hasAnyNotificationOrActivity: notifState.hasAnyNotificationOrActivity,
                 isUnsentMessage: notifState.isUnsentMessage,
                 invited: notifState.invited,
                 isMention: notifState.isMention,

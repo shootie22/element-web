@@ -5,9 +5,6 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { type IContent } from "matrix-js-sdk/src/matrix";
-import { type AccountDataEvents } from "matrix-js-sdk/src/types";
-
 import {
     MESSAGE_STYLE_ACCOUNT_DATA_TYPE,
     type MessageStyleAccountData,
@@ -29,7 +26,9 @@ export default class MessageStyleController extends MatrixClientBackedController
     };
 
     public getValue(): MessageStyle | null {
-        const content = this.client?.getAccountData(MESSAGE_STYLE_ACCOUNT_DATA_TYPE)?.getContent<MessageStyleAccountData>();
+        const content = this.client
+            ?.getAccountData(MESSAGE_STYLE_ACCOUNT_DATA_TYPE)
+            ?.getContent<MessageStyleAccountData>();
         if (!content?.defaultStyle || !validateMessageStyle(content.defaultStyle)) {
             return null;
         }
@@ -46,6 +45,6 @@ export default class MessageStyleController extends MatrixClientBackedController
             version: 1,
             defaultStyle: style,
         };
-        await this.client.setAccountData(MESSAGE_STYLE_ACCOUNT_DATA_TYPE, content as unknown as IContent);
+        await this.client.setAccountData(MESSAGE_STYLE_ACCOUNT_DATA_TYPE, content);
     }
 }
