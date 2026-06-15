@@ -89,6 +89,7 @@ export interface MessagePreview {
     event: MatrixEvent;
     isThreadReply: boolean;
     text: string;
+    htmlText?: string;
 }
 
 const isThreadReply = (event: MatrixEvent): boolean => {
@@ -114,10 +115,11 @@ const isThreadReply = (event: MatrixEvent): boolean => {
     return true;
 };
 
-const mkMessagePreview = (text: string, event: MatrixEvent): MessagePreview => {
+const mkMessagePreview = (text: string, event: MatrixEvent, htmlText?: string): MessagePreview => {
     return {
         event,
         text,
+        htmlText,
         isThreadReply: isThreadReply(event),
     };
 };
@@ -176,6 +178,11 @@ export class MessagePreviewStore extends AsyncStoreWithClient<EmptyObject> {
         return previewDef?.previewer.getTextFor(event, undefined, true) ?? "";
     }
 
+    public generateHtmlPreviewForEvent(event: MatrixEvent): string | undefined {
+        const previewDef = PREVIEWS[event.getType()];
+        return previewDef?.previewer.getHtmlFor?.(event, undefined, true) ?? undefined;
+    }
+
     private async generatePreview(room: Room, tagId?: TagID): Promise<void> {
         const events = [...room.getLiveTimeline().getEvents(), ...room.getPendingEvents()];
 
@@ -224,8 +231,9 @@ export class MessagePreviewStore extends AsyncStoreWithClient<EmptyObject> {
             const anyPreviewText = previewDef.previewer.getTextFor(event);
             if (!anyPreviewText) continue; // not previewable for some reason
 
-            changed = changed || anyPreviewText !== map.get(TAG_ANY)?.text;
-            map.set(TAG_ANY, mkMessagePreview(anyPreviewText, event));
+            const anyPreviewHtml = previewDef.previewer.getHtmlFor?.(event) ?? undefined;
+            changed = changed || anyPreviewText !== map.get(TAG_ANY)?.text || anyPreviewHtml !== map.get(TAG_ANY)?.htmlText;
+            map.set(TAG_ANY, mkMessagePreview(anyPreviewText, event, anyPreviewHtml));
 
             const tagsToGenerate = Array.from(map.keys()).filter((t) => t !== TAG_ANY); // we did the any tag above
             for (const genTagId of tagsToGenerate) {

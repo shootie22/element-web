@@ -204,7 +204,10 @@ export class RoomListItemViewModel
      * Load the message preview for this room if enabled.
      * Returns undefined if previews are disabled or couldn't be loaded.
      */
-    private async loadMessagePreview(): Promise<string | undefined> {
+    private async loadMessagePreview(): Promise<
+        | { text: string; htmlText?: string }
+        | undefined
+    > {
         const shouldShowMessagePreview = SettingsStore.getValue("RoomList.showMessagePreview");
         if (!shouldShowMessagePreview) {
             return undefined;
@@ -212,15 +215,23 @@ export class RoomListItemViewModel
 
         const messagePreviewTag = this.getMessagePreviewTag();
         const preview = await MessagePreviewStore.instance.getPreviewForRoom(this.props.room, messagePreviewTag);
-        return preview?.text;
+        if (!preview) return undefined;
+        return { text: preview.text, htmlText: preview.htmlText };
     }
 
     /**
      * Load and set the message preview if it differs from current.
      */
     private async loadAndSetMessagePreview(): Promise<void> {
-        const messagePreview = await this.loadMessagePreview();
-        this.snapshot.merge({ messagePreview });
+        const preview = await this.loadMessagePreview();
+        if (preview) {
+            this.snapshot.merge({
+                messagePreview: preview.text,
+                messagePreviewHtml: preview.htmlText,
+            });
+        } else {
+            this.snapshot.merge({ messagePreview: undefined, messagePreviewHtml: undefined });
+        }
     }
 
     /**

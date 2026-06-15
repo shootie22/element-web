@@ -168,6 +168,122 @@ describe("ReactionEventPreview", () => {
             );
         });
 
+        it("getHtmlFor: returns null for standard emoji (non-MXC)", () => {
+            const cli = MatrixClientPeg.safeGet();
+            const room = new Room(roomId, cli, userId);
+            mocked(cli.getRoom).mockReturnValue(room);
+
+            const message = mkEvent({
+                event: true,
+                content: { body: "test", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
+                user: userId,
+                type: "m.room.message",
+                room: roomId,
+            });
+            room.getUnfilteredTimelineSet().addLiveEvent(message, { addToState: true });
+
+            const event = mkEvent({
+                event: true,
+                content: {
+                    "m.relates_to": { rel_type: RelationType.Annotation, key: "🪿", event_id: message.getId() },
+                },
+                user: cli.getSafeUserId(),
+                type: "m.reaction",
+                room: roomId,
+            });
+            expect(preview.getHtmlFor(event)).toBeNull();
+        });
+
+        it("getHtmlFor: returns img tag for custom emoji with shortcode", () => {
+            const cli = MatrixClientPeg.safeGet();
+            const room = new Room(roomId, cli, userId);
+            mocked(cli.getRoom).mockReturnValue(room);
+
+            const message = mkEvent({
+                event: true,
+                content: { body: "hello", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
+                user: userId,
+                type: "m.room.message",
+                room: roomId,
+            });
+            room.getUnfilteredTimelineSet().addLiveEvent(message, { addToState: true });
+
+            const event = mkEvent({
+                event: true,
+                content: {
+                    "m.relates_to": { rel_type: RelationType.Annotation, key: "mxc://example.org/custom", event_id: message.getId() },
+                    "com.beeper.reaction.shortcode": "blobcat",
+                },
+                user: cli.getSafeUserId(),
+                type: "m.reaction",
+                room: roomId,
+            });
+            const html = preview.getHtmlFor(event);
+            expect(html).toContain("<img");
+            expect(html).toContain('alt="blobcat"');
+            expect(html).toContain("hello");
+        });
+
+        it("getHtmlFor: uses fallback alt text for custom emoji without shortcode", () => {
+            const cli = MatrixClientPeg.safeGet();
+            const room = new Room(roomId, cli, userId);
+            mocked(cli.getRoom).mockReturnValue(room);
+
+            const message = mkEvent({
+                event: true,
+                content: { body: "hello", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
+                user: userId,
+                type: "m.room.message",
+                room: roomId,
+            });
+            room.getUnfilteredTimelineSet().addLiveEvent(message, { addToState: true });
+
+            const event = mkEvent({
+                event: true,
+                content: {
+                    "m.relates_to": { rel_type: RelationType.Annotation, key: "mxc://example.org/custom", event_id: message.getId() },
+                },
+                user: cli.getSafeUserId(),
+                type: "m.reaction",
+                room: roomId,
+            });
+            const html = preview.getHtmlFor(event);
+            expect(html).toContain("<img");
+            expect(html).toContain("alt=\"a custom emoji\"");
+        });
+
+        it("getHtmlFor: returns html for other users reactions", () => {
+            const cli = MatrixClientPeg.safeGet();
+            const room = new Room(roomId, cli, userId);
+            mocked(cli.getRoom).mockReturnValue(room);
+
+            const message = mkEvent({
+                event: true,
+                content: { body: "hello", "m.relates_to": { rel_type: RelationType.Thread, event_id: "$foo:bar" } },
+                user: userId,
+                type: "m.room.message",
+                room: roomId,
+            });
+            room.getUnfilteredTimelineSet().addLiveEvent(message, { addToState: true });
+
+            const event = mkEvent({
+                event: true,
+                content: {
+                    "m.relates_to": { rel_type: RelationType.Annotation, key: "mxc://example.org/custom", event_id: message.getId() },
+                    "com.beeper.reaction.shortcode": "blobcat",
+                },
+                user: userId,
+                type: "m.reaction",
+                room: roomId,
+            });
+            event.sender = new RoomMember(roomId, userId);
+            event.sender.name = "Bob";
+            const html = preview.getHtmlFor(event);
+            expect(html).toContain("<img");
+            expect(html).toContain('alt="blobcat"');
+            expect(html).not.toContain("You");
+        });
+
         it("should use display name for your others' reactions", () => {
             const cli = MatrixClientPeg.safeGet();
             const room = new Room(roomId, cli, userId);

@@ -16,6 +16,8 @@ import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { MessagePreviewStore } from "../MessagePreviewStore";
 import { REACTION_SHORTCODE_KEY } from "../../../viewmodels/room/timeline/event-tile/reactions/reactionShortcode";
 
+const htmlEscape = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
 export class ReactionEventPreview implements Preview {
     public getTextFor(event: MatrixEvent, tagId?: TagID, isThread?: boolean): string | null {
         const roomId = event.getRoomId();
@@ -47,6 +49,41 @@ export class ReactionEventPreview implements Preview {
         return _t("event_preview|m.reaction|user", {
             sender: getSenderName(event),
             reaction,
+            message,
+        });
+    }
+
+    public getHtmlFor(event: MatrixEvent, tagId?: TagID, isThread?: boolean): string | null {
+        const roomId = event.getRoomId();
+        if (!roomId) return null;
+
+        const relation = event.getRelation();
+        if (!relation) return null;
+
+        const reaction = relation.key;
+        if (!reaction || !reaction.startsWith("mxc://")) return null;
+
+        const cli = MatrixClientPeg.get();
+        const room = cli?.getRoom(roomId);
+        const relatedEvent = relation.event_id ? room?.findEventById(relation.event_id) : null;
+        if (!relatedEvent) return null;
+
+        const shortcode = (REACTION_SHORTCODE_KEY.findIn(event.getContent() as Record<string, unknown>) as string | undefined) || (_t("event_preview|m.reaction|custom_emoji") as string);
+        const httpUrl = cli?.mxcUrlToHttp(reaction) ?? reaction;
+
+        const emojiImg = `<img src="${htmlEscape(httpUrl)}" alt="${htmlEscape(shortcode)}" style="height: 1em; vertical-align: bottom;" />`;
+        const message = htmlEscape(MessagePreviewStore.instance.generatePreviewForEvent(relatedEvent));
+
+        if (isSelf(event)) {
+            return _t("event_preview|m.reaction|you", {
+                reaction: emojiImg,
+                message,
+            });
+        }
+
+        return _t("event_preview|m.reaction|user", {
+            sender: htmlEscape(getSenderName(event)),
+            reaction: emojiImg,
             message,
         });
     }

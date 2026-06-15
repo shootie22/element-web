@@ -72,6 +72,8 @@ export interface RoomListItemViewSnapshot {
     isBold: boolean;
     /** Optional message preview text */
     messagePreview?: string;
+    /** Optional HTML message preview (for richer inline content like custom emoji) */
+    messagePreviewHtml?: string;
     /** Notification decoration data */
     notification: NotificationDecorationData;
     /** Whether the more options menu should be shown */

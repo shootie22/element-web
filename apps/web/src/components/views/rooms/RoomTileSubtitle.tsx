@@ -9,6 +9,7 @@ Please see LICENSE files in the repository root for full details.
 import React from "react";
 import classNames from "classnames";
 import { ThreadsIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
+import parse from "html-react-parser";
 
 import { type MessagePreview } from "../../../stores/message-preview";
 import { type Call } from "../../../models/Call";
@@ -42,7 +43,9 @@ export const RoomTileSubtitle: React.FC<Props> = ({ call, messagePreview, roomId
         return (
             <div className={className} id={messagePreviewId(roomId)} title={messagePreview.text}>
                 {icon}
-                <span className="mx_RoomTile_subtitle_text">{messagePreview.text}</span>
+                <span className="mx_RoomTile_subtitle_text">
+                    {messagePreview.htmlText ? parse(messagePreview.htmlText) : messagePreview.text}
+                </span>
             </div>
         );
     }

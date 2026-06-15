@@ -22,4 +22,14 @@ export interface Preview {
      * @returns The preview.
      */
     getTextFor(event: MatrixEvent, tagId?: TagID, isThread?: boolean): string | null;
+
+    /**
+     * Gets an HTML version of the preview, if the previewer supports it.
+     * When available, consumers should prefer this over getTextFor() for richer rendering.
+     * @param event The event to preview.
+     * @param tagId Optional. The tag where the room the event was sent in resides.
+     * @param isThread Optional. Whether the preview being generated is for a thread summary.
+     * @returns The HTML preview, or null if not available.
+     */
+    getHtmlFor?(event: MatrixEvent, tagId?: TagID, isThread?: boolean): string | null;
 }

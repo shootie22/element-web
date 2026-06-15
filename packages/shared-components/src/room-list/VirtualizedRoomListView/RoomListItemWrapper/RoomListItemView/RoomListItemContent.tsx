@@ -8,6 +8,7 @@
 import React, { type JSX, memo, type ReactNode } from "react";
 import { Text } from "@vector-im/compound-web";
 import classNames from "classnames";
+import parse from "html-react-parser";
 
 import { Flex } from "../../../../core/utils/Flex";
 import { useViewModel } from "../../../../core/viewmodel";
@@ -57,7 +58,7 @@ export const RoomListItemContent = memo(function RoomListItemContent({
                     </div>
                     {item.messagePreview && (
                         <Text as="div" size="sm" className={styles.ellipsis} title={item.messagePreview}>
-                            {item.messagePreview}
+                            {item.messagePreviewHtml ? parse(item.messagePreviewHtml) : item.messagePreview}
                         </Text>
                     )}
                 </div>
