@@ -11,8 +11,10 @@ import {
     type RoomListItemViewSnapshot,
     type RoomListItemViewActions,
     type Section,
+    type CallParticipantData,
 } from "@element-hq/web-shared-components";
 import { RoomEvent } from "matrix-js-sdk/src/matrix";
+import { getHttpUriForMxc } from "matrix-js-sdk/src/content-repo";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
 
 import type { Room, MatrixClient, RoomMember } from "matrix-js-sdk/src/matrix";
@@ -129,14 +131,10 @@ export class RoomListItemViewModel
     };
 
     /**
-     * Handler for call participant changes. Only updates the item if the call moves between having participants and not having participants, to avoid unnecessary updates.
+     * Handler for call participant changes. Updates the item to reflect participant changes.
      * @param participants The current call participants
      */
     private onCallParticipantsChanged = (participants: Map<RoomMember, Set<string>>): void => {
-        const hasCall = Boolean(this.snapshot.current.notification.callType);
-        // There is already an active call, we don't need to update the item
-        if (hasCall && participants.size > 0) return;
-
         this.updateItem();
     };
 
@@ -287,6 +285,32 @@ export class RoomListItemViewModel
         const hasParticipantsInCall = participantCount > 0;
         const callType =
             call?.callType === CallType.Voice ? "voice" : call?.callType === CallType.Video ? "video" : undefined;
+        const animated = SettingsStore.getValue("autoplayGifs") || undefined;
+        const callParticipants: CallParticipantData[] | undefined = hasParticipantsInCall
+            ? [...call!.participants.keys()].map((member) => {
+                  const freshMember = room.getMember(member.userId) ?? member;
+                  const mxcUrl = freshMember.getMxcAvatarUrl();
+                  const name = freshMember.name || freshMember.rawDisplayName || freshMember.userId;
+                  const avatarSize = Math.floor(36 * window.devicePixelRatio);
+                  return {
+                      userId: freshMember.userId,
+                      displayName: name,
+                      avatarUrl: mxcUrl
+                          ? (getHttpUriForMxc(
+                                client.baseUrl,
+                                mxcUrl,
+                                avatarSize,
+                                avatarSize,
+                                "crop",
+                                false,
+                                true,
+                                undefined,
+                                animated,
+                            ) || undefined)
+                          : undefined,
+                  };
+              })
+            : undefined;
 
         const canMoveToSection = SettingsStore.getValue("feature_room_list_sections");
 
@@ -309,7 +333,8 @@ export class RoomListItemViewModel
                 hasUnreadCount: notifState.hasUnreadCount,
                 count: notifState.count,
                 muted: isNotificationMute,
-                callType: hasParticipantsInCall ? callType : undefined,
+                callType: callParticipants ? callType : undefined,
+                callParticipants,
             },
             showMoreOptionsMenu,
             showNotificationMenu,

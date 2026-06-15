@@ -34,12 +34,15 @@ export const RoomTileCallSummary: FC<Props> = ({ call }) => {
             break;
     }
 
+    const participants = active ? [...call.participants.keys()] : undefined;
+
     return (
         <LiveContentSummary
             type={LiveContentType.Video}
             text={text}
             active={active}
             participantCount={useParticipantCount(call)}
+            participants={participants}
         />
     );
 };

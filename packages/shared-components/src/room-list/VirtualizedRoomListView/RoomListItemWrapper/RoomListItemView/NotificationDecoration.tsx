@@ -14,9 +14,15 @@ import {
     EmailSolidIcon,
     VoiceCallSolidIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
-import { UnreadCounter, Unread } from "@vector-im/compound-web";
+import { UnreadCounter, Unread, Avatar } from "@vector-im/compound-web";
 
 import { Flex } from "../../../../core/utils/Flex";
+
+export interface CallParticipantData {
+    userId: string;
+    displayName: string;
+    avatarUrl?: string;
+}
 
 /**
  * Data representing the notification state for a room or item.
@@ -43,12 +49,16 @@ export interface NotificationDecorationData {
     muted: boolean;
     /** Optional call type indicator */
     callType?: "video" | "voice";
+    /** Participants in an active call (replaces call icon with avatars) */
+    callParticipants?: CallParticipantData[];
 }
 
 /**
  * Props for the NotificationDecoration component.
  */
 export interface NotificationDecorationProps extends NotificationDecorationData {}
+
+const MAX_VISIBLE_AVATARS = 4;
 
 /**
  * Renders notification badges and indicators for rooms/items
@@ -57,6 +67,7 @@ export const NotificationDecoration: React.FC<NotificationDecorationProps> = ({
     hasAnyNotificationOrActivity,
     muted,
     callType,
+    callParticipants,
     isUnsentMessage,
     invited,
     isMention,
@@ -65,7 +76,7 @@ export const NotificationDecoration: React.FC<NotificationDecorationProps> = ({
     count,
 }) => {
     // Don't render anything if there's nothing to show
-    if (!hasAnyNotificationOrActivity && !muted && !callType) {
+    if (!hasAnyNotificationOrActivity && !muted && !callType && !callParticipants?.length) {
         return null;
     }
 
@@ -74,7 +85,48 @@ export const NotificationDecoration: React.FC<NotificationDecorationProps> = ({
             {isUnsentMessage && (
                 <ErrorSolidIcon width="20px" height="20px" fill="var(--cpd-color-icon-critical-primary)" />
             )}
-            {callType === "video" && (
+            {callParticipants && callParticipants.length > 0 ? (
+                <Flex align="center" gap="0px" style={{ marginLeft: "var(--cpd-space-2x)" }}>
+                    {callParticipants.slice(0, MAX_VISIBLE_AVATARS).map((p, i) => (
+                        <div
+                            key={p.userId}
+                            style={{
+                                marginLeft: i > 0 ? "-6px" : undefined,
+                                borderRadius: "50%",
+                                border: "1.5px solid var(--cpd-color-bg-canvas-default)",
+                                lineHeight: 0,
+                            }}
+                        >
+                            <Avatar
+                                id={p.userId}
+                                name={p.displayName}
+                                src={p.avatarUrl}
+                                size="18px"
+                            />
+                        </div>
+                    ))}
+                    {callParticipants.length > MAX_VISIBLE_AVATARS && (
+                        <div
+                            style={{
+                                marginLeft: "-4px",
+                                width: "18px",
+                                height: "18px",
+                                borderRadius: "50%",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                background: "var(--cpd-color-icon-accent-primary)",
+                                color: "var(--cpd-color-text-on-solid-primary)",
+                                fontSize: "9px",
+                                fontWeight: 600,
+                                border: "1.5px solid var(--cpd-color-bg-canvas-default)",
+                            }}
+                        >
+                            +{callParticipants.length - MAX_VISIBLE_AVATARS}
+                        </div>
+                    )}
+                </Flex>
+            ) : callType === "video" && (
                 <VideoCallSolidIcon width="20px" height="20px" fill="var(--cpd-color-icon-accent-primary)" />
             )}
             {callType === "voice" && (
