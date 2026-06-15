@@ -1259,6 +1259,7 @@
         },
         "m.emote": "* %(senderName)s %(emote)s",
         "m.reaction": {
+            "custom_emoji": "a custom emoji",
             "user": "%(sender)s reacted %(reaction)s to %(message)s",
             "you": "You reacted %(reaction)s to %(message)s"
         },

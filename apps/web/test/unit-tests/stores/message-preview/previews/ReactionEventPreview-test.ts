@@ -89,6 +89,85 @@ describe("ReactionEventPreview", () => {
             expect(preview.getTextFor(event)).toMatchInlineSnapshot(`"You reacted 🪿 to duck duck goose"`);
         });
 
+        it("should use shortcode for custom emoji reactions with MXC key", () => {
+            const cli = MatrixClientPeg.safeGet();
+            const room = new Room(roomId, cli, userId);
+            mocked(cli.getRoom).mockReturnValue(room);
+
+            const message = mkEvent({
+                event: true,
+                content: {
+                    "body": "hello world",
+                    "m.relates_to": {
+                        rel_type: RelationType.Thread,
+                        event_id: "$foo:bar",
+                    },
+                },
+                user: userId,
+                type: "m.room.message",
+                room: roomId,
+            });
+
+            room.getUnfilteredTimelineSet().addLiveEvent(message, { addToState: true });
+
+            const event = mkEvent({
+                event: true,
+                content: {
+                    "m.relates_to": {
+                        rel_type: RelationType.Annotation,
+                        key: "mxc://example.com/emoji",
+                        event_id: message.getId(),
+                    },
+                    "com.beeper.reaction.shortcode": "blobcat",
+                },
+                user: cli.getSafeUserId(),
+                type: "m.reaction",
+                room: roomId,
+            });
+            expect(preview.getTextFor(event)).toMatchInlineSnapshot(
+                `"You reacted blobcat to hello world"`,
+            );
+        });
+
+        it("should use fallback text for custom emoji without shortcode", () => {
+            const cli = MatrixClientPeg.safeGet();
+            const room = new Room(roomId, cli, userId);
+            mocked(cli.getRoom).mockReturnValue(room);
+
+            const message = mkEvent({
+                event: true,
+                content: {
+                    "body": "hello world",
+                    "m.relates_to": {
+                        rel_type: RelationType.Thread,
+                        event_id: "$foo:bar",
+                    },
+                },
+                user: userId,
+                type: "m.room.message",
+                room: roomId,
+            });
+
+            room.getUnfilteredTimelineSet().addLiveEvent(message, { addToState: true });
+
+            const event = mkEvent({
+                event: true,
+                content: {
+                    "m.relates_to": {
+                        rel_type: RelationType.Annotation,
+                        key: "mxc://example.com/emoji",
+                        event_id: message.getId(),
+                    },
+                },
+                user: cli.getSafeUserId(),
+                type: "m.reaction",
+                room: roomId,
+            });
+            expect(preview.getTextFor(event)).toMatchInlineSnapshot(
+                `"You reacted a custom emoji to hello world"`,
+            );
+        });
+
         it("should use display name for your others' reactions", () => {
             const cli = MatrixClientPeg.safeGet();
             const room = new Room(roomId, cli, userId);

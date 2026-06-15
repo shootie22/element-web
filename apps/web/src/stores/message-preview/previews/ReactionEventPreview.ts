@@ -14,6 +14,7 @@ import { getSenderName, isSelf } from "./utils";
 import { _t } from "../../../languageHandler";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 import { MessagePreviewStore } from "../MessagePreviewStore";
+import { REACTION_SHORTCODE_KEY } from "../../../viewmodels/room/timeline/event-tile/reactions/reactionShortcode";
 
 export class ReactionEventPreview implements Preview {
     public getTextFor(event: MatrixEvent, tagId?: TagID, isThread?: boolean): string | null {
@@ -23,8 +24,12 @@ export class ReactionEventPreview implements Preview {
         const relation = event.getRelation();
         if (!relation) return null; // invalid reaction (probably redacted)
 
-        const reaction = relation.key;
+        let reaction = relation.key;
         if (!reaction) return null; // invalid reaction (unknown format)
+
+        if (reaction.startsWith("mxc://")) {
+            reaction = REACTION_SHORTCODE_KEY.findIn(event.getContent()) || _t("event_preview|m.reaction|custom_emoji");
+        }
 
         const cli = MatrixClientPeg.get();
         const room = cli?.getRoom(roomId);
