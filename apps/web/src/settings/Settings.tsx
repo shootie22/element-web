@@ -827,7 +827,7 @@ export const SETTINGS: Settings = {
     "Tweaks.showRoomListFilters": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|tweaks|show_room_list_filters"),
-        default: true,
+        default: false,
     },
     // TODO: Wire up appropriately to UI (FTUE notifications)
     "Notifications.alwaysShowBadgeCounts": {
