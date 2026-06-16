@@ -5,14 +5,18 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { app, ipcMain } from "electron";
-import { autoUpdater, type UpdateInfo } from "electron-updater";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import * as https from "node:https";
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
+import { app, ipcMain } from "electron";
 
+import type { AppUpdater, UpdateInfo } from "electron-updater";
 import Store from "./store.js";
+
+const _require = createRequire(import.meta.url);
+const { autoUpdater } = _require("electron-updater") as { autoUpdater: AppUpdater };
 
 const UPDATE_POLL_INTERVAL_MS = 60 * 60 * 1000;
 const INITIAL_UPDATE_DELAY_MS = 30 * 1000;
