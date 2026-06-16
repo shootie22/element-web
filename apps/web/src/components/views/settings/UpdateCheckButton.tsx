@@ -49,7 +49,11 @@ function getStatusText(status: UpdateCheckStatus, errorDetail?: string): ReactNo
 
 const doneStatuses = [UpdateCheckStatus.Ready, UpdateCheckStatus.Error, UpdateCheckStatus.NotAvailable];
 
-const UpdateCheckButton: React.FC = () => {
+interface IProps {
+    onUpdateStatus?: (status: CheckUpdatesPayload) => void;
+}
+
+const UpdateCheckButton: React.FC<IProps> = ({ onUpdateStatus }) => {
     const [state, setState] = useState<CheckUpdatesPayload | null>(null);
 
     const onCheckForUpdateClick = (): void => {
@@ -59,7 +63,9 @@ const UpdateCheckButton: React.FC = () => {
 
     useDispatcher(dis, ({ action, ...params }) => {
         if (action === Action.CheckUpdates) {
-            setState(params as CheckUpdatesPayload);
+            const status = params as CheckUpdatesPayload;
+            setState(status);
+            onUpdateStatus?.(status);
         }
     });
 

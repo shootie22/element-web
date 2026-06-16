@@ -56,6 +56,10 @@ export interface UpdateStatus {
      * Detail string relating to the current status, typically for error details.
      */
     detail?: string;
+    releaseNotes?: string;
+    releaseName?: string;
+    releaseDate?: string | Date;
+    releaseURL?: string;
 }
 
 const UPDATE_DEFER_KEY = "mx_defer_update";
@@ -131,6 +135,10 @@ export default abstract class BasePlatform {
      * and replace this instance of the app with the new version.
      */
     public installUpdate(): void {}
+
+    public async getPendingUpdate(): Promise<UpdateStatus | null> {
+        return null;
+    }
 
     /**
      * Check if the version update has been deferred and that deferment is still in effect

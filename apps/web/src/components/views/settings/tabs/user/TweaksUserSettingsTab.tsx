@@ -22,10 +22,7 @@ export default function TweaksUserSettingsTab(): React.ReactNode {
                     <SettingsFlag name="MessageComposerInput.showStickersButton" level={SettingLevel.ACCOUNT} />
                     <SettingsFlag name="Tweaks.accentEmojiStickerButtons" level={SettingLevel.ACCOUNT} />
                     <SettingsFlag name="Tweaks.resizableEmojiStickerPickers" level={SettingLevel.ACCOUNT} />
-                    <SettingsFlag
-                        name="Tweaks.mixCustomEmojisWithFrequentlyUsed"
-                        level={SettingLevel.ACCOUNT}
-                    />
+                    <SettingsFlag name="Tweaks.mixCustomEmojisWithFrequentlyUsed" level={SettingLevel.ACCOUNT} />
                 </SettingsSubsection>
 
                 <SettingsSubsection heading={_t("settings|tweaks|animated_media_heading")} formWrap>
@@ -56,6 +53,14 @@ export default function TweaksUserSettingsTab(): React.ReactNode {
 
                 <SettingsSubsection heading={_t("settings|tweaks|room_list_heading")} formWrap>
                     <SettingsFlag name="Tweaks.showRoomListFilters" level={SettingLevel.ACCOUNT} />
+                </SettingsSubsection>
+
+                <SettingsSubsection heading={_t("settings|tweaks|system_heading")} formWrap>
+                    <SettingsFlag
+                        name="Electron.automaticallyKeepClientUpToDate"
+                        level={SettingLevel.PLATFORM}
+                        hideIfCannotSet
+                    />
                 </SettingsSubsection>
             </SettingsSection>
         </SettingsTab>

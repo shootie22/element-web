@@ -10,18 +10,7 @@ Please see LICENSE files in the repository root for full details.
 
 // Squirrel on windows starts the app with various flags as hooks to tell us when we've been installed/uninstalled etc.
 import "./squirrelhooks.js";
-import {
-    app,
-    BrowserWindow,
-    Menu,
-    autoUpdater,
-    dialog,
-    type Input,
-    type Event,
-    session,
-    protocol,
-    desktopCapturer,
-} from "electron";
+import { app, BrowserWindow, Menu, dialog, type Input, type Event, session, protocol, desktopCapturer } from "electron";
 // eslint-disable-next-line n/file-extension-in-import
 import * as Sentry from "@sentry/electron/main";
 import path, { dirname } from "node:path";
@@ -376,10 +365,8 @@ app.on("ready", async () => {
     // Minimist parses `--no-`-prefixed arguments as booleans with value `false` rather than verbatim.
     if (argv["update"] === false) {
         console.log("Auto update disabled via command line flag");
-    } else if (global.vectorConfig["update_base_url"]) {
-        void updater.start(global.vectorConfig["update_base_url"]);
     } else {
-        console.log("No update_base_url is defined: auto update is disabled");
+        void updater.start();
     }
 
     // Set up i18n before loading storage as we need translations for dialogs
@@ -564,7 +551,6 @@ function beforeQuit(): void {
 }
 
 app.on("before-quit", beforeQuit);
-autoUpdater.on("before-quit-for-update", beforeQuit);
 
 app.on("second-instance", (ev, commandLine, workingDirectory) => {
     // If other instance launched with --hidden then skip showing window

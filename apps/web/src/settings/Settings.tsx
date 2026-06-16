@@ -382,6 +382,7 @@ export interface Settings {
     "Electron.showTrayIcon": IBaseSetting<boolean>;
     "Electron.enableHardwareAcceleration": IBaseSetting<boolean>;
     "Electron.enableContentProtection": IBaseSetting<boolean>;
+    "Electron.automaticallyKeepClientUpToDate": IBaseSetting<boolean>;
     "mediaPreviewConfig": IBaseSetting<MediaPreviewConfig>;
     "inviteRules": IBaseSetting<ComputedInviteConfig>;
     "blockInvites": IBaseSetting<boolean>;
@@ -1619,6 +1620,12 @@ export const SETTINGS: Settings = {
         supportedLevels: [SettingLevel.PLATFORM],
         displayName: _td("settings|preferences|enable_content_protection"),
         default: false,
+    },
+    "Electron.automaticallyKeepClientUpToDate": {
+        supportedLevels: [SettingLevel.PLATFORM],
+        displayName: _td("settings|tweaks|automatically_keep_client_up_to_date"),
+        description: _td("settings|tweaks|automatically_keep_client_up_to_date_description"),
+        default: true,
     },
     "Developer.elementCallUrl": {
         supportedLevels: [SettingLevel.DEVICE],

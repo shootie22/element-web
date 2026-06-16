@@ -97,6 +97,7 @@ const config: Omit<Writable<Configuration>, "electronFuses"> & {
     electronFuses: Required<Configuration["electronFuses"]>;
 } = {
     appId: variant.appId,
+    artifactName: "${name}-${version}-${os}-${arch}.${ext}",
     asarUnpack: "**/*.node",
     electronFuses: {
         enableCookieEncryption: true,
@@ -120,6 +121,14 @@ const config: Omit<Writable<Configuration>, "electronFuses"> & {
         },
         "lib/**",
     ],
+    publish: [
+        {
+            provider: "github",
+            owner: "shootie22",
+            repo: "element-web",
+            releaseType: "release",
+        },
+    ],
     extraResources: ["build/icon.*", "webapp.asar"],
     extraMetadata: {
         name: variant.name,
@@ -129,7 +138,7 @@ const config: Omit<Writable<Configuration>, "electronFuses"> & {
         electron_protocol: variant.protocols[0],
     },
     linux: {
-        target: ["tar.gz", "deb"],
+        target: ["AppImage", "deb", "tar.gz"],
         category: "Network;InstantMessaging;Chat",
         icon: "icon.png",
         executableName: variant.name, // element-desktop or element-desktop-nightly
@@ -168,11 +177,16 @@ const config: Omit<Writable<Configuration>, "electronFuses"> & {
         badgeIcon: "build/icon.icon",
     },
     win: {
-        target: ["squirrel", "msi"],
+        target: ["nsis", "msi"],
         signtoolOptions: {
             signingHashAlgorithms: ["sha256"],
         },
         icon: "build/icon.ico",
+    },
+    nsis: {
+        oneClick: false,
+        perMachine: false,
+        allowToChangeInstallationDirectory: true,
     },
     msi: {
         perMachine: true,

@@ -46,7 +46,7 @@ import { _t } from "../../languageHandler";
 import { BadgeOverlayRenderer } from "../../favicon";
 import GenericToast from "../../components/views/toasts/GenericToast.tsx";
 
-interface SquirrelUpdate {
+interface DesktopUpdate {
     releaseNotes: string;
     releaseName: string;
     releaseDate: Date;
@@ -254,10 +254,17 @@ export default class ElectronPlatform extends BasePlatform {
         void this.ipc.call("breadcrumbs", rooms);
     };
 
-    private onUpdateDownloaded = async (ev: Event, { releaseNotes, releaseName }: SquirrelUpdate): Promise<void> => {
+    private onUpdateDownloaded = async (
+        ev: Event,
+        { releaseNotes, releaseName, releaseDate, updateURL }: DesktopUpdate,
+    ): Promise<void> => {
         dis.dispatch<CheckUpdatesPayload>({
             action: Action.CheckUpdates,
             status: UpdateCheckStatus.Ready,
+            releaseNotes,
+            releaseName,
+            releaseDate,
+            releaseURL: updateURL,
         });
         if (this.shouldShowUpdate(releaseName)) {
             showUpdateToast(await this.getAppVersion(), releaseName, releaseNotes);
@@ -387,6 +394,19 @@ export default class ElectronPlatform extends BasePlatform {
     public async canSelfUpdate(): Promise<boolean> {
         const feedUrl = await this.ipc.call("getUpdateFeedUrl");
         return Boolean(feedUrl);
+    }
+
+    public async getPendingUpdate(): Promise<UpdateStatus | null> {
+        const update = (await this.ipc.call("getPendingUpdate")) as DesktopUpdate | null;
+        if (!update) return null;
+
+        return {
+            status: UpdateCheckStatus.Ready,
+            releaseNotes: update.releaseNotes,
+            releaseName: update.releaseName,
+            releaseDate: update.releaseDate,
+            releaseURL: update.updateURL,
+        };
     }
 
     public startUpdateCheck(): void {

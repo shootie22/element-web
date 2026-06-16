@@ -10,6 +10,7 @@ import { ipcMain } from "electron";
 import * as tray from "./tray.js";
 import Store from "./store.js";
 import { AutoLaunch, type AutoLaunchState } from "./auto-launch.js";
+import * as updater from "./updater.js";
 
 interface Setting {
     read(): Promise<any>;
@@ -86,6 +87,17 @@ const Settings: Record<string, Setting> = {
         async write(value: any): Promise<void> {
             global.mainWindow?.setContentProtection(value);
             Store.instance?.set("enableContentProtection", value);
+        },
+    },
+    "Electron.automaticallyKeepClientUpToDate": {
+        supported(): boolean {
+            return updater.available();
+        },
+        async read(): Promise<any> {
+            return updater.automaticUpdatesEnabled();
+        },
+        async write(value: any): Promise<void> {
+            Store.instance?.set("automaticallyKeepClientUpToDate", value);
         },
     },
 };

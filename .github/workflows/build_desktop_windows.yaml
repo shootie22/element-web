@@ -75,7 +75,7 @@ on:
                 type: string
                 required: false
                 description: "List of targets to build"
-                default: "squirrel msi"
+                default: "nsis msi"
 permissions: {} # No permissions required
 jobs:
     build:
@@ -255,11 +255,8 @@ jobs:
               env:
                   VARIANT_PATH: variant.json
                   # Only set for Nightly builds
-                  # The windows packager relies on parsing this as semver, so we have to make it look like one.
-                  # This will give our update packages really stupid names, but we probably can't change that either
-                  # because squirrel windows parses them for the version too. We don't really care: nobody sees them.
-                  # We just give the installer a static name, so you'll just see this in the 'about' dialog.
-                  # Turns out if you use 0.0.0 here it makes Squirrel windows crash, so we use 0.0.1.
+                  # The Windows packager relies on parsing this as semver, so we have to make it look like one.
+                  # We just give the installer a static name, so you'll only see this in the About dialog.
                   VERSION: ${{ inputs.version && format('0.0.1-nightly.{0}', inputs.version) || '' }}
                   BUILD_ARGS: ${{ steps.config.outputs.build-args }}
                   TARGETS: ${{ inputs.targets }}
@@ -292,13 +289,12 @@ jobs:
               run: |
                   Test-Path './dist/win-*unpacked/Element*.exe'
 
-            - name: Assert all Squirrel files are present
-              if: contains(inputs.targets, 'squirrel')
+            - name: Assert all NSIS updater files are present
+              if: contains(inputs.targets, 'nsis')
               working-directory: apps/desktop
               run: |
-                  Test-Path './dist/squirrel-windows*/Element Setup*.exe'
-                  Test-Path './dist/squirrel-windows*/element-desktop-*-full.nupkg'
-                  Test-Path './dist/squirrel-windows*/RELEASES'
+                  Test-Path './dist/element-desktop*windows*x64.exe'
+                  Test-Path './dist/latest.yml'
 
             - name: Assert MSI is present
               if: contains(inputs.targets, 'msi')

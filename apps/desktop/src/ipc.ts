@@ -5,12 +5,13 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { app, autoUpdater, desktopCapturer, ipcMain, powerSaveBlocker, TouchBar, nativeImage } from "electron";
+import { app, desktopCapturer, ipcMain, powerSaveBlocker, TouchBar, nativeImage } from "electron";
 
 import IpcMainEvent = Electron.IpcMainEvent;
 import { randomArray } from "./utils.js";
 import { getDisplayMediaCallback, setDisplayMediaCallback } from "./displayMediaCallback.js";
 import Store, { clearDataAndRelaunch } from "./store.js";
+import * as updater from "./updater.js";
 
 let focusHandlerAttached = false;
 ipcMain.on("loudNotification", function (): void {
@@ -54,7 +55,10 @@ ipcMain.on("ipcCall", async function (_ev: IpcMainEvent, payload) {
 
     switch (payload.name) {
         case "getUpdateFeedUrl":
-            ret = autoUpdater.getFeedURL();
+            ret = updater.available() ? "github://shootie22/element-web" : "";
+            break;
+        case "getPendingUpdate":
+            ret = updater.getPendingUpdate() ?? null;
             break;
         case "setLanguage":
             global.appLocalization.setAppLocale(args[0]);

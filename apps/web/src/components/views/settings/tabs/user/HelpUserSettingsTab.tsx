@@ -14,6 +14,7 @@ import AccessibleButton from "../../../elements/AccessibleButton";
 import { _t } from "../../../../../languageHandler";
 import SdkConfig from "../../../../../SdkConfig";
 import PlatformPeg from "../../../../../PlatformPeg";
+import { UpdateCheckStatus, type UpdateStatus } from "../../../../../BasePlatform";
 import UpdateCheckButton from "../../UpdateCheckButton";
 import CopyableText from "../../../elements/CopyableText";
 import SettingsTab from "../SettingsTab";
@@ -26,6 +27,7 @@ import { BugReportDialogButton } from "../../../elements/BugReportDialogButton";
 interface IState {
     appVersion: string | null;
     canUpdate: boolean;
+    updateStatus: UpdateStatus | null;
 }
 
 export default class HelpUserSettingsTab extends React.Component<EmptyObject, IState> {
@@ -38,6 +40,7 @@ export default class HelpUserSettingsTab extends React.Component<EmptyObject, IS
         this.state = {
             appVersion: null,
             canUpdate: false,
+            updateStatus: null,
         };
     }
 
@@ -53,6 +56,12 @@ export default class HelpUserSettingsTab extends React.Component<EmptyObject, IS
             .then((v) => this.setState({ canUpdate: v }))
             .catch((e) => {
                 logger.error("Error getting self updatability: ", e);
+            });
+        PlatformPeg.get()
+            ?.getPendingUpdate()
+            .then((updateStatus) => this.setState({ updateStatus }))
+            .catch((e) => {
+                logger.error("Error getting pending update: ", e);
             });
     }
 
@@ -196,6 +205,39 @@ export default class HelpUserSettingsTab extends React.Component<EmptyObject, IS
         return `${appVersion}\n${cryptoVersion}`;
     };
 
+    private onUpdateStatus = (updateStatus: UpdateStatus): void => {
+        this.setState({ updateStatus });
+    };
+
+    private renderPendingUpdate(): ReactNode {
+        const { updateStatus } = this.state;
+        if (!updateStatus || updateStatus.status !== UpdateCheckStatus.Ready) return null;
+
+        return (
+            <SettingsSubsection
+                heading={_t("update|ready_heading")}
+                description={_t("update|ready_description", {
+                    version: updateStatus.releaseName ?? _t("update|available_update"),
+                })}
+            >
+                <AccessibleButton onClick={() => PlatformPeg.get()?.installUpdate()} kind="primary">
+                    {_t("action|restart")}
+                </AccessibleButton>
+                {updateStatus.releaseURL && (
+                    <SettingsSubsectionText>
+                        <ExternalLink href={updateStatus.releaseURL}>{_t("update|release_page_link")}</ExternalLink>
+                    </SettingsSubsectionText>
+                )}
+                {updateStatus.releaseNotes && (
+                    <SettingsSubsectionText>
+                        <h4>{_t("update|release_notes_heading")}</h4>
+                        <pre>{updateStatus.releaseNotes}</pre>
+                    </SettingsSubsectionText>
+                )}
+            </SettingsSubsection>
+        );
+    }
+
     public render(): React.ReactNode {
         const brand = SdkConfig.get().brand;
 
@@ -211,7 +253,7 @@ export default class HelpUserSettingsTab extends React.Component<EmptyObject, IS
 
         let updateButton: JSX.Element | undefined;
         if (this.state.canUpdate) {
-            updateButton = <UpdateCheckButton />;
+            updateButton = <UpdateCheckButton onUpdateStatus={this.onUpdateStatus} />;
         }
 
         let bugReportingSection;
@@ -262,6 +304,7 @@ export default class HelpUserSettingsTab extends React.Component<EmptyObject, IS
                             {updateButton}
                         </SettingsSubsectionText>
                     </SettingsSubsection>
+                    {this.renderPendingUpdate()}
                     {this.renderLegal()}
                     {this.renderCredits()}
                     <SettingsSubsection heading={_t("common|advanced")}>

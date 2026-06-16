@@ -61,7 +61,7 @@ on:
                 type: string
                 required: false
                 description: "List of targets to build"
-                default: "tar.gz deb"
+                default: "AppImage deb tar.gz"
             docker-image-tag:
                 type: string
                 required: false
@@ -253,6 +253,13 @@ jobs:
                   echo "tar.gz listing: "
                   echo "$TAR_GZ_LISTING"
                   ! echo "$TAR_GZ_LISTING" | grep '^h'
+
+            - name: Assert AppImage updater files are present
+              if: contains(inputs.targets, 'AppImage')
+              working-directory: apps/desktop
+              run: |
+                  test -f ./dist/element-desktop*linux*x64.AppImage
+                  test -f ./dist/latest-linux.yml
 
     test:
         name: Test Linux ${{ inputs.arch }} SQLCipher ${{ inputs.sqlcipher }}

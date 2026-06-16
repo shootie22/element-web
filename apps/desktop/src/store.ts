@@ -70,6 +70,7 @@ interface StoreData {
     locale?: string | string[];
     disableHardwareAcceleration: boolean;
     enableContentProtection: boolean;
+    automaticallyKeepClientUpToDate: boolean;
     safeStorage?: Record<string, string>;
     /** the safeStorage backend used for the safeStorage data as written */
     safeStorageBackend?: SafeStorageBackend;
@@ -209,6 +210,10 @@ class Store extends ElectronStore<StoreData> {
                 enableContentProtection: {
                     type: "boolean",
                     default: false,
+                },
+                automaticallyKeepClientUpToDate: {
+                    type: "boolean",
+                    default: true,
                 },
                 safeStorage: {
                     type: "object",
