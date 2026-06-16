@@ -4,8 +4,6 @@
 name: Deploy release
 run-name: Deploy ${{ github.ref_name }} to ${{ inputs.site || 'staging.element.io' }}
 on:
-    release:
-        types: [published]
     workflow_dispatch:
         inputs:
             site:

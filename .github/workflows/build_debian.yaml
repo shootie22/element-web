@@ -1,7 +1,6 @@
 name: Build Debian package
 on:
-    release:
-        types: [published]
+    workflow_dispatch: {}
 concurrency: ${{ github.workflow }}
 permissions: {} # We use ELEMENT_BOT_TOKEN instead
 jobs:
