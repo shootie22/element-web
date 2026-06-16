@@ -116,7 +116,7 @@ jobs:
 
             - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
               with:
-                  repository: element-hq/element-web
+                  repository: ${{ github.repository }}
                   ref: ${{ inputs.ref }}
                   persist-credentials: false
 
@@ -314,6 +314,7 @@ jobs:
         with:
             project: win-${{ inputs.arch }}
             artifact: ${{ inputs.artifact-prefix }}win-${{ inputs.arch }}
+            ref: ${{ inputs.ref }}
             runs-on: ${{ inputs.test-runs-on || (inputs.arch == 'arm64' && 'windows-11-arm' || 'windows-2022') }}
             executable: ./dist/win*-unpacked/Element*.exe
             blob_report: ${{ inputs.blob_report }}
