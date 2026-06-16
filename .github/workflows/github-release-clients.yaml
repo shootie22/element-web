@@ -148,18 +148,31 @@ jobs:
                   test "$(find release-assets -type f | wc -l)" -gt 0
                   find release-assets -type f -maxdepth 1 -print | sort
 
+            - name: Upload collected release assets
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: release-assets-${{ env.RELEASE_TAG }}
+                  path: release-assets
+                  retention-days: 14
+
             - name: Create or update GitHub release
               run: |
                   set -euo pipefail
 
                   if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-                      gh release upload "$RELEASE_TAG" release-assets/* --clobber --repo "$GITHUB_REPOSITORY"
+                      if ! gh release upload "$RELEASE_TAG" release-assets/* --clobber --repo "$GITHUB_REPOSITORY"; then
+                          echo "::error::GitHub denied release asset upload. Enable Settings > Actions > General > Workflow permissions > Read and write permissions, or add a RELEASE_TOKEN secret with Contents: read/write."
+                          exit 1
+                      fi
                   else
-                      gh release create "$RELEASE_TAG" release-assets/* \
+                      if ! gh release create "$RELEASE_TAG" release-assets/* \
                           --repo "$GITHUB_REPOSITORY" \
                           --target "$GITHUB_SHA" \
                           --title "$RELEASE_TAG" \
-                          --notes "Automated web, Linux, and Windows client build for $RELEASE_TAG."
+                          --notes "Automated web, Linux, and Windows client build for $RELEASE_TAG."; then
+                          echo "::error::GitHub denied release creation. Enable Settings > Actions > General > Workflow permissions > Read and write permissions, or add a RELEASE_TOKEN secret with Contents: read/write."
+                          exit 1
+                      fi
                   fi
               env:
-                  GH_TOKEN: ${{ github.token }}
+                  GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
