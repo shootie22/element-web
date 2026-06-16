@@ -165,11 +165,11 @@ jobs:
                           exit 1
                       fi
                   else
-                      if ! gh release create "$RELEASE_TAG" release-assets/* \
-                          --repo "$GITHUB_REPOSITORY" \
-                          --target "$GITHUB_SHA" \
-                          --title "$RELEASE_TAG" \
-                          --notes "Automated web, Linux, and Windows client build for $RELEASE_TAG."; then
+                    if ! gh release create "$RELEASE_TAG" release-assets/* \
+                        --repo "$GITHUB_REPOSITORY" \
+                        --target custom/main \
+                        --title "$RELEASE_TAG" \
+                        --notes "Automated web, Linux, and Windows client build for $RELEASE_TAG."; then
                           echo "::error::GitHub denied release creation. Enable Settings > Actions > General > Workflow permissions > Read and write permissions, or add a RELEASE_TOKEN secret with Contents: read/write."
                           exit 1
                       fi
