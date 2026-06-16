@@ -39,6 +39,7 @@ interface ExtraMetadata extends Metadata {
     electron_appId: string;
     electron_protocol: string;
     electron_windows_cert_sn?: string;
+    update_manifest_public_keys?: Record<string, string>;
 }
 
 /**
@@ -202,6 +203,53 @@ const config: Omit<Writable<Configuration>, "electronFuses"> & {
     nodeGypRebuild: false,
     npmRebuild: true,
 };
+
+function getUpdateManifestPublicKeys(): Record<string, string> | undefined {
+    if (process.env.UPDATE_MANIFEST_PUBLIC_KEYS_JSON) {
+        const keys = JSON.parse(process.env.UPDATE_MANIFEST_PUBLIC_KEYS_JSON) as Record<string, string>;
+        for (const [keyId, publicKey] of Object.entries(keys)) {
+            if (!keyId || !publicKey.includes("BEGIN PUBLIC KEY")) {
+                throw new Error(`Invalid update manifest public key for '${keyId}'`);
+            }
+        }
+        return keys;
+    }
+
+    if (process.env.UPDATE_MANIFEST_PUBLIC_KEYS_BASE64_JSON) {
+        const keys = JSON.parse(process.env.UPDATE_MANIFEST_PUBLIC_KEYS_BASE64_JSON) as Record<string, string>;
+        const decodedKeys = Object.fromEntries(
+            Object.entries(keys).map(([keyId, publicKey]) => [
+                keyId,
+                Buffer.from(publicKey, "base64").toString("utf8"),
+            ]),
+        );
+        for (const [keyId, publicKey] of Object.entries(decodedKeys)) {
+            if (!keyId || !publicKey.includes("BEGIN PUBLIC KEY")) {
+                throw new Error(`Invalid update manifest public key for '${keyId}'`);
+            }
+        }
+        return decodedKeys;
+    }
+
+    const singlePublicKey =
+        process.env.UPDATE_MANIFEST_PUBLIC_KEY_PEM ||
+        (process.env.UPDATE_MANIFEST_PUBLIC_KEY_BASE64
+            ? Buffer.from(process.env.UPDATE_MANIFEST_PUBLIC_KEY_BASE64, "base64").toString("utf8")
+            : undefined);
+    if (singlePublicKey) {
+        const keyId = process.env.UPDATE_MANIFEST_KEY_ID || "github-release-v1";
+        return {
+            [keyId]: singlePublicKey,
+        };
+    }
+
+    return undefined;
+}
+
+const updateManifestPublicKeys = getUpdateManifestPublicKeys();
+if (updateManifestPublicKeys) {
+    config.extraMetadata.update_manifest_public_keys = updateManifestPublicKeys;
+}
 
 /**
  * Allow specifying the version via env var.

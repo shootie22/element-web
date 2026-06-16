@@ -29,6 +29,9 @@ describe("getBuildConfig", () => {
                     electron_appId: "app.id",
                     electron_protocol: "proto",
                     electron_windows_cert_sn: "subject.name",
+                    update_manifest_public_keys: {
+                        "test-key": "-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----",
+                    },
                 }),
             },
             __dirname,
@@ -38,5 +41,6 @@ describe("getBuildConfig", () => {
         expect(config.appId).toBe("app.id");
         expect(config.protocol).toBe("proto");
         expect(config.windowsCertSubjectName).toBe("subject.name");
+        expect(config.updateManifestPublicKeys["test-key"]).toContain("BEGIN PUBLIC KEY");
     });
 });

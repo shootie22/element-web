@@ -7,13 +7,24 @@ Please see LICENSE files in the repository root for full details.
 
 import * as path from "node:path";
 import * as fs from "node:fs";
-import * as https from "node:https";
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { app, ipcMain } from "electron";
 
 import type { AppUpdater, UpdateInfo } from "electron-updater";
 import Store from "./store.js";
+import { getBuildConfig } from "./build-config.js";
+import {
+    artifactArchNamesForProcess,
+    downloadAndVerifyFile,
+    normaliseVersion,
+    requestJson,
+    tagForVersion,
+    validateVerboseTarListing,
+    verifyUpdateManifest,
+    type UpdateManifestEnvelope,
+    type UpdateManifestPayload,
+} from "./linux-tarball-updater.js";
 
 const _require = createRequire(import.meta.url);
 const { autoUpdater } = _require("electron-updater") as { autoUpdater: AppUpdater };
@@ -27,10 +38,21 @@ interface ICachedUpdate {
     releaseName: string;
     releaseDate: Date;
     updateURL: string;
+    linuxTarballPath?: string;
+    linuxTarballPayload?: UpdateManifestPayload;
+}
+
+interface GitHubRelease {
+    tag_name: string;
+    body?: string;
+    published_at?: string;
+    draft?: boolean;
+    prerelease?: boolean;
 }
 
 let started = false;
 let latestUpdateDownloaded: ICachedUpdate | undefined;
+let checkingLinuxTarballUpdate = false;
 
 function normaliseReleaseNotes(releaseNotes: UpdateInfo["releaseNotes"]): string {
     if (typeof releaseNotes === "string") return releaseNotes;
@@ -44,18 +66,34 @@ function normaliseReleaseNotes(releaseNotes: UpdateInfo["releaseNotes"]): string
 }
 
 function getReleasePage(version: string): string {
-    const tag = version.startsWith("v") ? version : `v${version}`;
+    const tag = tagForVersion(version);
     return `https://github.com/shootie22/element-web/releases/tag/${tag}`;
 }
 
-function getArtifactDownloadUrl(version: string): string {
-    const tag = version.startsWith("v") ? version : `v${version}`;
+function getManifestDownloadUrl(version: string): string {
+    const normalisedVersion = normaliseVersion(version);
+    const tag = tagForVersion(version);
     const arch = process.arch === "arm64" ? "arm64" : "x64";
-    return `https://github.com/shootie22/element-web/releases/download/${tag}/element-desktop-${version}-linux-${arch}.tar.gz`;
+    return `https://github.com/shootie22/element-web/releases/download/${tag}/element-desktop-${normalisedVersion}-linux-${arch}.tar.gz.update.json`;
+}
+
+function getLatestReleaseUrl(): string {
+    return "https://api.github.com/repos/shootie22/element-web/releases/latest";
 }
 
 function getInstallDir(): string {
     return path.dirname(app.getPath("exe"));
+}
+
+function isLinuxTarballInstall(): boolean {
+    if (process.platform !== "linux" || !app.isPackaged) return false;
+    if (process.env.APPIMAGE) return false;
+
+    const packageTypeFile = path.join(process.resourcesPath, "package-type");
+    if (!fs.existsSync(packageTypeFile)) return true;
+
+    const packageType = fs.readFileSync(packageTypeFile, "utf8").trim();
+    return packageType === "" || packageType === "tar.gz";
 }
 
 export function getPendingUpdate(): ICachedUpdate | undefined {
@@ -69,7 +107,7 @@ export function automaticUpdatesEnabled(): boolean {
 export function available(): boolean {
     if (!app.isPackaged) return false;
     if (process.platform === "win32") return true;
-    if (process.platform === "linux") return true;
+    if (process.platform === "linux") return Boolean(process.env.APPIMAGE) || isLinuxTarballInstall();
     // macOS update signing and notarisation setup is intentionally out of scope for this GitHub Releases path.
     return false;
 }
@@ -82,57 +120,26 @@ function notifyDownloaded(update: ICachedUpdate): void {
     global.mainWindow?.webContents.send("update-downloaded", update);
 }
 
-function downloadFile(url: string, dest: string, redirects = 0): Promise<void> {
-    if (redirects > 10) return Promise.reject(new Error("Too many redirects"));
-    return new Promise((resolve, reject) => {
-        const file = fs.createWriteStream(dest);
-        https.get(url, (response) => {
-            if (
-                response.statusCode != null &&
-                response.statusCode >= 300 &&
-                response.statusCode < 400 &&
-                response.headers.location
-            ) {
-                file.close();
-                fs.unlink(dest, () => {});
-                resolve(downloadFile(response.headers.location, dest, redirects + 1));
-                return;
-            }
-            if (response.statusCode !== 200) {
-                reject(new Error(`Download failed: ${response.statusCode}`));
-                return;
-            }
-            response.pipe(file);
-            file.on("finish", () => {
-                file.close();
-                resolve();
-            });
-        }).on("error", (err) => {
-            fs.unlink(dest, () => {});
-            reject(err);
-        });
-    });
-}
-
 function installUpdate(): void {
     if (!latestUpdateDownloaded) return;
 
     global.appQuitting = true;
 
-    if (process.platform === "linux") {
+    if (process.platform === "linux" && latestUpdateDownloaded.linuxTarballPath) {
         const installDir = getInstallDir();
-        const arch = process.arch === "arm64" ? "arm64" : "x64";
-        const updateFile = path.join(
-            app.getPath("temp"),
-            `element-desktop-${latestUpdateDownloaded.releaseName}-linux-${arch}.tar.gz`,
-        );
+        const updateFile = latestUpdateDownloaded.linuxTarballPath;
         try {
+            const listResult = spawnSync("tar", ["-tvzf", updateFile], { stdio: "pipe", timeout: 30000 });
+            if (listResult.status !== 0) {
+                throw new Error(listResult.stderr.toString() || `tar list exited with code ${listResult.status}`);
+            }
+            validateVerboseTarListing(listResult.stdout.toString(), 1);
+
             console.log(`Extracting update to ${installDir}`);
-            const result = spawnSync("tar", [
-                "-xzf", updateFile,
-                "-C", installDir,
-                "--strip-components=1",
-            ], { stdio: "pipe", timeout: 30000 });
+            const result = spawnSync("tar", ["-xzf", updateFile, "-C", installDir, "--strip-components=1"], {
+                stdio: "pipe",
+                timeout: 30000,
+            });
             if (result.status !== 0) {
                 throw new Error(result.stderr.toString() || `tar exited with code ${result.status}`);
             }
@@ -145,6 +152,60 @@ function installUpdate(): void {
         }
     } else {
         autoUpdater.quitAndInstall();
+    }
+}
+
+async function checkForLinuxTarballUpdate(manual: boolean): Promise<void> {
+    if (checkingLinuxTarballUpdate) return;
+    checkingLinuxTarballUpdate = true;
+
+    try {
+        const publicKeys = getBuildConfig().updateManifestPublicKeys;
+        if (Object.keys(publicKeys).length === 0) {
+            throw new Error("This build does not include Linux tar.gz update signing keys.");
+        }
+
+        const release = await requestJson<GitHubRelease>(getLatestReleaseUrl());
+        if (release.draft || release.prerelease) {
+            ipcChannelSendUpdateStatus(false);
+            return;
+        }
+
+        const manifest = await requestJson<UpdateManifestEnvelope>(getManifestDownloadUrl(release.tag_name));
+        const payload = verifyUpdateManifest(manifest, {
+            currentVersion: app.getVersion(),
+            platform: process.platform,
+            allowedArchNames: artifactArchNamesForProcess(),
+            publicKeys,
+        });
+
+        const tempDir = fs.mkdtempSync(path.join(app.getPath("temp"), "element-desktop-update-"));
+        const archivePath = path.join(
+            tempDir,
+            `element-desktop-${normaliseVersion(payload.version)}-linux-${payload.arch}.tar.gz`,
+        );
+
+        console.log(`Downloading signed Linux tar.gz update from ${payload.url}`);
+        await downloadAndVerifyFile(payload.url, archivePath, {
+            expectedSha512: payload.sha512,
+            expectedSize: payload.size,
+        });
+
+        latestUpdateDownloaded = {
+            releaseNotes: payload.releaseNotes ?? release.body ?? "",
+            releaseName: normaliseVersion(payload.version),
+            releaseDate: new Date(payload.releaseDate ?? release.published_at ?? Date.now()),
+            updateURL: getReleasePage(payload.version),
+            linuxTarballPath: archivePath,
+            linuxTarballPayload: payload,
+        };
+        notifyDownloaded(latestUpdateDownloaded);
+    } catch (e) {
+        const error = e instanceof Error ? e.message : String(e);
+        console.log("Couldn't check for Linux tar.gz update", e);
+        ipcChannelSendUpdateStatus(manual ? error : false);
+    } finally {
+        checkingLinuxTarballUpdate = false;
     }
 }
 
@@ -162,6 +223,11 @@ async function checkForUpdates(manual = false): Promise<void> {
     if (latestUpdateDownloaded) {
         console.log("Skipping update check as download already present");
         notifyDownloaded(latestUpdateDownloaded);
+        return;
+    }
+
+    if (isLinuxTarballInstall()) {
+        await checkForLinuxTarballUpdate(manual);
         return;
     }
 
@@ -193,7 +259,7 @@ export async function start(): Promise<void> {
 
     console.log("Starting GitHub Releases auto update");
 
-    if (process.platform === "linux") {
+    if (isLinuxTarballInstall()) {
         autoUpdater.autoDownload = false;
         autoUpdater.autoInstallOnAppQuit = false;
     } else {
@@ -209,34 +275,8 @@ ipcMain.on("install_update", installUpdate);
 ipcMain.on("check_updates", manualCheckForUpdates);
 
 autoUpdater
-    .on("update-available", async (info: UpdateInfo) => {
+    .on("update-available", async () => {
         ipcChannelSendUpdateStatus(true);
-        if (process.platform === "linux") {
-            const version = info.version;
-            const arch = process.arch === "arm64" ? "arm64" : "x64";
-            const url = getArtifactDownloadUrl(version);
-            const dest = path.join(
-                app.getPath("temp"),
-                `element-desktop-${version}-linux-${arch}.tar.gz`,
-            );
-            try {
-                console.log(`Downloading update from ${url}`);
-                await downloadFile(url, dest);
-                latestUpdateDownloaded = {
-                    releaseNotes: normaliseReleaseNotes(info.releaseNotes),
-                    releaseName: version,
-                    releaseDate: new Date(info.releaseDate),
-                    updateURL: getReleasePage(version),
-                };
-                console.log(`Update ${version} downloaded`);
-                notifyDownloaded(latestUpdateDownloaded);
-            } catch (e) {
-                console.error("Failed to download update:", e);
-                ipcChannelSendUpdateStatus(
-                    e instanceof Error ? e.message : String(e),
-                );
-            }
-        }
     })
     .on("update-not-available", function () {
         if (latestUpdateDownloaded) {

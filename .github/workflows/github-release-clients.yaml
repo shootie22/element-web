@@ -40,6 +40,13 @@ jobs:
                   node-version-file: .node-version
                   cache: pnpm
 
+            - name: Validate release version
+              id: release-version
+              run: |
+                  set -euo pipefail
+                  version="$(node scripts/validate-release-version.mjs "$RELEASE_TAG")"
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+
             - name: Install dependencies
               run: ./scripts/layered.sh
 
@@ -47,7 +54,7 @@ jobs:
               working-directory: apps/web
               run: pnpm run dist
               env:
-                  DIST_VERSION: ${{ env.RELEASE_TAG }}
+                  DIST_VERSION: ${{ steps.release-version.outputs.version }}
                   CI_PACKAGE: true
 
             - name: Upload webapp for desktop packaging
@@ -91,6 +98,11 @@ jobs:
             sqlcipher: static
             targets: AppImage deb tar.gz
             docker-image-tag: staging
+            update-manifest-public-key-pem: ${{ vars.UPDATE_MANIFEST_PUBLIC_KEY_PEM }}
+            update-manifest-public-key-base64: ${{ vars.UPDATE_MANIFEST_PUBLIC_KEY_BASE64 }}
+            update-manifest-public-keys-json: ${{ vars.UPDATE_MANIFEST_PUBLIC_KEYS_JSON }}
+            update-manifest-public-keys-base64-json: ${{ vars.UPDATE_MANIFEST_PUBLIC_KEYS_BASE64_JSON }}
+            update-manifest-key-id: ${{ vars.UPDATE_MANIFEST_KEY_ID }}
 
     windows:
         name: Windows ${{ matrix.arch }}
@@ -131,6 +143,8 @@ jobs:
             - name: Generate release notes
               run: |
                   set -euo pipefail
+
+                  node scripts/validate-release-version.mjs "$RELEASE_TAG"
 
                   previous_tag="$(git tag --sort=-v:refname | grep -E '^v[0-9]' | grep -v "^${RELEASE_TAG}$" | head -n 1 || true)"
                   {
@@ -175,6 +189,13 @@ jobs:
                   test "$(find release-assets -type f | wc -l)" -gt 0
                   find release-assets -type f -maxdepth 1 -print | sort
 
+            - name: Sign Linux tar.gz update manifests
+              run: node scripts/sign-linux-tarball-update-manifests.mjs --assets-dir release-assets --release-tag "$RELEASE_TAG" --repository "$GITHUB_REPOSITORY"
+              env:
+                  UPDATE_MANIFEST_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_MANIFEST_PRIVATE_KEY_PEM }}
+                  UPDATE_MANIFEST_PRIVATE_KEY_BASE64: ${{ secrets.UPDATE_MANIFEST_PRIVATE_KEY_BASE64 }}
+                  UPDATE_MANIFEST_KEY_ID: ${{ vars.UPDATE_MANIFEST_KEY_ID }}
+
             - name: Upload collected release assets
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
               with:
@@ -182,25 +203,22 @@ jobs:
                   path: release-assets
                   retention-days: 14
 
-            - name: Create or update GitHub release
+            - name: Create immutable GitHub release
               run: |
                   set -euo pipefail
 
                   if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-                      gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file RELEASE_NOTES.md
-                      if ! gh release upload "$RELEASE_TAG" release-assets/* --clobber --repo "$GITHUB_REPOSITORY"; then
-                          echo "::error::GitHub denied release asset upload. Enable Settings > Actions > General > Workflow permissions > Read and write permissions, or add a RELEASE_TOKEN secret with Contents: read/write."
-                          exit 1
-                      fi
-                  else
-                    if ! gh release create "$RELEASE_TAG" release-assets/* \
-                        --repo "$GITHUB_REPOSITORY" \
-                        --target custom/main \
-                        --title "$RELEASE_TAG" \
-                        --notes-file RELEASE_NOTES.md; then
-                          echo "::error::GitHub denied release creation. Enable Settings > Actions > General > Workflow permissions > Read and write permissions, or add a RELEASE_TOKEN secret with Contents: read/write."
-                          exit 1
-                      fi
+                      echo "::error::Release $RELEASE_TAG already exists. Releases are immutable; create a new tag/version instead."
+                      exit 1
+                  fi
+
+                  if ! gh release create "$RELEASE_TAG" release-assets/* \
+                      --repo "$GITHUB_REPOSITORY" \
+                      --verify-tag \
+                      --title "$RELEASE_TAG" \
+                      --notes-file RELEASE_NOTES.md; then
+                        echo "::error::GitHub denied release creation. Enable Settings > Actions > General > Workflow permissions > Read and write permissions, or add a RELEASE_TOKEN secret with Contents: read/write."
+                        exit 1
                   fi
               env:
                   GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
