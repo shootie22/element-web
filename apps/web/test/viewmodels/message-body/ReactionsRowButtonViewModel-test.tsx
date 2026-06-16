@@ -5,7 +5,14 @@
  * Please see LICENSE files in the repository root for full details.
  */
 
-import { EventType, type MatrixClient, type MatrixEvent, RelationType, type Room } from "matrix-js-sdk/src/matrix";
+import {
+    EventStatus,
+    EventType,
+    type MatrixClient,
+    type MatrixEvent,
+    RelationType,
+    type Room,
+} from "matrix-js-sdk/src/matrix";
 
 import {
     ReactionsRowButtonViewModel,
@@ -232,6 +239,18 @@ describe("ReactionsRowButtonViewModel", () => {
         vm.onClick();
 
         expect(client.redactEvent).toHaveBeenCalledWith(room.roomId, myReactionEvent.getId());
+        expect(client.sendEvent).not.toHaveBeenCalled();
+    });
+
+    it("cancels pending reaction local echo on click when myReactionEvent is not sent", () => {
+        const myReactionEvent = createReactionEvent("@me:example.org");
+        myReactionEvent.status = EventStatus.NOT_SENT;
+        const vm = new ReactionsRowButtonViewModel(createProps({ myReactionEvent }));
+
+        vm.onClick();
+
+        expect(client.cancelPendingEvent).toHaveBeenCalledWith(myReactionEvent);
+        expect(client.redactEvent).not.toHaveBeenCalled();
         expect(client.sendEvent).not.toHaveBeenCalled();
     });
 

@@ -154,6 +154,37 @@ describe("MessagePreviewStore", () => {
         );
     });
 
+    it("should preview a latest custom emoji-only message instead of falling back to older text", async () => {
+        const firstMessage = mkMessage({
+            user: "@sender:server",
+            event: true,
+            room: room.roomId,
+            msg: "First message",
+        });
+        await addEvent(store, room, firstMessage, false);
+
+        const customEmojiMessage = mkEvent({
+            event: true,
+            type: EventType.RoomMessage,
+            user: "@sender:server",
+            room: room.roomId,
+            content: {
+                body: ":blobcat:",
+                msgtype: "m.text",
+                format: "org.matrix.custom.html",
+                formatted_body:
+                    '<img data-mx-emoticon src="mxc://server/blobcat" alt=":blobcat:" title="blobcat" height="32" />',
+            },
+        });
+        await addEvent(store, room, customEmojiMessage);
+
+        expect(await store.getPreviewForRoom(room, DefaultTagID.Untagged)).toMatchObject({
+            text: "@sender:server: :blobcat:",
+            htmlText:
+                '@sender:server: <img data-mx-emoticon src="http://this.is.a.url/server/blobcat" alt=":blobcat:" />',
+        });
+    });
+
     it("should not display a redacted edit", async () => {
         const firstMessage = mkMessage({
             user: "@sender:server",

@@ -18,6 +18,7 @@ import { getImagePackEntries } from "../../../image-packs";
 import AccessibleButton from "../elements/AccessibleButton";
 import { REACTION_SHORTCODE_KEY } from "../../../viewmodels/room/timeline/event-tile/reactions/reactionShortcode";
 import RoomContext from "../../../contexts/RoomContext";
+import { removeOwnReaction } from "../../../viewmodels/room/timeline/event-tile/reactions/removeOwnReaction";
 
 interface QuickReactionsBarProps {
     mxEvent: MatrixEvent;
@@ -40,16 +41,17 @@ export function QuickReactionsBar({ mxEvent, reactions, className, onReaction }:
         const userId = MatrixClientPeg.safeGet().getSafeUserId();
         const myAnnotations = reactions.getAnnotationsBySender()?.[userId] ?? new Set<MatrixEvent>();
         return Object.fromEntries(
-            [...myAnnotations]
-                .filter((event) => !event.isRedacted())
-                .map((event) => [event.getRelation()?.key, event.getId()]),
+            [...myAnnotations].flatMap((event) => {
+                const key = event.getRelation()?.key;
+                return !event.isRedacted() && key ? [[key, event]] : [];
+            }),
         );
     }, [reactions]);
 
     const sendReaction = (reaction: string, shortcode?: string): void => {
         if (myReactions.hasOwnProperty(reaction)) {
             if (mxEvent.isRedacted() || !roomContext.canSelfRedact) return;
-            MatrixClientPeg.safeGet().redactEvent(mxEvent.getRoomId()!, myReactions[reaction]);
+            removeOwnReaction(MatrixClientPeg.safeGet(), mxEvent.getRoomId()!, myReactions[reaction]);
             dis.dispatch<FocusComposerPayload>({
                 action: Action.FocusAComposer,
                 context: roomContext.timelineRenderingType,

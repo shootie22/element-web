@@ -239,13 +239,14 @@ export class MessagePreviewStore extends AsyncStoreWithClient<EmptyObject> {
             for (const genTagId of tagsToGenerate) {
                 const realTagId = genTagId === TAG_ANY ? undefined : genTagId;
                 const preview = previewDef.previewer.getTextFor(event, realTagId);
+                const previewHtml = previewDef.previewer.getHtmlFor?.(event, realTagId) ?? undefined;
 
-                if (preview === anyPreviewText) {
-                    changed = changed || anyPreviewText !== map.get(genTagId)?.text;
+                if (preview === anyPreviewText && previewHtml === anyPreviewHtml) {
+                    changed = changed || anyPreviewText !== map.get(genTagId)?.text || anyPreviewHtml !== map.get(genTagId)?.htmlText;
                     map.delete(genTagId);
                 } else {
-                    changed = changed || preview !== map.get(genTagId)?.text;
-                    map.set(genTagId, preview ? mkMessagePreview(anyPreviewText, event) : null);
+                    changed = changed || preview !== map.get(genTagId)?.text || previewHtml !== map.get(genTagId)?.htmlText;
+                    map.set(genTagId, preview ? mkMessagePreview(preview, event, previewHtml) : null);
                 }
             }
 

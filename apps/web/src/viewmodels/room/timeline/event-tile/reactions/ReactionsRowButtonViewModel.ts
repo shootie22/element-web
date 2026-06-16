@@ -19,6 +19,7 @@ import dis from "../../../../../dispatcher/dispatcher";
 import SettingsStore from "../../../../../settings/SettingsStore";
 import { ReactionsRowButtonTooltipViewModel } from "./ReactionsRowButtonTooltipViewModel";
 import { REACTION_SHORTCODE_KEY } from "./reactionShortcode";
+import { removeOwnReaction } from "./removeOwnReaction";
 
 export interface ReactionsRowButtonViewModelProps {
     /**
@@ -251,7 +252,7 @@ export class ReactionsRowButtonViewModel
         if (disabled) return;
 
         if (myReactionEvent) {
-            client.redactEvent(mxEvent.getRoomId()!, myReactionEvent.getId()!);
+            removeOwnReaction(client, mxEvent.getRoomId()!, myReactionEvent);
             return;
         }
 

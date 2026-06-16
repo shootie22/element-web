@@ -15,7 +15,7 @@ export function buildColorTag(color: string): string {
 export function buildGradientTag(direction: GradientDirection, stops: GradientStop[]): string {
     const payload = encodeGradientPayload({ kind: "gradient", direction, stops });
     const fallback = stops[0]?.color ?? "#000000";
-    return `<span style="color: ${fallback}" data-mx-gradient="${payload}">`;
+    return `<span style="color: ${fallback}" data-mx-gradient="${payload}" data-mx-color="${fallback}">`;
 }
 
 function wrapRange(range: Range, color: string): HTMLSpanElement;
@@ -27,6 +27,7 @@ function wrapRange(range: Range, colorOrDir: string | GradientDirection, stops?:
         const payload = encodeGradientPayload({ kind: "gradient", direction, stops });
         span.style.color = stops[0]?.color ?? "#000000";
         span.setAttribute("data-mx-gradient", payload);
+        span.setAttribute("data-mx-color", stops[0]?.color ?? "#000000");
     } else {
         span.style.color = colorOrDir;
         span.setAttribute("data-mx-color", colorOrDir);

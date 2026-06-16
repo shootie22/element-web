@@ -43,6 +43,7 @@ export enum ElementWidgetActions {
     // NOTE: this is currently unused. Its only here to make EW aware
     // of this action so it does not throw errors.
     DeviceMute = "io.element.device_mute",
+    Deafen = "io.element.deafen",
 }
 
 export interface IHangupCallApiRequest extends IWidgetApiRequest {

@@ -1,0 +1,76 @@
+  # Colored Messages And Gradients
+
+  ## Summary
+
+  - Use Matrix org.matrix.custom.html for compatibility: plain body remains normal, so unsupported clients display
+    regular text.
+  - Solid colors use the Matrix-supported span data-mx-color="#rrggbb" path. Matrix spec v1.18 explicitly allows data-mx-
+    color on span and says clients translate it to CSS.
+  - Gradients use a client-specific span attribute, because Matrix only standardizes single hex colors, not gradients.
+    Other clients should strip/ignore the attribute and show normal text.
+  - Add a Tweaks setting, on by default, that disables both composing and rendering colored messages when off.
+  - Enable the WYSIWYG composer by default while preserving existing user/account overrides.
+
+  ## Key Changes
+
+  - Add account data event com.elementcreations.message_style:
+
+    {
+      "version": 1,
+      "defaultStyle": null
+    }
+     may be:
+
+    { kind: "solid"; color: "#rrggbb" }
+    { kind: "gradient"; direction: "left-to-right" | "top-to-bottom" | "diagonal-down" | "diagonal-up"; stops: { color:
+"#rrggbb"; position: number }[] }
+    Validate colors as 6-digit hex, gradient stops as 2-5 entries, and positions as 0..1.
+
+    Validate colors as 6-digit hex, gradient stops as 2-5 entries, and positions as 0..1.
+  - Add settings:
+      - Tweaks.enableColoredMessages, account-level, default true, shown in Tweaks.
+      - Change default feature_wysiwyg_composer to enabled.
+      - Change default rich composer mode to rich text enabled, without overwriting saved user choices.
+  - Composer UI:
+      - Add two compact buttons to the WYSIWYG formatting bar: text color for selected text, and default message style.
+      - Picker supports solid color and gradient mode.
+      - Gradient picker supports up to 5 stops and direction selector: left-to-right, top-to-bottom, diagonal-down,
+        diagonal-up.
+      - Manual selection color wraps only the selected range.
+      - Default style applies to future outgoing formatted sends when no explicit whole-message/manual color is present.
+  - Sending/rendering:
+      - Solid color HTML: <span data-mx-color="#rrggbb">text</span>.
+      - Gradient HTML: <span data-mx-gradient="encoded-v1-payload">text</span>.
+      - Renderer sanitizes data-mx-gradient, validates the decoded payload, and applies safe CSS background-image,
+        background-clip: text, and transparent text fill.
+      - When Tweaks.enableColoredMessages is off, strip/ignore both data-mx-color and data-mx-gradient for display and
+        hide composer controls.
+      - Apply default style to text, /me, edits, and formatted captions where the send path supports formatted_body.
+
+  ## Test Plan
+
+  - Unit test message content creation:
+      - plain body never contains color/gradient markup.
+      - solid default emits valid data-mx-color.
+      - gradient default emits client-specific gradient metadata.
+      - edits put styled content into both edited content and m.new_content where applicable.
+  - Unit test sanitizer/rendering:
+      - valid gradients render.
+      - invalid colors, too many stops, invalid positions, or unknown directions are stripped.
+      - setting off displays uncolored text.
+  - UI tests:
+      - selecting text and applying solid color affects only selected text.
+      - setting a default gradient persists to account data and is restored after reload.
+      - disabling the tweak hides color controls.
+  - Compatibility check:
+      - send colored message and inspect raw event: body is readable plain text, format is org.matrix.custom.html.
+
+  ## Assumptions
+
+  - No MSC is needed for solid colors; the current Matrix HTML formatting spec already covers single text colors.
+  - Gradients intentionally remain client-specific for v1.
+  - Default gradient direction selector includes exactly four directions.
+  - The first implementation targets the WYSIWYG composer path; legacy/basic composer gets no new color UI beyond
+    preserving fallback sends.
+  - Source reference: Matrix Client-Server API, m.room.message HTML formatting rules:
+    https://spec.matrix.org/latest/client-server-api/#mroommessage-msgtypes

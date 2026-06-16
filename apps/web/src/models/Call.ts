@@ -270,6 +270,16 @@ export abstract class Call extends TypedEventEmitter<CallEvent, CallEventHandler
         return (this.widgetApi = messaging.widgetApi);
     }
 
+    public async setDeviceMuteState(state: { audio_enabled?: boolean; video_enabled?: boolean }): Promise<void> {
+        if (!this.widgetApi) return;
+        await this.widgetApi.transport.send(ElementWidgetActions.DeviceMute, state);
+    }
+
+    public async setDeafened(deafened: boolean): Promise<void> {
+        if (!this.widgetApi) return;
+        await this.widgetApi.transport.send(ElementWidgetActions.Deafen, { deafened });
+    }
+
     protected setConnected(): void {
         this.room.on(RoomEvent.MyMembership, this.onMyMembership);
         window.addEventListener("beforeunload", this.beforeUnload);

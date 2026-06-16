@@ -72,5 +72,59 @@ describe("MessageEventPreview", () => {
             });
             expect(preview.getTextFor(event)).toBe(`${userId}: test new content body`);
         });
+
+        it("uses custom emoji alt text for formatted message previews", () => {
+            const event = mkEvent({
+                event: true,
+                content: {
+                    body: ":blobcat:",
+                    msgtype: "m.text",
+                    format: "org.matrix.custom.html",
+                    formatted_body:
+                        '<img data-mx-emoticon src="mxc://server/blobcat" alt=":blobcat:" title="blobcat" height="32" />',
+                },
+                user: userId,
+                type: "m.room.message",
+            });
+
+            expect(preview.getTextFor(event)).toBe(`${userId}: :blobcat:`);
+        });
+    });
+
+    describe("getHtmlFor", () => {
+        it("returns a safe custom emoji HTML preview", () => {
+            const event = mkEvent({
+                event: true,
+                content: {
+                    body: ":blobcat:",
+                    msgtype: "m.text",
+                    format: "org.matrix.custom.html",
+                    formatted_body:
+                        '<strong><img data-mx-emoticon src="mxc://server/blobcat" alt=":blobcat:" title="blobcat" height="32" /></strong>',
+                },
+                user: userId,
+                type: "m.room.message",
+            });
+
+            expect(preview.getHtmlFor(event)).toBe(
+                `${userId}: <img data-mx-emoticon src="http://this.is.a.url/server/blobcat" alt=":blobcat:" />`,
+            );
+        });
+
+        it("does not return rich HTML previews without custom emoji", () => {
+            const event = mkEvent({
+                event: true,
+                content: {
+                    body: "test body",
+                    msgtype: "m.text",
+                    format: "org.matrix.custom.html",
+                    formatted_body: "<strong>test body</strong>",
+                },
+                user: userId,
+                type: "m.room.message",
+            });
+
+            expect(preview.getHtmlFor(event)).toBeNull();
+        });
     });
 });

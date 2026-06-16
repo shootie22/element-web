@@ -10,6 +10,7 @@ import { initOnce } from "@vector-im/matrix-wysiwyg";
 
 import { createMessageContent } from "../../../../../../../src/components/views/rooms/wysiwyg_composer/utils/createMessageContent";
 import { encodeGradientPayload } from "../../../../../../../src/@types/message_style.ts";
+import SettingsStore from "../../../../../../../src/settings/SettingsStore";
 
 beforeAll(initOnce, 10000);
 
@@ -24,8 +25,15 @@ describe("createMessageContent with colored messages", () => {
         roomId: "!room:id",
     } as any;
 
-    // Create a base SettingsStore mock
-    const originalGetValue = jest.requireActual("../../../../../../../src/settings/SettingsStore").default.getValue;
+    const originalGetValue = SettingsStore.getValue;
+
+    function mockColoredMessageSettings(): void {
+        jest.spyOn(SettingsStore, "getValue").mockImplementation((key: string) => {
+            if (key === "Tweaks.enableColoredMessages") return true;
+            if (key === "MessageComposerInput.useMarkdown") return false;
+            return originalGetValue(key);
+        });
+    }
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -41,13 +49,7 @@ describe("createMessageContent with colored messages", () => {
 
     describe("explicit selection decorations", () => {
         it("serializes a selected solid color without depending on editor DOM spans", async () => {
-            jest.spyOn(require("../../../../../../../src/settings/SettingsStore"), "default", "get").mockReturnValue({
-                getValue: jest.fn().mockImplementation((key: string) => {
-                    if (key === "Tweaks.enableColoredMessages") return true;
-                    if (key === "MessageComposerInput.useMarkdown") return false;
-                    return originalGetValue(key);
-                }),
-            });
+            mockColoredMessageSettings();
 
             mockClient.getAccountData.mockReturnValue(undefined);
 
@@ -68,13 +70,7 @@ describe("createMessageContent with colored messages", () => {
         });
 
         it("serializes a selected gradient using the existing data-mx-gradient wire format", async () => {
-            jest.spyOn(require("../../../../../../../src/settings/SettingsStore"), "default", "get").mockReturnValue({
-                getValue: jest.fn().mockImplementation((key: string) => {
-                    if (key === "Tweaks.enableColoredMessages") return true;
-                    if (key === "MessageComposerInput.useMarkdown") return false;
-                    return originalGetValue(key);
-                }),
-            });
+            mockColoredMessageSettings();
 
             mockClient.getAccountData.mockReturnValue(undefined);
 
@@ -100,18 +96,12 @@ describe("createMessageContent with colored messages", () => {
                     kind: "gradient",
                     direction: "left-to-right",
                     stops,
-                })}">world</span>`,
+                })}" data-mx-color="#ff0000">world</span>`,
             );
         });
 
         it("escapes selected text while adding color spans", async () => {
-            jest.spyOn(require("../../../../../../../src/settings/SettingsStore"), "default", "get").mockReturnValue({
-                getValue: jest.fn().mockImplementation((key: string) => {
-                    if (key === "Tweaks.enableColoredMessages") return true;
-                    if (key === "MessageComposerInput.useMarkdown") return false;
-                    return originalGetValue(key);
-                }),
-            });
+            mockColoredMessageSettings();
 
             mockClient.getAccountData.mockReturnValue(undefined);
 
@@ -133,13 +123,7 @@ describe("createMessageContent with colored messages", () => {
 
     describe("solid default emits valid data-mx-color", () => {
         it("wraps formatted body in data-mx-color span when default style is solid", async () => {
-            jest.spyOn(require("../../../../../../../src/settings/SettingsStore"), "default", "get").mockReturnValue({
-                getValue: jest.fn().mockImplementation((key: string) => {
-                    if (key === "Tweaks.enableColoredMessages") return true;
-                    if (key === "MessageComposerInput.useMarkdown") return false;
-                    return originalGetValue(key);
-                }),
-            });
+            mockColoredMessageSettings();
 
             mockClient.getAccountData.mockReturnValue({
                 getContent: () => ({
@@ -155,13 +139,7 @@ describe("createMessageContent with colored messages", () => {
         });
 
         it("does not wrap when message already has explicit color", async () => {
-            jest.spyOn(require("../../../../../../../src/settings/SettingsStore"), "default", "get").mockReturnValue({
-                getValue: jest.fn().mockImplementation((key: string) => {
-                    if (key === "Tweaks.enableColoredMessages") return true;
-                    if (key === "MessageComposerInput.useMarkdown") return false;
-                    return originalGetValue(key);
-                }),
-            });
+            mockColoredMessageSettings();
 
             mockClient.getAccountData.mockReturnValue({
                 getContent: () => ({
@@ -180,13 +158,7 @@ describe("createMessageContent with colored messages", () => {
 
     describe("gradient default emits client-specific gradient metadata", () => {
         it("wraps formatted body in data-mx-gradient span when default style is gradient", async () => {
-            jest.spyOn(require("../../../../../../../src/settings/SettingsStore"), "default", "get").mockReturnValue({
-                getValue: jest.fn().mockImplementation((key: string) => {
-                    if (key === "Tweaks.enableColoredMessages") return true;
-                    if (key === "MessageComposerInput.useMarkdown") return false;
-                    return originalGetValue(key);
-                }),
-            });
+            mockColoredMessageSettings();
 
             mockClient.getAccountData.mockReturnValue({
                 getContent: () => ({
@@ -204,7 +176,7 @@ describe("createMessageContent with colored messages", () => {
 
             const content = (await createMessageContent("hello", true, { room: mockRoom })) as any;
             expect(content.formatted_body).toContain("data-mx-gradient");
-            expect(content.formatted_body).not.toContain("data-mx-color");
+            expect(content.formatted_body).toContain('data-mx-color="#ff0000"');
             expect(content.body).toBe("hello");
             expect(content.format).toBe("org.matrix.custom.html");
         });
@@ -212,13 +184,7 @@ describe("createMessageContent with colored messages", () => {
 
     describe("edits put styled content into both edited content and m.new_content", () => {
         it("applies default style to edits", async () => {
-            jest.spyOn(require("../../../../../../../src/settings/SettingsStore"), "default", "get").mockReturnValue({
-                getValue: jest.fn().mockImplementation((key: string) => {
-                    if (key === "Tweaks.enableColoredMessages") return true;
-                    if (key === "MessageComposerInput.useMarkdown") return false;
-                    return originalGetValue(key);
-                }),
-            });
+            mockColoredMessageSettings();
 
             mockClient.getAccountData.mockReturnValue({
                 getContent: () => ({

@@ -32,6 +32,7 @@ import { getFavoriteImagePackRoomIds, getImagePackEntries, isImagePackEventType 
 import * as recent from "../../../emojipicker/recent";
 import { REACTION_SHORTCODE_KEY } from "../../../viewmodels/room/timeline/event-tile/reactions/reactionShortcode";
 import { type ButtonEvent } from "../elements/AccessibleButton";
+import { removeOwnReaction } from "../../../viewmodels/room/timeline/event-tile/reactions/removeOwnReaction";
 
 interface IProps {
     mxEvent: MatrixEvent;
@@ -117,16 +118,17 @@ class ReactionPicker extends React.Component<IProps, IState> {
         this.removeImagePackListeners();
     }
 
-    private getReactions(): Record<string, string> {
+    private getReactions(): Record<string, MatrixEvent> {
         if (!this.props.reactions) {
             return {};
         }
         const userId = MatrixClientPeg.safeGet().getSafeUserId();
         const myAnnotations = this.props.reactions.getAnnotationsBySender()?.[userId] ?? new Set<MatrixEvent>();
         return Object.fromEntries(
-            [...myAnnotations]
-                .filter((event) => !event.isRedacted())
-                .map((event) => [event.getRelation()?.key, event.getId()]),
+            [...myAnnotations].flatMap((event) => {
+                const key = event.getRelation()?.key;
+                return !event.isRedacted() && key ? [[key, event]] : [];
+            }),
         );
     }
 
@@ -162,7 +164,7 @@ class ReactionPicker extends React.Component<IProps, IState> {
         if (myReactions.hasOwnProperty(reaction)) {
             if (this.props.mxEvent.isRedacted() || !this.context.canSelfRedact) return false;
 
-            MatrixClientPeg.safeGet().redactEvent(this.props.mxEvent.getRoomId()!, myReactions[reaction]);
+            removeOwnReaction(MatrixClientPeg.safeGet(), this.props.mxEvent.getRoomId()!, myReactions[reaction]);
             if (!keepOpen) {
                 dis.dispatch<FocusComposerPayload>({
                     action: Action.FocusAComposer,

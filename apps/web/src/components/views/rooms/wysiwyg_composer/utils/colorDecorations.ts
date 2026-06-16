@@ -6,7 +6,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import type { GradientDirection, GradientStop } from "../../../../../@types/message_style.ts";
-import { encodeGradientPayload } from "../../../../../@types/message_style.ts";
+import { decodeGradientPayload, encodeGradientPayload } from "../../../../../@types/message_style.ts";
 
 export interface ColorDecoration {
     startOffset: number;
@@ -128,6 +128,10 @@ function appendStyledTextPart(
         span.setAttribute("data-mx-color", color);
     } else if (gradient) {
         span.setAttribute("data-mx-gradient", gradient);
+        const fallbackColor = decodeGradientPayload(gradient)?.stops[0]?.color;
+        if (fallbackColor) {
+            span.setAttribute("data-mx-color", fallbackColor);
+        }
     }
     span.textContent = text;
     fragment.appendChild(span);
