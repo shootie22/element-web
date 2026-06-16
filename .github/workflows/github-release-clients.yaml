@@ -193,11 +193,11 @@ jobs:
                           exit 1
                       fi
                   else
-                      if ! gh release create "$RELEASE_TAG" release-assets/* \
-                          --repo "$GITHUB_REPOSITORY" \
-                          --target "$RELEASE_TAG" \
-                          --title "$RELEASE_TAG" \
-                          --notes-file RELEASE_NOTES.md; then
+                    if ! gh release create "$RELEASE_TAG" release-assets/* \
+                        --repo "$GITHUB_REPOSITORY" \
+                        --target custom/main \
+                        --title "$RELEASE_TAG" \
+                        --notes-file RELEASE_NOTES.md; then
                           echo "::error::GitHub denied release creation. Enable Settings > Actions > General > Workflow permissions > Read and write permissions, or add a RELEASE_TOKEN secret with Contents: read/write."
                           exit 1
                       fi
