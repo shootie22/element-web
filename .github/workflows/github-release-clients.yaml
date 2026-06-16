@@ -73,6 +73,7 @@ jobs:
         with:
             ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
             config: github-release
+            version: develop
             webapp-artifact: github-release-webapp
             deploy: false
 
