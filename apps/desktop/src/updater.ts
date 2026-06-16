@@ -7,6 +7,10 @@ Please see LICENSE files in the repository root for full details.
 
 import { app, ipcMain } from "electron";
 import { autoUpdater, type UpdateInfo } from "electron-updater";
+import * as path from "node:path";
+import * as fs from "node:fs";
+import * as https from "node:https";
+import { spawnSync } from "node:child_process";
 
 import Store from "./store.js";
 
@@ -40,6 +44,16 @@ function getReleasePage(version: string): string {
     return `https://github.com/shootie22/element-web/releases/tag/${tag}`;
 }
 
+function getArtifactDownloadUrl(version: string): string {
+    const tag = version.startsWith("v") ? version : `v${version}`;
+    const arch = process.arch === "arm64" ? "arm64" : "x64";
+    return `https://github.com/shootie22/element-web/releases/download/${tag}/element-desktop-${version}-linux-${arch}.tar.gz`;
+}
+
+function getInstallDir(): string {
+    return path.dirname(app.getPath("exe"));
+}
+
 export function getPendingUpdate(): ICachedUpdate | undefined {
     return latestUpdateDownloaded;
 }
@@ -50,10 +64,8 @@ export function automaticUpdatesEnabled(): boolean {
 
 export function available(): boolean {
     if (!app.isPackaged) return false;
-
     if (process.platform === "win32") return true;
-    if (process.platform === "linux") return Boolean(process.env.APPIMAGE);
-
+    if (process.platform === "linux") return true;
     // macOS update signing and notarisation setup is intentionally out of scope for this GitHub Releases path.
     return false;
 }
@@ -66,13 +78,70 @@ function notifyDownloaded(update: ICachedUpdate): void {
     global.mainWindow?.webContents.send("update-downloaded", update);
 }
 
+function downloadFile(url: string, dest: string, redirects = 0): Promise<void> {
+    if (redirects > 10) return Promise.reject(new Error("Too many redirects"));
+    return new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(dest);
+        https.get(url, (response) => {
+            if (
+                response.statusCode != null &&
+                response.statusCode >= 300 &&
+                response.statusCode < 400 &&
+                response.headers.location
+            ) {
+                file.close();
+                fs.unlink(dest, () => {});
+                resolve(downloadFile(response.headers.location, dest, redirects + 1));
+                return;
+            }
+            if (response.statusCode !== 200) {
+                reject(new Error(`Download failed: ${response.statusCode}`));
+                return;
+            }
+            response.pipe(file);
+            file.on("finish", () => {
+                file.close();
+                resolve();
+            });
+        }).on("error", (err) => {
+            fs.unlink(dest, () => {});
+            reject(err);
+        });
+    });
+}
+
 function installUpdate(): void {
     if (!latestUpdateDownloaded) return;
 
-    // for some reason, quitAndInstall does not fire the
-    // before-quit event, so we need to set the flag here.
     global.appQuitting = true;
-    autoUpdater.quitAndInstall();
+
+    if (process.platform === "linux") {
+        const installDir = getInstallDir();
+        const arch = process.arch === "arm64" ? "arm64" : "x64";
+        const updateFile = path.join(
+            app.getPath("temp"),
+            `element-desktop-${latestUpdateDownloaded.releaseName}-linux-${arch}.tar.gz`,
+        );
+        try {
+            console.log(`Extracting update to ${installDir}`);
+            const result = spawnSync("tar", [
+                "-xzf", updateFile,
+                "-C", installDir,
+                "--strip-components=1",
+            ], { stdio: "pipe", timeout: 30000 });
+            if (result.status !== 0) {
+                throw new Error(result.stderr.toString() || `tar exited with code ${result.status}`);
+            }
+            fs.unlinkSync(updateFile);
+            console.log("Update installed, restarting");
+            app.relaunch();
+            app.exit(0);
+        } catch (e) {
+            console.error("Failed to install update:", e);
+        }
+    } else {
+        autoUpdater.quitAndInstall();
+    }
 }
 
 async function checkForUpdates(manual = false): Promise<void> {
@@ -113,13 +182,19 @@ export async function start(): Promise<void> {
     if (started) return;
     started = true;
 
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
-    console.log("Starting GitHub Releases auto update");
-
     if (!available()) {
         console.warn("Auto update not supported for this build");
         return;
+    }
+
+    console.log("Starting GitHub Releases auto update");
+
+    if (process.platform === "linux") {
+        autoUpdater.autoDownload = false;
+        autoUpdater.autoInstallOnAppQuit = false;
+    } else {
+        autoUpdater.autoDownload = true;
+        autoUpdater.autoInstallOnAppQuit = true;
     }
 
     setTimeout(automaticCheckForUpdates, INITIAL_UPDATE_DELAY_MS);
@@ -130,8 +205,34 @@ ipcMain.on("install_update", installUpdate);
 ipcMain.on("check_updates", manualCheckForUpdates);
 
 autoUpdater
-    .on("update-available", function () {
+    .on("update-available", async (info: UpdateInfo) => {
         ipcChannelSendUpdateStatus(true);
+        if (process.platform === "linux") {
+            const version = info.version;
+            const arch = process.arch === "arm64" ? "arm64" : "x64";
+            const url = getArtifactDownloadUrl(version);
+            const dest = path.join(
+                app.getPath("temp"),
+                `element-desktop-${version}-linux-${arch}.tar.gz`,
+            );
+            try {
+                console.log(`Downloading update from ${url}`);
+                await downloadFile(url, dest);
+                latestUpdateDownloaded = {
+                    releaseNotes: normaliseReleaseNotes(info.releaseNotes),
+                    releaseName: version,
+                    releaseDate: new Date(info.releaseDate),
+                    updateURL: getReleasePage(version),
+                };
+                console.log(`Update ${version} downloaded`);
+                notifyDownloaded(latestUpdateDownloaded);
+            } catch (e) {
+                console.error("Failed to download update:", e);
+                ipcChannelSendUpdateStatus(
+                    e instanceof Error ? e.message : String(e),
+                );
+            }
+        }
     })
     .on("update-not-available", function () {
         if (latestUpdateDownloaded) {
