@@ -103,7 +103,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             voiceRecordingButton(props, narrow),
             props.showPollsButton ? pollButton(room, props.relation) : null,
             showLocationButton(props, room, matrixClient),
-            testButton(),
+            testMenuItem(props.toggleButtonMenu),
         ];
     } else {
         mainButtons = [
@@ -123,7 +123,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             voiceRecordingButton(props, narrow),
             props.showPollsButton ? pollButton(room, props.relation) : null,
             showLocationButton(props, room, matrixClient),
-            testButton(),
+            testMenuItem(props.toggleButtonMenu),
         ];
     }
 
@@ -205,17 +205,13 @@ function pollButton(room: Room, relation?: IEventRelation): ReactElement {
     return <PollButton key="polls" room={room} relation={relation} />;
 }
 
-function testButton(): ReactElement {
-    return <TestButton key="test" />;
-}
-
-function TestButton(): JSX.Element {
-    const closeMenu = useContext(OverflowMenuContext);
-
+function testMenuItem(closeMenu: OverflowMenuCloser): ReactElement {
     return (
-        <CollapsibleButton className="mx_MessageComposer_button" onClick={() => closeMenu?.()} title="test">
-            <TextFormattingIcon />
-        </CollapsibleButton>
+        <IconizedContextMenuOption
+            key="test"
+            label="test"
+            onClick={() => closeMenu()}
+        />
     );
 }
 
