@@ -103,6 +103,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             voiceRecordingButton(props, narrow),
             props.showPollsButton ? pollButton(room, props.relation) : null,
             showLocationButton(props, room, matrixClient),
+            testButton(),
         ];
     } else {
         mainButtons = [
@@ -122,6 +123,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             voiceRecordingButton(props, narrow),
             props.showPollsButton ? pollButton(room, props.relation) : null,
             showLocationButton(props, room, matrixClient),
+            testButton(),
         ];
     }
 
@@ -201,6 +203,20 @@ function voiceRecordingButton(props: IProps, narrow: boolean): ReactElement | nu
 
 function pollButton(room: Room, relation?: IEventRelation): ReactElement {
     return <PollButton key="polls" room={room} relation={relation} />;
+}
+
+function testButton(): ReactElement {
+    return <TestButton key="test" />;
+}
+
+function TestButton(): JSX.Element {
+    const closeMenu = useContext(OverflowMenuContext);
+
+    return (
+        <CollapsibleButton className="mx_MessageComposer_button" onClick={() => closeMenu?.()} title="test">
+            <TextFormattingIcon />
+        </CollapsibleButton>
+    );
 }
 
 interface IPollButtonProps {
