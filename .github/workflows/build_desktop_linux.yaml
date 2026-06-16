@@ -258,7 +258,7 @@ jobs:
               if: contains(inputs.targets, 'AppImage')
               working-directory: apps/desktop
               run: |
-                  test -f ./dist/element-desktop*linux*x64.AppImage
+                  test -f ./dist/element-desktop*.AppImage
                   test -f ./dist/latest-linux.yml
 
     test:
