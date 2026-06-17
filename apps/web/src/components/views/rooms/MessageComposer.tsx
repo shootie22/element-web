@@ -362,19 +362,19 @@ export class MessageComposer extends React.Component<IProps, IState> {
         if (this.props.replyToEvent) {
             const replyingToThread = this.props.relation?.rel_type === THREAD_RELATION_TYPE.name;
             if (replyingToThread && this.props.e2eStatus) {
-                return `${_t("composer|placeholder_thread_encrypted")} (TEST TEST TEST)`;
+                return _t("composer|placeholder_thread_encrypted");
             } else if (replyingToThread) {
-                return `${_t("composer|placeholder_thread")} (TEST TEST TEST)`;
+                return _t("composer|placeholder_thread");
             } else if (this.props.e2eStatus) {
-                return `${_t("composer|placeholder_reply_encrypted")} (TEST TEST TEST)`;
+                return _t("composer|placeholder_reply_encrypted");
             } else {
-                return `${_t("composer|placeholder_reply")} (TEST TEST TEST)`;
+                return _t("composer|placeholder_reply");
             }
         } else {
             if (this.props.e2eStatus) {
-                return `${_t("composer|placeholder_encrypted")} (TEST TEST TEST)`;
+                return _t("composer|placeholder_encrypted");
             } else {
-                return `${_t("composer|placeholder")} (TEST TEST TEST)`;
+                return _t("composer|placeholder");
             }
         }
     };
