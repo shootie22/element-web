@@ -27,6 +27,8 @@ jobs:
     web:
         name: Build web
         runs-on: ubuntu-24.04
+        outputs:
+            version: ${{ steps.release-version.outputs.version }}
         steps:
             - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
               with:
@@ -86,7 +88,9 @@ jobs:
 
     linux:
         name: Linux ${{ matrix.arch }}
-        needs: prepare-desktop
+        needs:
+            - web
+            - prepare-desktop
         strategy:
             fail-fast: false
             matrix:
@@ -97,6 +101,7 @@ jobs:
             arch: ${{ matrix.arch }}
             sqlcipher: static
             targets: AppImage deb tar.gz
+            version: ${{ needs.web.outputs.version }}
             docker-image-tag: staging
             update-manifest-public-key-pem: ${{ vars.UPDATE_MANIFEST_PUBLIC_KEY_PEM }}
             update-manifest-public-key-base64: ${{ vars.UPDATE_MANIFEST_PUBLIC_KEY_BASE64 }}
@@ -106,7 +111,9 @@ jobs:
 
     windows:
         name: Windows ${{ matrix.arch }}
-        needs: prepare-desktop
+        needs:
+            - web
+            - prepare-desktop
         strategy:
             fail-fast: false
             matrix:
@@ -117,6 +124,7 @@ jobs:
             ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
             arch: ${{ matrix.arch }}
             targets: nsis msi
+            version: ${{ needs.web.outputs.version }}
             sign: ${{ vars.WINDOWS_SIGN_RELEASES == 'true' && 'true' || '' }}
 
     publish:
@@ -165,9 +173,19 @@ jobs:
 
                   mkdir -p release-assets
                   while IFS= read -r -d '' file; do
-                      target="release-assets/$(basename "$file")"
+                      filename="$(basename "$file")"
+                      # upload/download-artifact can prefix filenames with the source artifact name,
+                      # for example linux-amd64-sqlcipher-static__element-desktop-1.12.27-linux-x64.tar.gz.
+                      # GitHub release assets need their canonical electron-builder names because
+                      # the runtime updater constructs deterministic download URLs.
+                      filename="${filename#linux-amd64-sqlcipher-static__}"
+                      filename="${filename#linux-arm64-sqlcipher-static__}"
+                      filename="${filename#win-x64__}"
+                      filename="${filename#win-arm64__}"
+                      filename="${filename#web-release__}"
+                      target="release-assets/$filename"
                       if [ -e "$target" ]; then
-                          echo "::error::Duplicate release asset name: $(basename "$file")"
+                          echo "::error::Duplicate release asset name after normalization: $filename"
                           exit 1
                       fi
                       cp "$file" "$target"
@@ -188,6 +206,9 @@ jobs:
 
                   test "$(find release-assets -type f | wc -l)" -gt 0
                   find release-assets -type f -maxdepth 1 -print | sort
+
+                  version="$(node scripts/validate-release-version.mjs "$RELEASE_TAG")"
+                  test -f "release-assets/element-desktop-${version}-linux-x64.tar.gz"
 
             - name: Sign Linux tar.gz update manifests
               run: node scripts/sign-linux-tarball-update-manifests.mjs --assets-dir release-assets --release-tag "$RELEASE_TAG" --repository "$GITHUB_REPOSITORY"
