@@ -155,9 +155,25 @@ jobs:
                   node scripts/validate-release-version.mjs "$RELEASE_TAG"
 
                   previous_tag="$(git tag --sort=-v:refname | grep -E '^v[0-9]' | grep -v "^${RELEASE_TAG}$" | head -n 1 || true)"
+
+                  # Detect an upstream-sync merge in this release's range so the notes can
+                  # lead with a clear "synced with upstream" callout (see AGENTS.md). Matches
+                  # the conventional merge subject "Merge upstream/develop ...".
+                  sync_merge=""
+                  if [ -n "$previous_tag" ]; then
+                      sync_merge="$(git log --merges --format='%H %s' "${previous_tag}..${RELEASE_TAG}" | grep -iE 'merge upstream/develop' | head -n 1 | cut -d' ' -f1 || true)"
+                  fi
+
                   {
                       echo "Automated web, Linux, and Windows client build for ${RELEASE_TAG}."
                       echo
+                      if [ -n "$sync_merge" ]; then
+                          up_sha="$(git rev-parse --short "${sync_merge}^2")"
+                          up_date="$(git log -1 --format=%cs "${sync_merge}^2")"
+                          up_count="$(git rev-list --count "${sync_merge}^1..${sync_merge}^2")"
+                          echo "🔄 **Synced with upstream:** merged ${up_count} commits from element-hq/element-web \`develop\` up to \`${up_sha}\` (${up_date}). This build is up to date with upstream (official Element) plus our custom enhancements — upstream + ours."
+                          echo
+                      fi
                       if [ -n "$previous_tag" ]; then
                           echo "## Changes since ${previous_tag}"
                           git log --format='- %s (%h)' "${previous_tag}..${RELEASE_TAG}"

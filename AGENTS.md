@@ -42,22 +42,25 @@ Use the `<sha>` that `upstream/develop`'s `pnpm-lock.yaml` currently uses.
 
 ## Release convention: always call out the upstream sync 🔄
 
-Whenever a release includes an upstream merge, **always say so** in the version-bump
-commit body and the GitHub release notes, prefixed with the 🔄 emoji. This is a
-standing convention, not a one-off.
+Whenever a release includes an upstream merge, the GitHub release notes **must say so**,
+prefixed with the 🔄 emoji, framing the build as **upstream + our enhancements** (at least
+as current as official Element, often ahead). This is a standing convention.
 
-The messaging should make clear this build is **upstream + our enhancements** — i.e.
-at least as current as official Element, and often ahead of it. Include the upstream
-sync point (the `element-hq/element-web develop` commit and date we merged to) and the
-number of commits merged. Example:
+**This is automated — do NOT create releases by hand.** Releases are built and published
+by the `.github/workflows/github-release-clients.yaml` pipeline, which triggers on `v*`
+tag push, builds the web/Linux/Windows assets, and creates the release with those assets
+attached. Its "Generate release notes" step auto-detects an upstream-sync merge in the
+release's commit range (a merge commit whose subject matches `Merge upstream/develop`) and
+prepends the 🔄 callout with the merged commit count and the upstream sync point. Example:
 
-> 🔄 Synced with upstream: merged all 39 commits from element-hq/element-web develop
+> 🔄 **Synced with upstream:** merged 39 commits from element-hq/element-web `develop`
 > up to `90fb221a8e` (2026-06-18). This build is up to date with upstream plus our
 > custom enhancements — upstream + ours.
 
-Practical flow: put it in the annotated tag message, then create the release from the
-tag so the notes are reused verbatim (no `gh` needed — the GitHub REST API works with
-the token in the `origin` remote).
+For this to work, keep the upstream merge commit's subject starting with
+`Merge upstream/develop` (that's how the pipeline detects the sync). Never create a release
+manually via `gh`/the API — the publish job treats releases as immutable and will fail if
+one already exists for the tag.
 
 ## Verification gates (current state)
 
