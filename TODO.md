@@ -267,3 +267,9 @@ Notes:
 #22 if i keep clicking on the same reaction to a message, it should cycle between adding it and removing it. currently it seems buggy, as sometimes it removes it, sometimes it doesnt do anything, sometimes it errors out. please fix.
 
 #23 for the colored text gradient support feature, which still sends the base gradient color as context so that other clients can still interpret messages with color, please add a setting in the Tweaks menu for enabling or disabling that.
+
+#24 implement screenshare audio sharing using this PR https://github.com/element-hq/element-web/pull/33044 - check if we can merge withou conflicts. if there are conflicts, let's analyze them
+
+#25 functionality to toggle on/off someone's screen share
+
+#26 by default set vp9 codec, 1440p and max bitrate and 60fps

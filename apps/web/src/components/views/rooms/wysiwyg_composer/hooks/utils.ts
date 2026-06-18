@@ -132,7 +132,9 @@ export function handleClipboardEvent(
         }
     }
 
-    if (event.type !== "paste" || data === null) {
+    const isPasteEvent =
+        event instanceof ClipboardEvent ? event.type === "paste" : event.inputType === "insertFromPaste";
+    if (!isPasteEvent || data === null) {
         return false;
     }
 

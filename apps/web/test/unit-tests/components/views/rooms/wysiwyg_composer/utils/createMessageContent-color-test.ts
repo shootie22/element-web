@@ -207,5 +207,40 @@ describe("createMessageContent with colored messages", () => {
             expect(content.formatted_body).toContain('data-mx-color="#ff0000"');
             expect(content["m.new_content"].formatted_body).toContain('data-mx-color="#ff0000"');
         });
+
+        it("preserves explicit gradient style when editing", async () => {
+            mockColoredMessageSettings();
+
+            mockClient.getAccountData.mockReturnValue(undefined);
+
+            const editedEvent = {
+                getId: () => "$eventId",
+                getType: () => "m.room.message",
+                getContent: () => ({ body: "old" }),
+                replyEventId: undefined,
+                getThread: () => null,
+                getRoomId: () => "!room:id",
+                isEvent: true,
+            } as any;
+            const gradient = encodeGradientPayload({
+                kind: "gradient",
+                direction: "left-to-right",
+                stops: [
+                    { color: "#ff0000", position: 0 },
+                    { color: "#0000ff", position: 1 },
+                ],
+            });
+
+            const content = (await createMessageContent(
+                `<span data-mx-gradient="${gradient}" data-mx-color="#ff0000">edited text</span>`,
+                true,
+                { editedEvent, room: mockRoom },
+            )) as any;
+
+            expect(content.formatted_body).toContain(`data-mx-gradient="${gradient}"`);
+            expect(content.formatted_body).toContain('data-mx-color="#ff0000"');
+            expect(content["m.new_content"].formatted_body).toContain(`data-mx-gradient="${gradient}"`);
+            expect(content["m.new_content"].formatted_body).toContain('data-mx-color="#ff0000"');
+        });
     });
 });

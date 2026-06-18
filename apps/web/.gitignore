@@ -1,4 +1,5 @@
 /webapp
+/.build
 /config.json
 /config.json.*
 /config.local*.json

@@ -88,6 +88,8 @@ export enum CallEvent {
     Close = "close",
     Destroy = "destroy",
     CallTypeChanged = "call_type_changed",
+    DeviceMute = "device_mute",
+    Deafen = "deafen",
 }
 
 interface CallEventHandlerMap {
@@ -99,6 +101,8 @@ interface CallEventHandlerMap {
     [CallEvent.Close]: () => void;
     [CallEvent.Destroy]: () => void;
     [CallEvent.CallTypeChanged]: (callType: CallType) => void;
+    [CallEvent.DeviceMute]: () => void;
+    [CallEvent.Deafen]: () => void;
 }
 
 /**
@@ -175,6 +179,48 @@ export abstract class Call extends TypedEventEmitter<CallEvent, CallEventHandler
     }
     public set presented(value: boolean) {
         this._presented = value;
+    }
+
+    private _audioEnabled = true;
+    /**
+     * Whether the local microphone is enabled.
+     */
+    public get audioEnabled(): boolean {
+        return this._audioEnabled;
+    }
+    protected set audioEnabled(value: boolean) {
+        if (this._audioEnabled !== value) {
+            this._audioEnabled = value;
+            this.emit(CallEvent.DeviceMute);
+        }
+    }
+
+    private _videoEnabled = true;
+    /**
+     * Whether the local camera is enabled.
+     */
+    public get videoEnabled(): boolean {
+        return this._videoEnabled;
+    }
+    protected set videoEnabled(value: boolean) {
+        if (this._videoEnabled !== value) {
+            this._videoEnabled = value;
+            this.emit(CallEvent.DeviceMute);
+        }
+    }
+
+    private _deafened = false;
+    /**
+     * Whether the local audio output is disabled (deafened).
+     */
+    public get deafened(): boolean {
+        return this._deafened;
+    }
+    protected set deafened(value: boolean) {
+        if (this._deafened !== value) {
+            this._deafened = value;
+            this.emit(CallEvent.Deafen);
+        }
     }
 
     protected constructor(
@@ -311,6 +357,7 @@ export abstract class Call extends TypedEventEmitter<CallEvent, CallEventHandler
      * Stops further communication with the widget and tells the UI to close.
      */
     protected close(): void {
+        if (this.connected) this.setDisconnected();
         this.widgetApi = null;
         this.emit(CallEvent.Close);
     }
@@ -520,8 +567,10 @@ export class JitsiCall extends Call {
     }
 
     public close(): void {
-        this.widgetApi!.off(`action:${ElementWidgetActions.JoinCall}`, this.onJoin);
-        this.widgetApi!.off(`action:${ElementWidgetActions.HangupCall}`, this.onHangup);
+        if (this.widgetApi) {
+            this.widgetApi.off(`action:${ElementWidgetActions.JoinCall}`, this.onJoin);
+            this.widgetApi.off(`action:${ElementWidgetActions.HangupCall}`, this.onHangup);
+        }
         ActiveWidgetStore.instance.off(ActiveWidgetStoreEvent.Dock, this.onDock);
         ActiveWidgetStore.instance.off(ActiveWidgetStoreEvent.Undock, this.onUndock);
         super.close();
@@ -645,6 +694,7 @@ export class ElementCall extends Call {
 
     private settingsStoreCallEncryptionWatcher?: string;
     private terminationTimer?: number;
+    private startPromise: Promise<ClientWidgetApi> | null = null;
 
     public get presented(): boolean {
         return super.presented;
@@ -905,6 +955,16 @@ export class ElementCall extends Call {
     }
 
     public async start(widgetGenerationParameters: WidgetGenerationParameters): Promise<ClientWidgetApi> {
+        // Prevent duplicate calls: if start() was already initiated (even if not yet
+        // resolved — the widget messaging might still be initializing), return the
+        // existing promise so that listeners are registered exactly once.
+        if (this.startPromise) return this.startPromise;
+
+        this.startPromise = this._startImpl(widgetGenerationParameters);
+        return this.startPromise;
+    }
+
+    private async _startImpl(widgetGenerationParameters: WidgetGenerationParameters): Promise<ClientWidgetApi> {
         // Some parameters may only be set once the user has chosen to interact with the call, regenerate the URL
         // at this point in case any of the parameters have changed.
         this.widgetGenerationParameters = { ...this.widgetGenerationParameters, ...widgetGenerationParameters };
@@ -918,6 +978,7 @@ export class ElementCall extends Call {
         widgetApi.on(`action:${ElementWidgetActions.HangupCall}`, this.onHangup);
         widgetApi.on(`action:${ElementWidgetActions.Close}`, this.onClose);
         widgetApi.on(`action:${ElementWidgetActions.DeviceMute}`, this.onDeviceMute);
+        widgetApi.on(`action:${ElementWidgetActions.Deafen}`, this.onDeafen);
         return widgetApi;
     }
 
@@ -940,10 +1001,14 @@ export class ElementCall extends Call {
     }
 
     public close(): void {
-        this.widgetApi!.off(`action:${ElementWidgetActions.JoinCall}`, this.onJoin);
-        this.widgetApi!.off(`action:${ElementWidgetActions.HangupCall}`, this.onHangup);
-        this.widgetApi!.off(`action:${ElementWidgetActions.Close}`, this.onClose);
-        this.widgetApi!.off(`action:${ElementWidgetActions.DeviceMute}`, this.onDeviceMute);
+        if (this.widgetApi) {
+            this.widgetApi.off(`action:${ElementWidgetActions.JoinCall}`, this.onJoin);
+            this.widgetApi.off(`action:${ElementWidgetActions.HangupCall}`, this.onHangup);
+            this.widgetApi.off(`action:${ElementWidgetActions.Close}`, this.onClose);
+            this.widgetApi.off(`action:${ElementWidgetActions.DeviceMute}`, this.onDeviceMute);
+            this.widgetApi.off(`action:${ElementWidgetActions.Deafen}`, this.onDeafen);
+        }
+        this.startPromise = null;
         super.close();
     }
 
@@ -969,6 +1034,7 @@ export class ElementCall extends Call {
     private readonly onMembershipChanged = (): void => {
         this.updateParticipants();
         this.callType = this.session.getConsensusCallIntent() === "audio" ? CallType.Voice : CallType.Video;
+        this.checkDestroy();
     };
 
     private updateParticipants(): void {
@@ -991,7 +1057,19 @@ export class ElementCall extends Call {
 
     private readonly onDeviceMute = (ev: CustomEvent<IWidgetApiRequest>): void => {
         ev.preventDefault();
-        this.widgetApi!.transport.reply(ev.detail, {}); // ack
+        if (!this.widgetApi) return;
+        this.widgetApi.transport.reply(ev.detail, {}); // ack
+        const data = (ev.detail as any).data ?? ev.detail;
+        if (typeof data.audio_enabled === "boolean") this.audioEnabled = data.audio_enabled;
+        if (typeof data.video_enabled === "boolean") this.videoEnabled = data.video_enabled;
+    };
+
+    private readonly onDeafen = (ev: CustomEvent<IWidgetApiRequest>): void => {
+        ev.preventDefault();
+        if (!this.widgetApi) return;
+        this.widgetApi.transport.reply(ev.detail, {}); // ack
+        const data = (ev.detail as any).data ?? ev.detail;
+        if (typeof data.deafened === "boolean") this.deafened = data.deafened;
     };
 
     private readonly onJoin = (ev: CustomEvent<IWidgetApiRequest>): void => {
@@ -1008,6 +1086,7 @@ export class ElementCall extends Call {
         ev.preventDefault();
         this.widgetApi!.transport.reply(ev.detail, {}); // ack
         this.setDisconnected();
+        this.close();
     };
 
     private readonly onClose = async (ev: CustomEvent<IWidgetApiRequest>): Promise<void> => {

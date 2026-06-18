@@ -11,10 +11,28 @@
 
     .mx_RoomListCallControls {
         display: flex;
-        justify-content: center;
+        justify-content: space-between;
+        align-items: center;
         gap: var(--cpd-space-2x);
         padding: var(--cpd-space-2x) var(--cpd-space-3x);
         border-block-start: 1px solid var(--cpd-color-border-interactive-secondary);
         background: var(--cpd-color-bg-canvas-default);
+
+        .mx_RoomListCallControls_left,
+        .mx_RoomListCallControls_center,
+        .mx_RoomListCallControls_right {
+            display: flex;
+            align-items: center;
+            gap: var(--cpd-space-2x);
+        }
+
+        .mx_RoomListCallControls_roomName {
+            font: var(--cpd-font-body-sm-medium);
+            color: var(--cpd-color-text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
     }
 }

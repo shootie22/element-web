@@ -16,13 +16,35 @@ import SettingsStore from "../../../../../settings/SettingsStore";
 import type EditorStateTransfer from "../../../../../utils/EditorStateTransfer";
 import { useScopedRoomContext } from "../../../../../contexts/ScopedRoomContext.tsx";
 
+const MX_REPLY_REGEX = /<mx-reply>[\s\S]*?<\/mx-reply>/;
+
+function stripReplyFallback(html: string): string {
+    return html.replace(MX_REPLY_REGEX, "");
+}
+
+function prepareFormattedContentForEditing(html: string): string {
+    if (!html.includes("data-mx-gradient")) {
+        return html;
+    }
+
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    for (const element of Array.from(doc.body.querySelectorAll<HTMLElement>("[data-mx-gradient]"))) {
+        element.style.removeProperty("background");
+        element.style.removeProperty("background-image");
+        element.style.removeProperty("background-clip");
+        element.style.removeProperty("-webkit-background-clip");
+        element.style.removeProperty("-webkit-text-fill-color");
+        if (!element.getAttribute("style")) {
+            element.removeAttribute("style");
+        }
+    }
+    return doc.body.innerHTML;
+}
+
 function getFormattedContent(editorStateTransfer: EditorStateTransfer): string {
-    return (
-        editorStateTransfer
-            .getEvent()
-            .getContent()
-            .formatted_body?.replace(/<mx-reply>.*<\/mx-reply>/, "") || ""
-    );
+    const content = editorStateTransfer.getEvent().getContent();
+    const formattedBody = content["m.new_content"]?.formatted_body ?? content.formatted_body ?? "";
+    return prepareFormattedContentForEditing(stripReplyFallback(formattedBody));
 }
 
 export function parseEditorStateTransfer(

@@ -723,9 +723,14 @@ export default (env: string, argv: Record<string, any>): webpack.Configuration =
                     { from: "media/**", context: path.resolve(__dirname, "res/") },
                     { from: "config.json", noErrorOnMissing: true },
                     // Element Call embedded widget
+                    // Prefer a locally built element-call in .build/element-call (used when
+                    // scripts/build-element-call.sh has been run, e.g. in CI or local dev).
+                    // Falls back to the npm package @element-hq/element-call-embedded.
                     {
                         from: "**",
-                        context: path.join(getPackageRoot("@element-hq/element-call-embedded"), "dist"),
+                        context: fs.existsSync(path.resolve(__dirname, ".build", "element-call"))
+                            ? path.resolve(__dirname, ".build", "element-call")
+                            : path.join(getPackageRoot("@element-hq/element-call-embedded"), "dist"),
                         to: path.join(__dirname, "webapp", "widgets", "element-call"),
                     },
                     // Mobile guide assets

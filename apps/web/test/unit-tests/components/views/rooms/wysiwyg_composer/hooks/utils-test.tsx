@@ -70,6 +70,29 @@ describe("handleClipboardEvent", () => {
         expect(output).toBe(true);
     });
 
+    it("handles beforeinput paste events when data files are present", () => {
+        const dataTransfer = { files: ["something here"], types: [] } as unknown as DataTransfer;
+        const originalEvent = new InputEvent("beforeinput", { inputType: "insertFromPaste" });
+        Object.assign(originalEvent, { dataTransfer });
+
+        const output = handleClipboardEvent(originalEvent, dataTransfer, mockUploadVM);
+
+        expect(mockUploadVM.initiateViaDataTransfer).toHaveBeenCalledTimes(1);
+        expect(mockUploadVM.initiateViaDataTransfer).toHaveBeenCalledWith(dataTransfer);
+        expect(output).toBe(true);
+    });
+
+    it("does not upload beforeinput paste files when rich text is present", () => {
+        const dataTransfer = { files: ["something here"], types: ["text/rtf"] } as unknown as DataTransfer;
+        const originalEvent = new InputEvent("beforeinput", { inputType: "insertFromPaste" });
+        Object.assign(originalEvent, { dataTransfer });
+
+        const output = handleClipboardEvent(originalEvent, dataTransfer, mockUploadVM);
+
+        expect(mockUploadVM.initiateViaDataTransfer).not.toHaveBeenCalled();
+        expect(output).toBe(false);
+    });
+
     it("calls the error handler when sentContentListToRoom errors", async () => {
         const mockErrorMessage = "something went wrong";
         mockUploadVM.initiateViaDataTransfer.mockRejectedValueOnce(new Error(mockErrorMessage));

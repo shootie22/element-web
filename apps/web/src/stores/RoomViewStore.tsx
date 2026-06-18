@@ -370,16 +370,21 @@ export class RoomViewStore extends EventEmitter {
                 else viewingCall = CallStore.instance.getActiveCall(payload.room_id) !== null;
             }
 
-            if (room && viewingCall) {
+            if (room) {
                 let call = CallStore.instance.getCall(payload.room_id);
                 // Start a call if not already there
                 if (call === null) {
                     ElementCall.create(room);
                     call = CallStore.instance.getCall(payload.room_id)!;
                 }
-                call.presented = true;
+                if (viewingCall) {
+                    call.presented = true;
+                }
                 // Immediately start the call. This will connect to all required widget events
                 // and allow the widget to show the lobby.
+                // We do this regardless of viewingCall so that the JoinCall handler is
+                // registered early, ensuring connectedCalls is populated when the user
+                // joins a call in a voice room on first visit.
                 if (call.connectionState === ConnectionState.Disconnected) {
                     call.start({ skipLobby: payload.skipLobby, voiceOnly: payload.voiceOnly });
                 }

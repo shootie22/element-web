@@ -163,14 +163,14 @@ export class CallStore extends AsyncStoreWithClient<EmptyObject> {
                 const onConnectionState = (state: ConnectionState): void => {
                     if (state === ConnectionState.Connected) {
                         this.connectedCalls = new Set([...this.connectedCalls, call]);
-                    } else if (state === ConnectionState.Disconnected) {
+                    } else if (state === ConnectionState.Disconnected || state === ConnectionState.Disconnecting) {
                         this.connectedCalls = new Set([...this.connectedCalls].filter((c) => c !== call));
                     }
                 };
                 const onDestroy = (): void => {
                     this.calls.delete(room.roomId);
                     for (const [event, listener] of this.callListeners.get(call)!) call.off(event, listener);
-                    this.updateRoom(room);
+                    this.callListeners.delete(call);
                 };
 
                 call.on(CallEvent.ConnectionState, onConnectionState);

@@ -28,6 +28,7 @@ import * as EmojiButton from "../../../../../../src/components/views/rooms/Emoji
 import { createMocks } from "./utils";
 import { ScopedRoomContextProvider } from "../../../../../../src/contexts/ScopedRoomContext.tsx";
 import { RoomUploadContextProvider } from "../../../../../../src/viewmodels/room/RoomUploadViewModel.tsx";
+import { encodeGradientPayload } from "../../../../../../src/@types/message_style.ts";
 
 beforeAll(initOnce, 10000);
 
@@ -156,6 +157,34 @@ describe("EditWysiwygComposer", () => {
                 expect(screen.getByRole("textbox")).not.toContainHTML("<mx-reply>Reply</mx-reply>");
                 expect(screen.getByRole("textbox")).toContainHTML("My content");
             });
+        });
+
+        it("Should initialize with gradient formatted content", async () => {
+            const gradient = encodeGradientPayload({
+                kind: "gradient",
+                direction: "left-to-right",
+                stops: [
+                    { color: "#ff0000", position: 0 },
+                    { color: "#0000ff", position: 1 },
+                ],
+            });
+            const mockEvent = mkEvent({
+                type: "m.room.message",
+                room: "myfakeroom",
+                user: "myfakeuser",
+                content: {
+                    msgtype: "m.text",
+                    body: "Gradient message",
+                    format: "org.matrix.custom.html",
+                    formatted_body: `<span style="-webkit-text-fill-color: transparent; background-image: linear-gradient(to right, #ff0000, #0000ff);" data-mx-gradient="${gradient}" data-mx-color="#ff0000">Gradient message</span>`,
+                },
+                event: true,
+            });
+
+            customRender(false, new EditorStateTransfer(mockEvent));
+            await waitFor(() => expect(screen.getByRole("textbox")).toHaveAttribute("contentEditable", "true"));
+
+            await waitFor(() => expect(screen.getByRole("textbox")).toHaveTextContent("Gradient message"));
         });
     });
 

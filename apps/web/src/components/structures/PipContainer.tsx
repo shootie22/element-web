@@ -19,6 +19,8 @@ import dis from "../../dispatcher/dispatcher";
 import { Action } from "../../dispatcher/actions";
 import { WidgetLayoutStore } from "../../stores/widgets/WidgetLayoutStore";
 import ActiveWidgetStore, { ActiveWidgetStoreEvent } from "../../stores/ActiveWidgetStore";
+import WidgetStore from "../../stores/WidgetStore";
+import { WidgetType } from "../../widgets/WidgetType";
 import { type ViewRoomPayload } from "../../dispatcher/payloads/ViewRoomPayload";
 import { UPDATE_EVENT } from "../../stores/AsyncStore";
 import { SdkContextClass } from "../../contexts/SDKContext";
@@ -251,17 +253,22 @@ class PipContainerInner extends React.Component<IProps, IState> {
             ));
         }
 
-        if (this.state.showWidgetInPip && this.state.persistentWidgetId) {
-            pipContent.push(({ onStartMoving }) => (
-                <WidgetPipWrappedView
-                    key="widget-pip"
-                    widgetId={this.state.persistentWidgetId!}
-                    room={MatrixClientPeg.safeGet().getRoom(this.state.persistentRoomId ?? undefined)!}
-                    viewingRoom={this.state.viewedRoomId === this.state.persistentRoomId}
-                    onStartMoving={onStartMoving}
-                    movePersistedElement={this.props.movePersistedElement}
-                />
-            ));
+        if (this.state.showWidgetInPip && this.state.persistentWidgetId && this.state.persistentRoomId) {
+            const apps = WidgetStore.instance.getApps(this.state.persistentRoomId);
+            const widget = apps.find((app) => app.id === this.state.persistentWidgetId);
+            const isCallWidget = widget ? WidgetType.CALL.matches(widget.type) : false;
+            if (!isCallWidget) {
+                pipContent.push(({ onStartMoving }) => (
+                    <WidgetPipWrappedView
+                        key="widget-pip"
+                        widgetId={this.state.persistentWidgetId!}
+                        room={MatrixClientPeg.safeGet().getRoom(this.state.persistentRoomId ?? undefined)!}
+                        viewingRoom={this.state.viewedRoomId === this.state.persistentRoomId}
+                        onStartMoving={onStartMoving}
+                        movePersistedElement={this.props.movePersistedElement}
+                    />
+                ));
+            }
         }
 
         if (pipContent.length) {

@@ -38,3 +38,10 @@ if [ "$js_sdk_dep" = "github:matrix-org/matrix-js-sdk#develop" ]; then
 else
     echo "Skipping matrix-js-sdk fetch and link as package.json pins $js_sdk_dep"
 fi
+
+# Build a custom Element Call (embedded) if the source is available.
+# Set ELEMENT_CALL_SRC to the path of an element-call checkout, or it will
+# default to looking for element-call as a sibling of element-web.
+if [ -n "$ELEMENT_CALL_SRC" ] || [ -d "$(dirname "$0")/../element-call" ]; then
+    "$(dirname "$0")/build-element-call.sh" "$ELEMENT_CALL_SRC"
+fi
