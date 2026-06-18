@@ -51,7 +51,7 @@ interface IProps {
     // z-index for the element. Defaults to 9.
     zIndex?: number;
 
-    style?: React.StyleHTMLAttributes<HTMLDivElement>;
+    style?: React.CSSProperties;
 
     // Handle to manually notify this PersistedElement that it needs to move
     moveRef?: RefObject<(() => void) | null>;

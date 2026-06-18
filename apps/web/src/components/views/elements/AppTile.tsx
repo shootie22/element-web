@@ -114,6 +114,9 @@ interface IProps {
     showLayoutButtons?: boolean;
     // Handle to manually notify the PersistedElement that it needs to move
     movePersistedElement?: RefObject<(() => void) | null>;
+    // Inline style applied to the PersistedElement wrapper (e.g. to fade the
+    // persisted widget in). Only used for persistent (miniMode) widgets.
+    persistedElementStyle?: CSSProperties;
     // An element to render after the iframe as an overlay
     overlay?: ReactNode;
     // If defined this async method will be called when the widget requests to become sticky.
@@ -796,6 +799,7 @@ export default class AppTile extends React.Component<IProps, IState> {
                                 zIndex={this.props.miniMode ? zIndexAboveOtherPersistentElements : 9}
                                 persistKey={this.persistKey}
                                 moveRef={this.props.movePersistedElement}
+                                style={this.props.persistedElementStyle}
                             >
                                 {appTileBody}
                             </PersistedElement>

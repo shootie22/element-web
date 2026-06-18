@@ -95,6 +95,12 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
         };
     }, [call, docked, includeSelf]);
 
+    // Re-assert feed-only mode right as we're about to reveal the iframe, in case
+    // the initial toggle was missed before the widget's action listener attached.
+    useEffect(() => {
+        if (showIframe) void call.setFeedOnly(true, includeSelf);
+    }, [showIframe, call, includeSelf]);
+
     // The single persisted iframe is repositioned over whichever placeholder is
     // mounted; call this whenever our media region appears or resizes.
     const movePersistedElement = useRef<() => void>(null);
@@ -109,12 +115,30 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
         return () => observer.disconnect();
     }, [showIframe]);
 
+    // Fade the iframe in once it's mounted: it starts hidden so the brief moment
+    // before element-call switches to the chrome-less feed-only view is masked,
+    // then smoothly appears.
+    const [iframeVisible, setIframeVisible] = useState(false);
+    useEffect(() => {
+        if (!showIframe) {
+            setIframeVisible(false);
+            return;
+        }
+        setIframeVisible(false);
+        const timer = window.setTimeout(() => setIframeVisible(true), 150);
+        return () => window.clearTimeout(timer);
+    }, [showIframe]);
+
     const room = client.getRoom(roomId);
 
     // Give each feed a 16:9 slot, stacked (capped so the panel can't grow without
     // bound); the widget fills the region with the stacked feeds.
     const slots = Math.min(Math.max(feedCount, 1), 3);
     const videoStyle: React.CSSProperties = { aspectRatio: `16 / ${9 * slots}` };
+    const persistedStyle: React.CSSProperties = {
+        opacity: iframeVisible ? 1 : 0,
+        transition: "opacity 250ms ease-out",
+    };
 
     return (
         <div className="mx_RoomListCallPanel">
@@ -125,6 +149,7 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
                             persistentWidgetId={widgetId}
                             persistentRoomId={roomId}
                             movePersistedElement={movePersistedElement}
+                            style={persistedStyle}
                         />
                     </div>
                 )}

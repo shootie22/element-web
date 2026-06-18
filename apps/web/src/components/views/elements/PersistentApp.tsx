@@ -20,6 +20,8 @@ interface IProps {
     persistentRoomId: string;
     pointerEvents?: CSSProperties["pointerEvents"];
     movePersistedElement: RefObject<(() => void) | null>;
+    // Inline style applied to the persisted widget wrapper (e.g. to fade it in).
+    style?: CSSProperties;
     children?: ReactNode;
 }
 
@@ -51,6 +53,7 @@ export default class PersistentApp extends React.Component<IProps> {
                 showMenubar={false}
                 pointerEvents={this.props.pointerEvents}
                 movePersistedElement={this.props.movePersistedElement}
+                persistedElementStyle={this.props.style}
                 overlay={this.props.children}
             />
         );
