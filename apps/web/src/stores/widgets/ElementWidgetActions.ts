@@ -52,6 +52,10 @@ export enum ElementWidgetActions {
     //   anyVideo: boolean
     // }
     CallMediaState = "io.element.call_media_state",
+    // Sent from the host to the widget to toggle chrome-less "feed-only"
+    // rendering (just the active camera/screenshare video feeds) for embedding
+    // in the global call panel. Data: { enabled: boolean, includeSelf: boolean }
+    FeedOnly = "io.element.feed_only",
 }
 
 export interface IHangupCallApiRequest extends IWidgetApiRequest {

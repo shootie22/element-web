@@ -2843,6 +2843,7 @@
             "use_legacy_typing_indicator": "Use the old non-animated typing indicator",
             "enable_colored_messages": "Colored text",
             "start_with_camera_muted": "Start calls with camera muted",
+            "call_panel_show_own_feed": "Include your own video feed in the call panel",
             "calls_heading": "Calls",
             "room_list_heading": "Room list",
             "show_room_list_filters": "Show room list filters",

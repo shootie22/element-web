@@ -263,6 +263,7 @@ export interface Settings {
     "Tweaks.useLegacyTypingIndicator": IBaseSetting<boolean>;
     "Tweaks.enableColoredMessages": IBaseSetting<boolean>;
     "Tweaks.startWithCameraMuted": IBaseSetting<boolean>;
+    "Tweaks.callPanelShowOwnFeed": IBaseSetting<boolean>;
     "Tweaks.showRoomListFilters": IBaseSetting<boolean>;
     "Notifications.alwaysShowBadgeCounts": IBaseSetting<boolean>;
     "Notifications.showbold": IBaseSetting<boolean>;
@@ -823,6 +824,11 @@ export const SETTINGS: Settings = {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,
         displayName: _td("settings|tweaks|start_with_camera_muted"),
         default: false,
+    },
+    "Tweaks.callPanelShowOwnFeed": {
+        supportedLevels: LEVELS_ACCOUNT_SETTINGS,
+        displayName: _td("settings|tweaks|call_panel_show_own_feed"),
+        default: true,
     },
     "Tweaks.showRoomListFilters": {
         supportedLevels: LEVELS_ACCOUNT_SETTINGS,

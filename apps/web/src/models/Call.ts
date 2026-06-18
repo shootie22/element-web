@@ -362,6 +362,15 @@ export abstract class Call extends TypedEventEmitter<CallEvent, CallEventHandler
         await this.widgetApi.transport.send(ElementWidgetActions.Deafen, { deafened });
     }
 
+    /**
+     * Toggles chrome-less "feed-only" rendering in the call widget, used while
+     * the widget is embedded in the global call panel.
+     */
+    public async setFeedOnly(enabled: boolean, includeSelf: boolean): Promise<void> {
+        if (!this.widgetApi) return;
+        await this.widgetApi.transport.send(ElementWidgetActions.FeedOnly, { enabled, includeSelf });
+    }
+
     protected setConnected(): void {
         this.room.on(RoomEvent.MyMembership, this.onMyMembership);
         window.addEventListener("beforeunload", this.beforeUnload);

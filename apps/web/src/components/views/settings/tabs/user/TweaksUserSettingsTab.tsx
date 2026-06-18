@@ -52,6 +52,7 @@ export default function TweaksUserSettingsTab(): React.ReactNode {
 
                 <SettingsSubsection heading={_t("settings|tweaks|calls_heading")} formWrap>
                     <SettingsFlag name="Tweaks.startWithCameraMuted" level={SettingLevel.ACCOUNT} />
+                    <SettingsFlag name="Tweaks.callPanelShowOwnFeed" level={SettingLevel.ACCOUNT} />
                 </SettingsSubsection>
 
                 <SettingsSubsection heading={_t("settings|tweaks|room_list_heading")} formWrap>

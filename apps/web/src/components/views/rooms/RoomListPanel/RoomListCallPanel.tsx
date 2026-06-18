@@ -12,6 +12,7 @@ import ActiveWidgetStore, { ActiveWidgetStoreEvent } from "../../../../stores/Ac
 import PersistentApp from "../../elements/PersistentApp";
 import { useMatrixClientContext } from "../../../../contexts/MatrixClientContext";
 import { useActiveLocalCall } from "../../../../hooks/useActiveLocalCall";
+import { useSettingValue } from "../../../../hooks/useSettings";
 import { RoomListCallControls } from "./RoomListCallControls";
 import { CallAvatarRow } from "./CallAvatarRow";
 
@@ -70,7 +71,24 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
         };
     }, [isDockedNow]);
 
-    const showIframe = mediaState.anyVideo && !docked;
+    const includeSelf = useSettingValue("Tweaks.callPanelShowOwnFeed");
+
+    // Count the video feeds the panel would actually show (a participant can have
+    // both a camera and a screenshare). Honour the "include own feed" setting.
+    const feedCount = mediaState.participants.reduce((n, p) => {
+        if (!includeSelf && p.local) return n;
+        return n + (p.sharingCamera ? 1 : 0) + (p.sharingScreen ? 1 : 0);
+    }, 0);
+
+    const showIframe = feedCount > 0 && !docked;
+
+    // Tell the widget to render chrome-less feed-only output while we host it.
+    useEffect(() => {
+        void call.setFeedOnly(showIframe, includeSelf);
+        return () => {
+            void call.setFeedOnly(false, includeSelf);
+        };
+    }, [call, showIframe, includeSelf]);
 
     // The single persisted iframe is repositioned over whichever placeholder is
     // mounted; call this whenever our media region appears or resizes.
@@ -88,11 +106,16 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
 
     const room = client.getRoom(roomId);
 
+    // Give each feed a 16:9 slot, stacked (capped so the panel can't grow without
+    // bound); the widget fills the region with the stacked feeds.
+    const slots = Math.min(Math.max(feedCount, 1), 3);
+    const videoStyle: React.CSSProperties = { aspectRatio: `16 / ${9 * slots}` };
+
     return (
         <div className="mx_RoomListCallPanel">
             <div className="mx_RoomListCallPanel_media">
                 {showIframe ? (
-                    <div className="mx_RoomListCallPanel_video" ref={videoRef}>
+                    <div className="mx_RoomListCallPanel_video" ref={videoRef} style={videoStyle}>
                         <PersistentApp
                             persistentWidgetId={widgetId}
                             persistentRoomId={roomId}

@@ -27,7 +27,8 @@
     .mx_RoomListCallPanel_video {
         position: relative;
         width: 100%;
-        aspect-ratio: 16 / 9;
+        /* aspect-ratio is set inline based on the number of stacked feeds */
+        max-height: 45vh;
         background: var(--cpd-color-bg-subtle-secondary);
         overflow: hidden;
     }
