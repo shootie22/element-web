@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import { type RefObject, useEffect } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 
 import type { GradientDirection, GradientStop } from "../../../../../@types/message_style.ts";
 import SettingsStore from "../../../../../settings/SettingsStore";
@@ -253,14 +253,27 @@ export function storeRange(action: ColorDecoration & { editor?: HTMLElement | nu
     storeColorDecoration(editor, decoration);
 }
 
-export function useColorPersistence(editorRef: RefObject<HTMLDivElement | null>, _messageContent: string | null): void {
+export function useColorPersistence(
+    editorRef: RefObject<HTMLDivElement | null>,
+    _messageContent: string | null,
+    initialColorDecorations: ColorDecoration[] = [],
+): void {
+    const seededInitialDecorations = useRef(false);
+
     useEffect(() => {
         const editor = editorRef.current ?? document.querySelector<HTMLElement>(EDITOR_SELECTOR);
         if (!editor) return;
+
+        if (!seededInitialDecorations.current) {
+            for (const decoration of initialColorDecorations) {
+                storeColorDecoration(editor, decoration);
+            }
+            seededInitialDecorations.current = true;
+        }
 
         if (_messageContent) {
             rebaseColorDecorations(editor, htmlToText(_messageContent));
         }
         applyStyleToEditor(defaultStyle, editor);
-    }, [editorRef, _messageContent]);
+    }, [editorRef, _messageContent, initialColorDecorations]);
 }

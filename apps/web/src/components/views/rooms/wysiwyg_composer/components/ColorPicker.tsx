@@ -13,9 +13,19 @@ import BaseDialog from "../../../dialogs/BaseDialog";
 import DialogButtons from "../../../elements/DialogButtons";
 import { validateColor, validateGradientStops, type GradientDirection } from "../../../../../@types/message_style.ts";
 
-interface PickerResultSolid { kind: "solid"; color: string }
-interface PickerResultGradient { kind: "gradient"; direction: GradientDirection; stops: { color: string; position: number }[] }
-type PickerResult = PickerResultSolid | PickerResultGradient;
+interface PickerResultSolid {
+    kind: "solid";
+    color: string;
+}
+interface PickerResultGradient {
+    kind: "gradient";
+    direction: GradientDirection;
+    stops: { color: string; position: number }[];
+}
+interface PickerResultReset {
+    kind: "reset";
+}
+type PickerResult = PickerResultSolid | PickerResultGradient | PickerResultReset;
 
 interface ColorPickerProps {
     mode: "solid" | "gradient";
@@ -24,11 +34,31 @@ interface ColorPickerProps {
 }
 
 const PRESET_COLORS = [
-    "#ff0000", "#ff4400", "#ff8800", "#ffcc00", "#ffff00",
-    "#88ff00", "#00ff00", "#00ff88", "#00ffcc", "#00ffff",
-    "#0088ff", "#0000ff", "#4400ff", "#8800ff", "#cc00ff",
-    "#ff00ff", "#ff0088", "#ff0044", "#000000", "#555555",
-    "#888888", "#aaaaaa", "#cccccc", "#eeeeee", "#ffffff",
+    "#ff0000",
+    "#ff4400",
+    "#ff8800",
+    "#ffcc00",
+    "#ffff00",
+    "#88ff00",
+    "#00ff00",
+    "#00ff88",
+    "#00ffcc",
+    "#00ffff",
+    "#0088ff",
+    "#0000ff",
+    "#4400ff",
+    "#8800ff",
+    "#cc00ff",
+    "#ff00ff",
+    "#ff0088",
+    "#ff0044",
+    "#000000",
+    "#555555",
+    "#888888",
+    "#aaaaaa",
+    "#cccccc",
+    "#eeeeee",
+    "#ffffff",
 ];
 
 const DIRECTIONS: { value: GradientDirection; label: string }[] = [
@@ -47,13 +77,7 @@ export function openColorPicker(
     mode: "solid" | "gradient",
     initialStyle?: PickerResult,
 ): Promise<PickerResult | undefined> {
-    const { finished } = Modal.createDialog(
-        ColorPicker,
-        { mode, initialStyle },
-        "mx_CompoundDialog",
-        false,
-        true,
-    );
+    const { finished } = Modal.createDialog(ColorPicker, { mode, initialStyle }, "mx_CompoundDialog", false, true);
     return finished.then(([result]) => result);
 }
 
@@ -146,7 +170,9 @@ const GradientTab: React.FC<{
                             value={stop.color}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => updateStopColor(index, e.target.value)}
                         />
-                        <label className="mx_ColorPicker_stop_position_label">{_t("composer|color_picker|position")}</label>
+                        <label className="mx_ColorPicker_stop_position_label">
+                            {_t("composer|color_picker|position")}
+                        </label>
                         <input
                             type="range"
                             min="0"
@@ -180,12 +206,8 @@ const GradientTab: React.FC<{
 };
 
 const ColorPicker: React.FC<ColorPickerProps> = ({ mode, initialStyle, onFinished }) => {
-    const [tab, setTab] = useState<"solid" | "gradient">(
-        initialStyle?.kind === "gradient" ? "gradient" : mode,
-    );
-    const [solidColor, setSolidColor] = useState(
-        initialStyle?.kind === "solid" ? initialStyle.color : "#ff0000",
-    );
+    const [tab, setTab] = useState<"solid" | "gradient">(initialStyle?.kind === "gradient" ? "gradient" : mode);
+    const [solidColor, setSolidColor] = useState(initialStyle?.kind === "solid" ? initialStyle.color : "#ff0000");
     const [gradientDirection, setGradientDirection] = useState<GradientDirection>(
         initialStyle?.kind === "gradient" ? initialStyle.direction : "left-to-right",
     );
@@ -243,7 +265,11 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ mode, initialStyle, onFinishe
                 primaryIsSubmit={true}
                 onCancel={() => onFinished(undefined)}
                 onPrimaryButtonClick={handleApply}
-            />
+            >
+                <button type="button" onClick={() => onFinished({ kind: "reset" })}>
+                    {_t("composer|color_picker|reset_color")}
+                </button>
+            </DialogButtons>
         </BaseDialog>
     );
 };

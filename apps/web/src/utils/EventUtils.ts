@@ -14,6 +14,8 @@ import {
     MsgType,
     RelationType,
     type MatrixClient,
+    type Room,
+    RoomEvent,
     THREAD_RELATION_TYPE,
     M_POLL_END,
     M_POLL_START,
@@ -102,6 +104,167 @@ export function canEditOwnEvent(matrixClient: MatrixClient, mxEvent: MatrixEvent
 }
 
 const MAX_JUMP_DISTANCE = 100;
+const DEFER_EDIT_TIMEOUT_MS = 15000;
+const SEND_IN_PROGRESS_TIMEOUT_MS = 5000;
+
+const sendsInProgress = new WeakMap<Room, Map<TimelineRenderingType, number>>();
+
+export function markRoomMessageSendInProgress(room: Room, timelineRenderingType: TimelineRenderingType): void {
+    let roomSends = sendsInProgress.get(room);
+    if (!roomSends) {
+        roomSends = new Map();
+        sendsInProgress.set(room, roomSends);
+    }
+
+    const existingTimeoutId = roomSends.get(timelineRenderingType);
+    if (existingTimeoutId !== undefined) {
+        window.clearTimeout(existingTimeoutId);
+    }
+
+    const timeoutId = window.setTimeout(() => {
+        roomSends?.delete(timelineRenderingType);
+    }, SEND_IN_PROGRESS_TIMEOUT_MS);
+    roomSends.set(timelineRenderingType, timeoutId);
+}
+
+function consumeRoomMessageSendInProgress(room: Room, timelineRenderingType: TimelineRenderingType): boolean {
+    const roomSends = sendsInProgress.get(room);
+    const timeoutId = roomSends?.get(timelineRenderingType);
+    if (timeoutId === undefined) {
+        return false;
+    }
+
+    window.clearTimeout(timeoutId);
+    roomSends?.delete(timelineRenderingType);
+    return true;
+}
+
+function couldEditWhenRemoteEchoed(matrixClient: MatrixClient, event: MatrixEvent): boolean {
+    if (
+        event.getType() !== EventType.RoomMessage ||
+        event.status === null ||
+        event.isRedacted() ||
+        event.isRelation(RelationType.Replace) ||
+        event.getSender() !== matrixClient.getUserId()
+    ) {
+        return false;
+    }
+
+    const content = event.getOriginalContent();
+    return (
+        (content.msgtype === MsgType.Text || content.msgtype === MsgType.Emote) &&
+        !!content.body &&
+        typeof content.body === "string"
+    );
+}
+
+function getNewestVisibleEvent(events: MatrixEvent[]): MatrixEvent | undefined {
+    for (let i = events.length - 1; i >= 0; i--) {
+        const event = events[i];
+        if (!shouldHideEvent(event)) {
+            return event;
+        }
+    }
+}
+
+export function deferEditUntilEditable({
+    event,
+    matrixClient,
+    room,
+    timelineRenderingType,
+}: {
+    event: MatrixEvent;
+    matrixClient: MatrixClient;
+    room?: Room;
+    timelineRenderingType: TimelineRenderingType;
+}): boolean {
+    if (!room || !couldEditWhenRemoteEchoed(matrixClient, event)) {
+        return false;
+    }
+
+    const originalEventId = event.getId();
+    let cleanup: () => void = () => {};
+
+    const dispatchIfEditable = (candidate: MatrixEvent): boolean => {
+        const currentEvent = candidate.getId() ? (room.findEventById(candidate.getId()!) ?? candidate) : candidate;
+        if (!canEditOwnEvent(matrixClient, currentEvent)) {
+            return false;
+        }
+
+        cleanup();
+        defaultDispatcher.dispatch({
+            action: Action.EditEvent,
+            event: currentEvent,
+            timelineRenderingType,
+        });
+        return true;
+    };
+
+    const onLocalEchoUpdated = (updatedEvent: MatrixEvent, _room: Room, oldEventId?: string): void => {
+        if (updatedEvent === event || updatedEvent.getId() === event.getId() || oldEventId === originalEventId) {
+            dispatchIfEditable(updatedEvent);
+        }
+    };
+
+    cleanup = (): void => {
+        room.off(RoomEvent.LocalEchoUpdated, onLocalEchoUpdated);
+        window.clearTimeout(timeoutId);
+    };
+
+    room.on(RoomEvent.LocalEchoUpdated, onLocalEchoUpdated);
+    const timeoutId = window.setTimeout(cleanup, DEFER_EDIT_TIMEOUT_MS);
+    return true;
+}
+
+export function deferEditForNewestPendingEvent({
+    events,
+    matrixClient,
+    room,
+    timelineRenderingType,
+}: {
+    events: MatrixEvent[];
+    matrixClient: MatrixClient;
+    room?: Room;
+    timelineRenderingType: TimelineRenderingType;
+}): boolean {
+    const newestEvent = getNewestVisibleEvent(events);
+    return newestEvent
+        ? deferEditUntilEditable({ event: newestEvent, matrixClient, room, timelineRenderingType })
+        : false;
+}
+
+export function deferEditForNextPendingEvent({
+    matrixClient,
+    room,
+    timelineRenderingType,
+}: {
+    matrixClient: MatrixClient;
+    room?: Room;
+    timelineRenderingType: TimelineRenderingType;
+}): boolean {
+    if (!room || !consumeRoomMessageSendInProgress(room, timelineRenderingType)) {
+        return false;
+    }
+
+    let cleanup: () => void = () => {};
+
+    const onLocalEchoUpdated = (event: MatrixEvent): void => {
+        if (!deferEditUntilEditable({ event, matrixClient, room, timelineRenderingType })) {
+            return;
+        }
+        cleanup();
+    };
+
+    cleanup = (): void => {
+        room.off(RoomEvent.LocalEchoUpdated, onLocalEchoUpdated);
+        window.clearTimeout(timeoutId);
+    };
+
+    room.on(RoomEvent.LocalEchoUpdated, onLocalEchoUpdated);
+    const timeoutId = window.setTimeout(cleanup, SEND_IN_PROGRESS_TIMEOUT_MS);
+    return true;
+}
+
 export function findEditableEvent({
     matrixClient,
     events,

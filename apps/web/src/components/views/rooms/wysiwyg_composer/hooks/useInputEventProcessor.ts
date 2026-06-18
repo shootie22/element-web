@@ -13,7 +13,11 @@ import { type MatrixClient } from "matrix-js-sdk/src/matrix";
 import { useSettingValue } from "../../../../../hooks/useSettings";
 import { getKeyBindingsManager } from "../../../../../KeyBindingsManager";
 import { KeyBindingAction } from "../../../../../accessibility/KeyboardShortcuts";
-import { findEditableEvent } from "../../../../../utils/EventUtils";
+import {
+    deferEditForNewestPendingEvent,
+    deferEditForNextPendingEvent,
+    findEditableEvent,
+} from "../../../../../utils/EventUtils";
 import dis from "../../../../../dispatcher/dispatcher";
 import { Action } from "../../../../../dispatcher/actions";
 import { type IRoomState } from "../../../../structures/RoomView";
@@ -189,6 +193,26 @@ function dispatchEditEvent(
         : getEventsFromRoom(composerContext, roomContext);
     if (!foundEvents) {
         return false;
+    }
+
+    if (
+        !editorStateTransfer &&
+        !isForward &&
+        (deferEditForNewestPendingEvent({
+            events: foundEvents,
+            matrixClient: mxClient,
+            room: roomContext.room,
+            timelineRenderingType: roomContext.timelineRenderingType,
+        }) ||
+            deferEditForNextPendingEvent({
+                matrixClient: mxClient,
+                room: roomContext.room,
+                timelineRenderingType: roomContext.timelineRenderingType,
+            }))
+    ) {
+        event.stopPropagation();
+        event.preventDefault();
+        return true;
     }
 
     const newEvent = findEditableEvent({

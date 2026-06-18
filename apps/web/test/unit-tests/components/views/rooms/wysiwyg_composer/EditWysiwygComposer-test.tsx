@@ -186,6 +186,26 @@ describe("EditWysiwygComposer", () => {
 
             await waitFor(() => expect(screen.getByRole("textbox")).toHaveTextContent("Gradient message"));
         });
+
+        it("Should initialize with solid colored formatted content", async () => {
+            const mockEvent = mkEvent({
+                type: "m.room.message",
+                room: "myfakeroom",
+                user: "myfakeuser",
+                content: {
+                    msgtype: "m.text",
+                    body: "Solid message",
+                    format: "org.matrix.custom.html",
+                    formatted_body: `<span data-mx-color="#ff0000">Solid message</span>`,
+                },
+                event: true,
+            });
+
+            customRender(false, new EditorStateTransfer(mockEvent));
+            await waitFor(() => expect(screen.getByRole("textbox")).toHaveAttribute("contentEditable", "true"));
+
+            await waitFor(() => expect(screen.getByRole("textbox")).toHaveTextContent("Solid message"));
+        });
     });
 
     describe("Edit and save actions", () => {

@@ -28,6 +28,7 @@ import { useSettingValue } from "../../../../../hooks/useSettings";
 import { useScopedRoomContext } from "../../../../../contexts/ScopedRoomContext.tsx";
 import { useContainsCommand } from "../hooks/useContainsCommand.ts";
 import { type ComposerFunctions } from "../types";
+import { type ColorDecoration } from "../utils/colorDecorations";
 import { customEmojiText, decorateCustomEmojiShortcodes } from "../utils/customEmoji";
 import { getImagePackEntries } from "../../../../../image-packs";
 
@@ -37,6 +38,7 @@ interface WysiwygComposerProps {
     onSend: () => void;
     placeholder?: string;
     initialContent?: string;
+    initialColorDecorations?: ColorDecoration[];
     className?: string;
     leftComponent?: ReactNode;
     rightComponent?: ReactNode;
@@ -55,6 +57,7 @@ export const WysiwygComposer = memo(function WysiwygComposer({
     onSend,
     placeholder,
     initialContent,
+    initialColorDecorations,
     className,
     leftComponent,
     rightComponent,
@@ -87,7 +90,7 @@ export const WysiwygComposer = memo(function WysiwygComposer({
 
     const { isFocused, onFocus } = useIsFocused();
 
-    useColorPersistence(ref, messageContent);
+    useColorPersistence(ref, messageContent, initialColorDecorations);
 
     const isReady = isWysiwygReady && !disabled;
     const computedPlaceholder = (!content && placeholder) || undefined;

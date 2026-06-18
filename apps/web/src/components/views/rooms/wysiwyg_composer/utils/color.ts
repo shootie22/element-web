@@ -20,7 +20,11 @@ export function buildGradientTag(direction: GradientDirection, stops: GradientSt
 
 function wrapRange(range: Range, color: string): HTMLSpanElement;
 function wrapRange(range: Range, direction: GradientDirection, stops: GradientStop[]): HTMLSpanElement;
-function wrapRange(range: Range, colorOrDir: string | GradientDirection, stops?: GradientStop[]): HTMLSpanElement | undefined {
+function wrapRange(
+    range: Range,
+    colorOrDir: string | GradientDirection,
+    stops?: GradientStop[],
+): HTMLSpanElement | undefined {
     const span = document.createElement("span");
     if (stops) {
         const direction = colorOrDir as GradientDirection;
@@ -52,10 +56,7 @@ export function applySolidColorToSelection(color: string): void {
     wrapRange(range, color);
 }
 
-export function applyGradientToSelection(
-    direction: GradientDirection,
-    stops: GradientStop[],
-): void {
+export function applyGradientToSelection(direction: GradientDirection, stops: GradientStop[]): void {
     const sel = document.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
     const range = sel.getRangeAt(0);
@@ -69,7 +70,10 @@ export function removeColorFromSelection(): void {
     // Walk up from startContainer to find any color span ancestor, then unwrap
     let node: Node | null = range.startContainer;
     while (node && node instanceof Node) {
-        if (node instanceof HTMLElement && (node.hasAttribute("data-mx-color") || node.hasAttribute("data-mx-gradient"))) {
+        if (
+            node instanceof HTMLElement &&
+            (node.hasAttribute("data-mx-color") || node.hasAttribute("data-mx-gradient"))
+        ) {
             const parent = node.parentNode;
             if (parent) {
                 while (node.firstChild) parent.insertBefore(node.firstChild, node);
@@ -83,4 +87,15 @@ export function removeColorFromSelection(): void {
     const text = range.toString();
     range.deleteContents();
     range.insertNode(document.createTextNode(text));
+}
+
+export function removeColorFromEditor(editor?: HTMLElement | null): void {
+    if (!editor) return;
+
+    for (const node of Array.from(editor.querySelectorAll<HTMLElement>("[data-mx-color], [data-mx-gradient]"))) {
+        const parent = node.parentNode;
+        if (!parent) continue;
+        while (node.firstChild) parent.insertBefore(node.firstChild, node);
+        parent.removeChild(node);
+    }
 }

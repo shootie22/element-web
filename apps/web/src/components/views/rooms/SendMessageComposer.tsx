@@ -40,7 +40,12 @@ import {
 } from "../../../editor/serialize";
 import BasicMessageComposer, { REGEX_EMOTICON } from "./BasicMessageComposer";
 import { CommandPartCreator, type Part, type PartCreator, type SerializedPart } from "../../../editor/parts";
-import { findEditableEvent } from "../../../utils/EventUtils";
+import {
+    deferEditForNewestPendingEvent,
+    deferEditForNextPendingEvent,
+    findEditableEvent,
+    markRoomMessageSendInProgress,
+} from "../../../utils/EventUtils";
 import SendHistoryManager from "../../../SendHistoryManager";
 import { CommandCategories } from "../../../slash-commands/SlashCommands";
 import { useMatrixClientContext, type MatrixClientProps } from "../../../contexts/MatrixClientContext";
@@ -234,6 +239,23 @@ export class SendMessageComposer extends React.Component<ISendMessageComposerPro
                     const events = this.context.liveTimeline
                         ?.getEvents()
                         .concat(replyingToThread ? [] : this.props.room.getPendingEvents());
+                    if (
+                        events &&
+                        (deferEditForNewestPendingEvent({
+                            events,
+                            matrixClient: MatrixClientPeg.safeGet(),
+                            room: this.props.room,
+                            timelineRenderingType: this.context.timelineRenderingType,
+                        }) ||
+                            deferEditForNextPendingEvent({
+                                matrixClient: MatrixClientPeg.safeGet(),
+                                room: this.props.room,
+                                timelineRenderingType: this.context.timelineRenderingType,
+                            }))
+                    ) {
+                        event.preventDefault();
+                        break;
+                    }
                     const editEvent = events
                         ? findEditableEvent({
                               events,
@@ -442,6 +464,7 @@ export class SendMessageComposer extends React.Component<ISendMessageComposerPro
             const threadId =
                 this.props.relation?.rel_type === THREAD_RELATION_TYPE.name ? this.props.relation.event_id : null;
 
+            markRoomMessageSendInProgress(this.props.room, this.context.timelineRenderingType);
             const prom = doMaybeLocalRoomAction(
                 roomId,
                 (actualRoomId: string) => this.props.mxClient.sendMessage(actualRoomId, threadId ?? null, content!),

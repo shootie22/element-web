@@ -38,9 +38,21 @@ import { useComposerContext } from "../ComposerContext";
 import { KeyboardShortcut } from "../../../settings/KeyboardShortcut";
 import { type KeyCombo } from "../../../../../KeyBindingsManager";
 import { openColorPicker } from "./ColorPicker";
-import { applySolidColorToSelection, applyGradientToSelection } from "../utils/color";
+import {
+    applySolidColorToSelection,
+    applyGradientToSelection,
+    removeColorFromSelection,
+    removeColorFromEditor,
+} from "../utils/color";
 import { setSelection } from "../utils/selection";
-import { storeRange, setDefaultStyle, getDefaultStyle, onDefaultStyleChange } from "../hooks/useColorPersistence";
+import {
+    storeRange,
+    setDefaultStyle,
+    getDefaultStyle,
+    onDefaultStyleChange,
+    clearDefaultStyle,
+    clearColorRanges,
+} from "../hooks/useColorPersistence";
 import SettingsStore from "../../../../../settings/SettingsStore";
 import { MatrixClientPeg } from "../../../../../MatrixClientPeg";
 import {
@@ -304,7 +316,12 @@ export function FormattingButtons({
                         editor?.focus();
                         await setSelection(savedSelection);
                         await new Promise((resolve) => setTimeout(resolve, 0));
-                        if (result.kind === "solid") {
+                        if (result.kind === "reset") {
+                            clearDefaultStyle();
+                            clearColorRanges(editor);
+                            removeColorFromSelection();
+                            removeColorFromEditor(editor);
+                        } else if (result.kind === "solid") {
                             setDefaultStyle({ color: result.color });
                             computeAndStoreRange(editor, result.color);
                             applySolidColorToSelection(result.color);
@@ -319,7 +336,7 @@ export function FormattingButtons({
                         await client.setAccountData(MESSAGE_STYLE_ACCOUNT_DATA_TYPE, {
                             ...currentData,
                             version: 1,
-                            defaultStyle: result as MessageStyle | null,
+                            defaultStyle: result.kind === "reset" ? null : (result as MessageStyle),
                         });
                     }}
                     icon={<ColorIcon currentStyle={currentStyle} className="mx_FormattingButtons_Icon" />}

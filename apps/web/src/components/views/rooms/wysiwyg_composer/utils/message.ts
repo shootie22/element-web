@@ -182,11 +182,12 @@ interface EditMessageParams {
     mxClient: MatrixClient;
     roomContext: Pick<IRoomState, "timelineRenderingType">;
     editorStateTransfer: EditorStateTransfer;
+    editorElement?: HTMLElement | null;
 }
 
 export async function editMessage(
     html: string,
-    { roomContext, mxClient, editorStateTransfer }: EditMessageParams,
+    { roomContext, mxClient, editorStateTransfer, editorElement }: EditMessageParams,
 ): Promise<ISendEventResponse | undefined> {
     const editedEvent = editorStateTransfer.getEvent();
 
@@ -205,7 +206,10 @@ export async function editMessage(
         const position = this.model.positionForOffset(caret.offset, caret.atNodeEnd);
         this.editorRef.current?.replaceEmoticon(position, REGEX_EMOTICON);
     }*/
-    const editContent = await createMessageContent(html, true, { editedEvent });
+    const editContent = await createMessageContent(html, true, {
+        editedEvent,
+        editorElement,
+    });
     const newContent = editContent["m.new_content"]!;
 
     const shouldSend = true;

@@ -577,6 +577,7 @@ describe("WysiwygComposer", () => {
                                     initialContent={
                                         roomContext.room && _editorStateTransfer
                                             ? parseEditorStateTransfer(_editorStateTransfer, roomContext.room, client)
+                                                  .content
                                             : undefined
                                     }
                                 />

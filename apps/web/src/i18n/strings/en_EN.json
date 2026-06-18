@@ -661,6 +661,7 @@
             "solid": "Solid",
             "gradient": "Gradient",
             "text_color": "Text color",
+            "reset_color": "Reset color",
             "default_style": "Default style"
         }
     },

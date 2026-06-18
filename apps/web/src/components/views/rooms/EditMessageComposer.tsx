@@ -131,6 +131,7 @@ class EditMessageComposer extends React.Component<IEditMessageComposerProps, ISt
 
     public componentDidMount(): void {
         window.addEventListener("beforeunload", this.saveStoredEditorState);
+        window.addEventListener("keydown", this.onWindowKeyDown, { capture: true });
         this.dispatcherRef = dis.register(this.onAction);
     }
 
@@ -200,6 +201,15 @@ class EditMessageComposer extends React.Component<IEditMessageComposerProps, ISt
                 break;
             }
         }
+    };
+
+    private onWindowKeyDown = (event: globalThis.KeyboardEvent): void => {
+        if (event.defaultPrevented) return;
+        if (getKeyBindingsManager().getMessageComposerAction(event) !== KeyBindingAction.CancelReplyOrEdit) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        this.cancelEdit();
     };
 
     private endEdit(): void {
@@ -394,6 +404,7 @@ class EditMessageComposer extends React.Component<IEditMessageComposerProps, ISt
         // it will set the cursor at the end.
         this.props.editState.setEditorState(caret ?? null, parts);
         window.removeEventListener("beforeunload", this.saveStoredEditorState);
+        window.removeEventListener("keydown", this.onWindowKeyDown, { capture: true });
         if (this.shouldSaveStoredEditorState) {
             this.saveStoredEditorState();
         }
