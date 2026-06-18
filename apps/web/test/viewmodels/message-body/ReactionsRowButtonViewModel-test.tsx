@@ -316,6 +316,19 @@ describe("ReactionsRowButtonViewModel", () => {
         expect(dis.dispatch).toHaveBeenCalledWith({ action: "message_sent" });
     });
 
+    it("cancels a stale failed pending reaction instead of sending another reaction", () => {
+        const pendingReactionEvent = createReactionEvent("@me:example.org");
+        pendingReactionEvent.status = EventStatus.NOT_SENT;
+        jest.spyOn(room, "getPendingEvents").mockReturnValue([pendingReactionEvent]);
+        const vm = new ReactionsRowButtonViewModel(createProps());
+
+        vm.onClick();
+
+        expect(client.cancelPendingEvent).toHaveBeenCalledWith(pendingReactionEvent);
+        expect(client.sendEvent).not.toHaveBeenCalled();
+        expect(dis.dispatch).not.toHaveBeenCalledWith({ action: "message_sent" });
+    });
+
     it("redacts a just-sent reaction instead of sending a duplicate when clicked again before send settles", async () => {
         jest.useFakeTimers();
         const vm = new ReactionsRowButtonViewModel(createProps());
@@ -341,6 +354,22 @@ describe("ReactionsRowButtonViewModel", () => {
         expect(client.sendEvent).toHaveBeenCalledTimes(1);
         jest.advanceTimersByTime(500);
         jest.useRealTimers();
+    });
+
+    it("cancels the failed reaction local echo when a send is rejected", async () => {
+        const failedReactionEvent = createReactionEvent("@me:example.org");
+        failedReactionEvent.status = EventStatus.NOT_SENT;
+        const error = new Error("Duplicate annotation") as Error & { event: MatrixEvent };
+        error.event = failedReactionEvent;
+        jest.spyOn(client, "sendEvent").mockRejectedValue(error);
+        const vm = new ReactionsRowButtonViewModel(createProps());
+
+        vm.onClick();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(client.cancelPendingEvent).toHaveBeenCalledWith(failedReactionEvent);
+        expect(client.sendEvent).toHaveBeenCalledTimes(1);
     });
 
     it("does nothing on click when disabled", () => {

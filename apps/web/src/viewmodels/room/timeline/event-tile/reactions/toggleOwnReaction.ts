@@ -5,7 +5,14 @@
  * Please see LICENSE files in the repository root for full details.
  */
 
-import { EventType, type MatrixClient, type MatrixEvent, RelationType } from "matrix-js-sdk/src/matrix";
+import {
+    EventStatus,
+    EventType,
+    type MatrixClient,
+    type MatrixEvent,
+    RelationType,
+    type Room,
+} from "matrix-js-sdk/src/matrix";
 import { type ReactionEventContent } from "matrix-js-sdk/src/types";
 import { logger } from "matrix-js-sdk/src/logger";
 
@@ -15,6 +22,7 @@ import { removeOwnReaction } from "./removeOwnReaction";
 
 type CustomReactionEventContent = ReactionEventContent & Record<"shortcode" | "com.beeper.reaction.shortcode", string>;
 type SentReactionResponse = { event_id: string } | MatrixEvent;
+type ReactionSendError = Error & { event?: MatrixEvent };
 
 interface ToggleOwnReactionOptions {
     client: MatrixClient;
@@ -90,6 +98,64 @@ function buildReactionContent(eventId: string, reaction: string, shortcode?: str
     return content;
 }
 
+function isOwnReactionForEvent(
+    client: MatrixClient,
+    event: MatrixEvent,
+    targetEventId: string,
+    reaction: string,
+): boolean {
+    const relation = event.getRelation();
+    return (
+        event.getType() === EventType.Reaction &&
+        event.getSender() === client.getSafeUserId() &&
+        relation?.rel_type === RelationType.Annotation &&
+        relation.event_id === targetEventId &&
+        relation.key === reaction
+    );
+}
+
+function findOwnPendingReaction(
+    client: MatrixClient,
+    room: Room | null,
+    targetEventId: string,
+    reaction: string,
+): MatrixEvent | undefined {
+    return room
+        ?.getPendingEvents()
+        .find((event) => !event.isRedacted() && isOwnReactionForEvent(client, event, targetEventId, reaction));
+}
+
+function cancelPendingReaction(client: MatrixClient, event: MatrixEvent): boolean {
+    if (
+        event.status === EventStatus.QUEUED ||
+        event.status === EventStatus.NOT_SENT ||
+        event.status === EventStatus.ENCRYPTING
+    ) {
+        client.cancelPendingEvent(event);
+        return true;
+    }
+
+    return false;
+}
+
+function cancelFailedReactionLocalEcho(
+    client: MatrixClient,
+    room: Room | null,
+    targetEventId: string,
+    reaction: string,
+    error: ReactionSendError,
+): void {
+    if (error.event && isOwnReactionForEvent(client, error.event, targetEventId, reaction)) {
+        cancelPendingReaction(client, error.event);
+        return;
+    }
+
+    const pendingReaction = findOwnPendingReaction(client, room, targetEventId, reaction);
+    if (pendingReaction?.status === EventStatus.NOT_SENT) {
+        cancelPendingReaction(client, pendingReaction);
+    }
+}
+
 function redactSentReaction(client: MatrixClient, roomId: string, eventId: string): Promise<void> {
     return Promise.resolve(client.redactEvent(roomId, eventId)).then(
         () => {},
@@ -146,6 +212,7 @@ export function toggleOwnReaction({
     const eventId = mxEvent.getId();
     if (!roomId || !eventId || mxEvent.isRedacted()) return false;
 
+    const room = client.getRoom(roomId);
     const key = pendingToggleKey(client, roomId, eventId, reaction);
     const existingPendingToggle = pendingReactionToggles.get(key);
     if (existingPendingToggle) {
@@ -171,6 +238,17 @@ export function toggleOwnReaction({
         return false;
     }
 
+    const pendingReaction = findOwnPendingReaction(client, room, eventId, reaction);
+    if (pendingReaction) {
+        const removed =
+            cancelPendingReaction(client, pendingReaction) ||
+            removeOwnReaction(client, roomId, pendingReaction, () => clearPendingToggle(key, pendingToggle));
+        if (!removed) {
+            clearPendingToggle(key, pendingToggle);
+        }
+        return false;
+    }
+
     void Promise.resolve(
         client.sendEvent(roomId, EventType.Reaction, buildReactionContent(eventId, reaction, shortcode)),
     )
@@ -179,6 +257,7 @@ export function toggleOwnReaction({
         })
         .catch((error) => {
             logger.warn("Failed to send reaction", error);
+            cancelFailedReactionLocalEcho(client, room, eventId, reaction, error);
             clearPendingToggle(key, pendingToggle);
         });
     dis.dispatch({ action: "message_sent" });
