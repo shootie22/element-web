@@ -273,3 +273,11 @@ Notes:
 #25 functionality to toggle on/off someone's screen share
 
 #26 by default set vp9 codec, 1440p and max bitrate and 60fps
+
+#27 we want little feedback sounds for muting, unmutingn, deafening, undeafening, sharing video cam, closing video cam. each can just have their own soundn, where the open and close sounds are the same, just that the close one is pitched down a little. kinda how discord does it, you know?
+
+#28 have a look at all unit tests and check if they are well hooked up, and if they work, in both element web and element call. for example, i know some unit tests are failing in element call. please look at why that is, and see if that is an easy fix to make them work, or if we need to have a look together and take some decisionsn.
+
+#29. is it possible to add some practical good tests to make sure that the builds we make for all platforms + their auto-updates work well? or do we already have somethign for the builds themselves, just not for the auto-update? as some kindn of unitt tests? what do you think?
+
+#30. we want to package the element web client as a tiny container that we can run as a docker container. basically i want to be able to deploy it for my friennds as a web client (in the browser) and be able to do it as a docker container, so i can easily deploy new versions, or switch back to an old one if something broke. would that be easy to do with an action on github? i am thinking it should expose/route the traffic using something tiny like caddy? is that even necessary? what do you think? questions? i would be looking for using it behind a reverse proxy probably I think. what do you think?
