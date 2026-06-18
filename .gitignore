@@ -42,3 +42,6 @@ storybook-static
 # vitepress
 /docs/.vitepress/dist
 /docs/.vitepress/cache
+
+# Internal planning notes — keep local, not in the repo
+TODO.md
