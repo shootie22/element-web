@@ -22,6 +22,8 @@ interface BuildConfig {
     // Subject name of the code signing cert used for Windows packages, if signed
     // used as a basis for the Tray GUID which must be rolled if the certificate changes.
     windowsCertSubjectName: string | undefined;
+    // Public keys trusted for signed Linux tar.gz update manifests.
+    updateManifestPublicKeys: Record<string, string>;
 }
 
 export function getBuildConfig(): BuildConfig {
@@ -31,6 +33,7 @@ export function getBuildConfig(): BuildConfig {
             appId: (packageJson["electron_appId"] as string) || "im.riot.app",
             protocol: (packageJson["electron_protocol"] as string) || "io.element.desktop",
             windowsCertSubjectName: packageJson["electron_windows_cert_sn"] as string,
+            updateManifestPublicKeys: (packageJson["update_manifest_public_keys"] as Record<string, string>) || {},
         };
     }
 

@@ -61,11 +61,31 @@ on:
                 type: string
                 required: false
                 description: "List of targets to build"
-                default: "tar.gz deb"
+                default: "AppImage deb tar.gz"
             docker-image-tag:
                 type: string
                 required: false
                 description: "Tag of the desktop build environment image to use"
+            update-manifest-public-key-pem:
+                type: string
+                required: false
+                description: "PEM public key embedded for signed Linux tar.gz update manifests"
+            update-manifest-public-key-base64:
+                type: string
+                required: false
+                description: "Base64-encoded PEM public key embedded for signed Linux tar.gz update manifests"
+            update-manifest-public-keys-json:
+                type: string
+                required: false
+                description: "JSON object of key id to PEM public key for signed Linux tar.gz update manifests"
+            update-manifest-public-keys-base64-json:
+                type: string
+                required: false
+                description: "JSON object of key id to base64-encoded PEM public key"
+            update-manifest-key-id:
+                type: string
+                required: false
+                description: "Key id to use with update-manifest-public-key-pem"
 env:
     SQLCIPHER_BUNDLED: ${{ inputs.sqlcipher == 'static' && '1' || '' }}
     MAX_GLIBC: 2.31 # bullseye-era glibc, used by glibc-check.sh
@@ -192,6 +212,11 @@ jobs:
                   USE_HARD_LINKS: false
                   BUILD_ARGS: ${{ steps.config.outputs.build-args }}
                   TARGETS: ${{ inputs.targets }}
+                  UPDATE_MANIFEST_PUBLIC_KEY_PEM: ${{ inputs.update-manifest-public-key-pem }}
+                  UPDATE_MANIFEST_PUBLIC_KEY_BASE64: ${{ inputs.update-manifest-public-key-base64 }}
+                  UPDATE_MANIFEST_PUBLIC_KEYS_JSON: ${{ inputs.update-manifest-public-keys-json }}
+                  UPDATE_MANIFEST_PUBLIC_KEYS_BASE64_JSON: ${{ inputs.update-manifest-public-keys-base64-json }}
+                  UPDATE_MANIFEST_KEY_ID: ${{ inputs.update-manifest-key-id }}
 
             - name: Check native libraries
               working-directory: apps/desktop
@@ -253,6 +278,13 @@ jobs:
                   echo "tar.gz listing: "
                   echo "$TAR_GZ_LISTING"
                   ! echo "$TAR_GZ_LISTING" | grep '^h'
+
+            - name: Assert AppImage updater files are present
+              if: contains(inputs.targets, 'AppImage')
+              working-directory: apps/desktop
+              run: |
+                  test -f ./dist/element-desktop*.AppImage
+                  test -f ./dist/latest-linux.yml
 
     test:
         name: Test Linux ${{ inputs.arch }} SQLCipher ${{ inputs.sqlcipher }}

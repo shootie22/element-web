@@ -27,6 +27,8 @@ jobs:
     web:
         name: Build web
         runs-on: ubuntu-24.04
+        outputs:
+            version: ${{ steps.release-version.outputs.version }}
         steps:
             - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
               with:
@@ -40,6 +42,13 @@ jobs:
                   node-version-file: .node-version
                   cache: pnpm
 
+            - name: Validate release version
+              id: release-version
+              run: |
+                  set -euo pipefail
+                  version="$(node scripts/validate-release-version.mjs "$RELEASE_TAG")"
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+
             - name: Install dependencies
               run: ./scripts/layered.sh
 
@@ -47,7 +56,7 @@ jobs:
               working-directory: apps/web
               run: pnpm run dist
               env:
-                  DIST_VERSION: ${{ env.RELEASE_TAG }}
+                  DIST_VERSION: ${{ steps.release-version.outputs.version }}
                   CI_PACKAGE: true
 
             - name: Upload webapp for desktop packaging
@@ -79,32 +88,43 @@ jobs:
 
     linux:
         name: Linux ${{ matrix.arch }}
-        needs: prepare-desktop
+        needs:
+            - web
+            - prepare-desktop
         strategy:
             fail-fast: false
             matrix:
-                arch: [amd64, arm64]
+                arch: [amd64]
         uses: ./.github/workflows/build_desktop_linux.yaml
         with:
             ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
             arch: ${{ matrix.arch }}
             sqlcipher: static
-            targets: tar.gz deb
+            targets: AppImage deb tar.gz
+            version: ${{ needs.web.outputs.version }}
             docker-image-tag: staging
+            update-manifest-public-key-pem: ${{ vars.UPDATE_MANIFEST_PUBLIC_KEY_PEM }}
+            update-manifest-public-key-base64: ${{ vars.UPDATE_MANIFEST_PUBLIC_KEY_BASE64 }}
+            update-manifest-public-keys-json: ${{ vars.UPDATE_MANIFEST_PUBLIC_KEYS_JSON }}
+            update-manifest-public-keys-base64-json: ${{ vars.UPDATE_MANIFEST_PUBLIC_KEYS_BASE64_JSON }}
+            update-manifest-key-id: ${{ vars.UPDATE_MANIFEST_KEY_ID }}
 
     windows:
         name: Windows ${{ matrix.arch }}
-        needs: prepare-desktop
+        needs:
+            - web
+            - prepare-desktop
         strategy:
             fail-fast: false
             matrix:
-                arch: [x64, arm64]
+                arch: [x64]
         uses: ./.github/workflows/build_desktop_windows.yaml
         secrets: inherit # zizmor: ignore[secrets-inherit]
         with:
             ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
             arch: ${{ matrix.arch }}
-            targets: squirrel msi
+            targets: nsis msi
+            version: ${{ needs.web.outputs.version }}
             sign: ${{ vars.WINDOWS_SIGN_RELEASES == 'true' && 'true' || '' }}
 
     publish:
@@ -117,10 +137,35 @@ jobs:
         permissions:
             contents: write
         steps:
+            - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+              with:
+                  ref: ${{ env.RELEASE_REF }}
+                  fetch-depth: 0
+                  persist-credentials: false
+
             - name: Download artifacts
               uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
               with:
                   path: downloaded
+
+            - name: Generate release notes
+              run: |
+                  set -euo pipefail
+
+                  node scripts/validate-release-version.mjs "$RELEASE_TAG"
+
+                  previous_tag="$(git tag --sort=-v:refname | grep -E '^v[0-9]' | grep -v "^${RELEASE_TAG}$" | head -n 1 || true)"
+                  {
+                      echo "Automated web, Linux, and Windows client build for ${RELEASE_TAG}."
+                      echo
+                      if [ -n "$previous_tag" ]; then
+                          echo "## Changes since ${previous_tag}"
+                          git log --format='- %s (%h)' "${previous_tag}..${RELEASE_TAG}"
+                      else
+                          echo "## Changes"
+                          git log --format='- %s (%h)' "${RELEASE_TAG}" -n 100
+                      fi
+                  } > RELEASE_NOTES.md
 
             - name: Collect release assets
               run: |
@@ -128,18 +173,32 @@ jobs:
 
                   mkdir -p release-assets
                   while IFS= read -r -d '' file; do
-                      rel=${file#downloaded/}
-                      safe=${rel//\//__}
-                      cp "$file" "release-assets/$safe"
+                      filename="$(basename "$file")"
+                      # upload/download-artifact can prefix filenames with the source artifact name,
+                      # for example linux-amd64-sqlcipher-static__element-desktop-1.12.27-linux-x64.tar.gz.
+                      # GitHub release assets need their canonical electron-builder names because
+                      # the runtime updater constructs deterministic download URLs.
+                      filename="${filename#linux-amd64-sqlcipher-static__}"
+                      filename="${filename#linux-arm64-sqlcipher-static__}"
+                      filename="${filename#win-x64__}"
+                      filename="${filename#win-arm64__}"
+                      filename="${filename#web-release__}"
+                      target="release-assets/$filename"
+                      if [ -e "$target" ]; then
+                          echo "::error::Duplicate release asset name after normalization: $filename"
+                          exit 1
+                      fi
+                      cp "$file" "$target"
                   done < <(
                       find downloaded -type f \
                           \( \
                               -name '*.tar.gz' \
                               -o -name '*.deb' \
+                              -o -name '*.AppImage' \
                               -o -name '*.exe' \
                               -o -name '*.msi' \
-                              -o -name '*.nupkg' \
-                              -o -name 'RELEASES' \
+                              -o -name '*.blockmap' \
+                              -o -name 'latest*.yml' \
                           \) \
                           ! -path '*-test/*' \
                           -print0
@@ -148,6 +207,16 @@ jobs:
                   test "$(find release-assets -type f | wc -l)" -gt 0
                   find release-assets -type f -maxdepth 1 -print | sort
 
+                  version="$(node scripts/validate-release-version.mjs "$RELEASE_TAG")"
+                  test -f "release-assets/element-desktop-${version}-linux-x64.tar.gz"
+
+            - name: Sign Linux tar.gz update manifests
+              run: node scripts/sign-linux-tarball-update-manifests.mjs --assets-dir release-assets --release-tag "$RELEASE_TAG" --repository "$GITHUB_REPOSITORY"
+              env:
+                  UPDATE_MANIFEST_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_MANIFEST_PRIVATE_KEY_PEM }}
+                  UPDATE_MANIFEST_PRIVATE_KEY_BASE64: ${{ secrets.UPDATE_MANIFEST_PRIVATE_KEY_BASE64 }}
+                  UPDATE_MANIFEST_KEY_ID: ${{ vars.UPDATE_MANIFEST_KEY_ID }}
+
             - name: Upload collected release assets
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
               with:
@@ -155,24 +224,22 @@ jobs:
                   path: release-assets
                   retention-days: 14
 
-            - name: Create or update GitHub release
+            - name: Create immutable GitHub release
               run: |
                   set -euo pipefail
 
                   if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-                      if ! gh release upload "$RELEASE_TAG" release-assets/* --clobber --repo "$GITHUB_REPOSITORY"; then
-                          echo "::error::GitHub denied release asset upload. Enable Settings > Actions > General > Workflow permissions > Read and write permissions, or add a RELEASE_TOKEN secret with Contents: read/write."
-                          exit 1
-                      fi
-                  else
-                    if ! gh release create "$RELEASE_TAG" release-assets/* \
-                        --repo "$GITHUB_REPOSITORY" \
-                        --target custom/main \
-                        --title "$RELEASE_TAG" \
-                        --notes "Automated web, Linux, and Windows client build for $RELEASE_TAG."; then
-                          echo "::error::GitHub denied release creation. Enable Settings > Actions > General > Workflow permissions > Read and write permissions, or add a RELEASE_TOKEN secret with Contents: read/write."
-                          exit 1
-                      fi
+                      echo "::error::Release $RELEASE_TAG already exists. Releases are immutable; create a new tag/version instead."
+                      exit 1
+                  fi
+
+                  if ! gh release create "$RELEASE_TAG" release-assets/* \
+                      --repo "$GITHUB_REPOSITORY" \
+                      --verify-tag \
+                      --title "$RELEASE_TAG" \
+                      --notes-file RELEASE_NOTES.md; then
+                        echo "::error::GitHub denied release creation. Enable Settings > Actions > General > Workflow permissions > Read and write permissions, or add a RELEASE_TOKEN secret with Contents: read/write."
+                        exit 1
                   fi
               env:
                   GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
