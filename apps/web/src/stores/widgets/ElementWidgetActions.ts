@@ -56,6 +56,9 @@ export enum ElementWidgetActions {
     // rendering (just the active camera/screenshare video feeds) for embedding
     // in the global call panel. Data: { enabled: boolean, includeSelf: boolean }
     FeedOnly = "io.element.feed_only",
+    // Sent from the widget to the host to request expanding to the full call UI
+    // (e.g. double-clicking a feed in the global call panel).
+    Expand = "io.element.expand",
 }
 
 export interface IHangupCallApiRequest extends IWidgetApiRequest {

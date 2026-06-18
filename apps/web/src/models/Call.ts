@@ -33,6 +33,9 @@ import { timeout } from "../utils/promise";
 import WidgetUtils from "../utils/WidgetUtils";
 import { WidgetType } from "../widgets/WidgetType";
 import { ElementWidgetActions } from "../stores/widgets/ElementWidgetActions";
+import defaultDispatcher from "../dispatcher/dispatcher";
+import { Action } from "../dispatcher/actions";
+import { type ViewRoomPayload } from "../dispatcher/payloads/ViewRoomPayload";
 import WidgetStore from "../stores/WidgetStore";
 import { WidgetMessagingStore, WidgetMessagingStoreEvent } from "../stores/widgets/WidgetMessagingStore";
 import ActiveWidgetStore, { ActiveWidgetStoreEvent } from "../stores/ActiveWidgetStore";
@@ -1025,6 +1028,7 @@ export class ElementCall extends Call {
         widgetApi.on(`action:${ElementWidgetActions.DeviceMute}`, this.onDeviceMute);
         widgetApi.on(`action:${ElementWidgetActions.Deafen}`, this.onDeafen);
         widgetApi.on(`action:${ElementWidgetActions.CallMediaState}`, this.onCallMediaState);
+        widgetApi.on(`action:${ElementWidgetActions.Expand}`, this.onExpand);
         return widgetApi;
     }
 
@@ -1054,6 +1058,7 @@ export class ElementCall extends Call {
             this.widgetApi.off(`action:${ElementWidgetActions.DeviceMute}`, this.onDeviceMute);
             this.widgetApi.off(`action:${ElementWidgetActions.Deafen}`, this.onDeafen);
             this.widgetApi.off(`action:${ElementWidgetActions.CallMediaState}`, this.onCallMediaState);
+            this.widgetApi.off(`action:${ElementWidgetActions.Expand}`, this.onExpand);
         }
         // Clear media state so the global call panel stops showing stale participants.
         this.mediaState = { participants: [], anyVideo: false };
@@ -1132,6 +1137,18 @@ export class ElementCall extends Call {
                 anyVideo: !!data.anyVideo,
             };
         }
+    };
+
+    private readonly onExpand = (ev: CustomEvent<IWidgetApiRequest>): void => {
+        ev.preventDefault();
+        this.widgetApi?.transport.reply(ev.detail, {}); // ack
+        // Navigate to the call's room and open the full call view.
+        defaultDispatcher.dispatch<ViewRoomPayload>({
+            action: Action.ViewRoom,
+            room_id: this.roomId,
+            view_call: true,
+            metricsTrigger: "WebFloatingCallWindow",
+        });
     };
 
     private readonly onJoin = (ev: CustomEvent<IWidgetApiRequest>): void => {
