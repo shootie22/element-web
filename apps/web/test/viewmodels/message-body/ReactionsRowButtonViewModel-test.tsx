@@ -317,7 +317,7 @@ describe("ReactionsRowButtonViewModel", () => {
     });
 
     it("cancels a stale failed pending reaction instead of sending another reaction", () => {
-        const pendingReactionEvent = createReactionEvent("@me:example.org");
+        const pendingReactionEvent = createReactionEvent(client.getSafeUserId());
         pendingReactionEvent.status = EventStatus.NOT_SENT;
         jest.spyOn(room, "getPendingEvents").mockReturnValue([pendingReactionEvent]);
         const vm = new ReactionsRowButtonViewModel(createProps());
@@ -327,6 +327,21 @@ describe("ReactionsRowButtonViewModel", () => {
         expect(client.cancelPendingEvent).toHaveBeenCalledWith(pendingReactionEvent);
         expect(client.sendEvent).not.toHaveBeenCalled();
         expect(dis.dispatch).not.toHaveBeenCalledWith({ action: "message_sent" });
+    });
+
+    it("redacts an own relation reaction found in the room when props are stale", () => {
+        const myReactionEvent = createReactionEvent(client.getSafeUserId());
+        jest.spyOn(room.relations, "getChildEventsForEvent").mockReturnValue({
+            getAnnotationsBySender: () => ({
+                [client.getSafeUserId()]: new Set([myReactionEvent]),
+            }),
+        } as never);
+        const vm = new ReactionsRowButtonViewModel(createProps());
+
+        vm.onClick();
+
+        expect(client.redactEvent).toHaveBeenCalledWith(room.roomId, myReactionEvent.getId());
+        expect(client.sendEvent).not.toHaveBeenCalled();
     });
 
     it("redacts a just-sent reaction instead of sending a duplicate when clicked again before send settles", async () => {
@@ -357,7 +372,7 @@ describe("ReactionsRowButtonViewModel", () => {
     });
 
     it("cancels the failed reaction local echo when a send is rejected", async () => {
-        const failedReactionEvent = createReactionEvent("@me:example.org");
+        const failedReactionEvent = createReactionEvent(client.getSafeUserId());
         failedReactionEvent.status = EventStatus.NOT_SENT;
         const error = new Error("Duplicate annotation") as Error & { event: MatrixEvent };
         error.event = failedReactionEvent;

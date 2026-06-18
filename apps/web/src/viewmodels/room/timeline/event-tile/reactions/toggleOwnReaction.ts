@@ -125,6 +125,21 @@ function findOwnPendingReaction(
         .find((event) => !event.isRedacted() && isOwnReactionForEvent(client, event, targetEventId, reaction));
 }
 
+function findOwnRelationReaction(
+    client: MatrixClient,
+    room: Room | null,
+    targetEventId: string,
+    reaction: string,
+): MatrixEvent | undefined {
+    const myAnnotations = room?.relations
+        .getChildEventsForEvent(targetEventId, RelationType.Annotation, EventType.Reaction)
+        ?.getAnnotationsBySender()?.[client.getSafeUserId()];
+
+    return [...(myAnnotations ?? [])].find(
+        (event) => !event.isRedacted() && isOwnReactionForEvent(client, event, targetEventId, reaction),
+    );
+}
+
 function cancelPendingReaction(client: MatrixClient, event: MatrixEvent): boolean {
     if (
         event.status === EventStatus.QUEUED ||
@@ -223,13 +238,18 @@ export function toggleOwnReaction({
 
     const pendingToggle = markPendingToggle(key);
 
-    if (myReactionEvent && !myReactionEvent.isRedacted()) {
+    const ownReactionEvent =
+        myReactionEvent && !myReactionEvent.isRedacted()
+            ? myReactionEvent
+            : findOwnRelationReaction(client, room, eventId, reaction);
+
+    if (ownReactionEvent) {
         if (!canSelfRedact) {
             clearPendingToggle(key, pendingToggle);
             return false;
         }
 
-        const removed = removeOwnReaction(client, roomId, myReactionEvent, () =>
+        const removed = removeOwnReaction(client, roomId, ownReactionEvent, () =>
             clearPendingToggle(key, pendingToggle),
         );
         if (!removed) {
