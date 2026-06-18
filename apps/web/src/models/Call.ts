@@ -19,7 +19,11 @@ import { KnownMembership, type Membership } from "matrix-js-sdk/src/types";
 import { logger as rootLogger } from "matrix-js-sdk/src/logger";
 import { secureRandomString } from "matrix-js-sdk/src/randomstring";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
-import { type IWidgetApiRequest, type ClientWidgetApi, type IWidgetData } from "matrix-widget-api";
+import {
+    type IWidgetApiRequest,
+    type ClientWidgetApi,
+    type IWidgetData,
+} from "matrix-widget-api";
 import {
     type MatrixRTCSession,
     MatrixRTCSessionEvent,
@@ -114,6 +118,22 @@ export interface CallMediaState {
     participants: CallMediaParticipant[];
     /** Whether any participant is sharing their camera or screen. */
     anyVideo: boolean;
+}
+
+interface DeviceMuteState {
+    [key: string]: unknown;
+    audio_enabled?: boolean;
+    video_enabled?: boolean;
+}
+
+interface DeafenRequest {
+    [key: string]: unknown;
+    deafened: boolean;
+}
+
+interface DeafenState {
+    [key: string]: unknown;
+    deafened?: boolean;
 }
 
 interface CallEventHandlerMap {
@@ -355,14 +375,19 @@ export abstract class Call extends TypedEventEmitter<CallEvent, CallEventHandler
         return (this.widgetApi = messaging.widgetApi);
     }
 
-    public async setDeviceMuteState(state: { audio_enabled?: boolean; video_enabled?: boolean }): Promise<void> {
+    public async setDeviceMuteState(state: DeviceMuteState): Promise<void> {
         if (!this.widgetApi) return;
-        await this.widgetApi.transport.send(ElementWidgetActions.DeviceMute, state);
+        const response = await this.widgetApi.transport.send<DeviceMuteState, DeviceMuteState>(ElementWidgetActions.DeviceMute, state);
+        const audioEnabled = typeof response.audio_enabled === "boolean" ? response.audio_enabled : state.audio_enabled;
+        const videoEnabled = typeof response.video_enabled === "boolean" ? response.video_enabled : state.video_enabled;
+        if (typeof audioEnabled === "boolean") this.audioEnabled = audioEnabled;
+        if (typeof videoEnabled === "boolean") this.videoEnabled = videoEnabled;
     }
 
     public async setDeafened(deafened: boolean): Promise<void> {
         if (!this.widgetApi) return;
-        await this.widgetApi.transport.send(ElementWidgetActions.Deafen, { deafened });
+        const response = await this.widgetApi.transport.send<DeafenRequest, DeafenState>(ElementWidgetActions.Deafen, { deafened });
+        this.deafened = typeof response.deafened === "boolean" ? response.deafened : deafened;
     }
 
     /**

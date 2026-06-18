@@ -36,36 +36,36 @@ export const RoomListCallControls: React.FC<Props> = ({ call }: Props) => {
     const [videoEnabled, setVideoEnabled] = useState(call.videoEnabled);
     const [deafened, setDeafened] = useState(call.deafened);
 
-    // Sync states from the Call model whenever the active call changes
-    useEffect(() => {
+    const syncFromCall = useCallback((): void => {
         setAudioEnabled(call.audioEnabled);
         setVideoEnabled(call.videoEnabled);
         setDeafened(call.deafened);
     }, [call]);
 
+    // Sync states from the Call model whenever the active call changes
+    useEffect(() => {
+        syncFromCall();
+    }, [syncFromCall]);
+
     // Subscribe to device mute events from the active call
     useEffect(() => {
         if (!call) return;
-        const onDeviceMute = (): void => {
-            setAudioEnabled(call.audioEnabled);
-            setVideoEnabled(call.videoEnabled);
-        };
-        const onDeafen = (): void => {
-            setDeafened(call.deafened);
-        };
-        call.on(CallEvent.DeviceMute, onDeviceMute);
-        call.on(CallEvent.Deafen, onDeafen);
+        call.on(CallEvent.DeviceMute, syncFromCall);
+        call.on(CallEvent.Deafen, syncFromCall);
         return () => {
-            call.off(CallEvent.DeviceMute, onDeviceMute);
-            call.off(CallEvent.Deafen, onDeafen);
+            call.off(CallEvent.DeviceMute, syncFromCall);
+            call.off(CallEvent.Deafen, syncFromCall);
         };
-    }, [call]);
+    }, [call, syncFromCall]);
 
     const room = call ? client.getRoom(call.roomId) : null;
     const roomName = room?.name ?? call?.roomId ?? "";
 
     const setDeviceMute = useCallback(
-        async (state: { audio_enabled?: boolean; video_enabled?: boolean }): Promise<void> => {
+        async (state: {
+            audio_enabled?: boolean;
+            video_enabled?: boolean;
+        }): Promise<void> => {
             await call?.setDeviceMuteState(state);
         },
         [call],
@@ -73,21 +73,22 @@ export const RoomListCallControls: React.FC<Props> = ({ call }: Props) => {
 
     const onAudioClick = useCallback(() => {
         const next = !audioEnabled;
-        setAudioEnabled(next);
-        void setDeviceMute({ audio_enabled: next }).catch(() => setAudioEnabled(!next));
-    }, [audioEnabled, setDeviceMute]);
+        void setDeviceMute({ audio_enabled: next })
+            .catch(syncFromCall)
+            .finally(syncFromCall);
+    }, [audioEnabled, setDeviceMute, syncFromCall]);
 
     const onVideoClick = useCallback(() => {
         const next = !videoEnabled;
-        setVideoEnabled(next);
-        void setDeviceMute({ video_enabled: next }).catch(() => setVideoEnabled(!next));
-    }, [setDeviceMute, videoEnabled]);
+        void setDeviceMute({ video_enabled: next })
+            .catch(syncFromCall)
+            .finally(syncFromCall);
+    }, [setDeviceMute, syncFromCall, videoEnabled]);
 
     const onDeafenClick = useCallback(() => {
         const next = !deafened;
-        setDeafened(next);
-        void call?.setDeafened(next).catch(() => setDeafened(!next));
-    }, [call, deafened]);
+        void call?.setDeafened(next).catch(syncFromCall).finally(syncFromCall);
+    }, [call, deafened, syncFromCall]);
 
     const onNavigateToRoom = useCallback(() => {
         if (!call) return;
@@ -115,17 +116,28 @@ export const RoomListCallControls: React.FC<Props> = ({ call }: Props) => {
     return (
         <div className="mx_RoomListCallControls" aria-label={_t("action|call")}>
             <div className="mx_RoomListCallControls_left">
-                <IconButton size="32px" kind="secondary" onClick={onNavigateToRoom} tooltip={_t("voip|expand")}>
+                <IconButton
+                    size="32px"
+                    kind="secondary"
+                    onClick={onNavigateToRoom}
+                    tooltip={_t("voip|expand")}
+                >
                     <ChevronLeftIcon />
                 </IconButton>
-                <span className="mx_RoomListCallControls_roomName">{roomName}</span>
+                <span className="mx_RoomListCallControls_roomName">
+                    {roomName}
+                </span>
             </div>
             <div className="mx_RoomListCallControls_center">
                 <IconButton
                     size="32px"
                     kind={audioEnabled ? "secondary" : "primary"}
                     onClick={onAudioClick}
-                    tooltip={audioEnabled ? _t("voip|disable_microphone") : _t("voip|enable_microphone")}
+                    tooltip={
+                        audioEnabled
+                            ? _t("voip|disable_microphone")
+                            : _t("voip|enable_microphone")
+                    }
                     aria-pressed={!audioEnabled}
                 >
                     {audioEnabled ? <MicOnSolidIcon /> : <MicOffSolidIcon />}
@@ -134,10 +146,18 @@ export const RoomListCallControls: React.FC<Props> = ({ call }: Props) => {
                     size="32px"
                     kind={videoEnabled ? "secondary" : "primary"}
                     onClick={onVideoClick}
-                    tooltip={videoEnabled ? _t("voip|disable_camera") : _t("voip|enable_camera")}
+                    tooltip={
+                        videoEnabled
+                            ? _t("voip|disable_camera")
+                            : _t("voip|enable_camera")
+                    }
                     aria-pressed={!videoEnabled}
                 >
-                    {videoEnabled ? <VideoCallSolidIcon /> : <VideoCallOffSolidIcon />}
+                    {videoEnabled ? (
+                        <VideoCallSolidIcon />
+                    ) : (
+                        <VideoCallOffSolidIcon />
+                    )}
                 </IconButton>
                 <IconButton
                     size="32px"
@@ -150,7 +170,12 @@ export const RoomListCallControls: React.FC<Props> = ({ call }: Props) => {
                 </IconButton>
             </div>
             <div className="mx_RoomListCallControls_right">
-                <IconButton size="32px" kind="primary" onClick={onDisconnect} tooltip={_t("voip|hangup")}>
+                <IconButton
+                    size="32px"
+                    kind="primary"
+                    onClick={onDisconnect}
+                    tooltip={_t("voip|hangup")}
+                >
                     <EndCallIcon />
                 </IconButton>
             </div>

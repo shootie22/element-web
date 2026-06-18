@@ -5,18 +5,48 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { type JSX, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, {
+    type JSX,
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+} from "react";
+import { type RoomMember } from "matrix-js-sdk/src/matrix";
 
-import { type Call, CallEvent, type CallMediaState } from "../../../../models/Call";
-import ActiveWidgetStore, { ActiveWidgetStoreEvent } from "../../../../stores/ActiveWidgetStore";
+import {
+    type Call,
+    CallEvent,
+    type CallMediaState,
+} from "../../../../models/Call";
+import ActiveWidgetStore, {
+    ActiveWidgetStoreEvent,
+} from "../../../../stores/ActiveWidgetStore";
 import PersistentApp from "../../elements/PersistentApp";
 import { useMatrixClientContext } from "../../../../contexts/MatrixClientContext";
 import { useActiveLocalCall } from "../../../../hooks/useActiveLocalCall";
 import { useSettingValue } from "../../../../hooks/useSettings";
 import { RoomListCallControls } from "./RoomListCallControls";
-import { CallAvatarRow } from "./CallAvatarRow";
+import { CallAvatarRow, type CallParticipantSlot } from "./CallAvatarRow";
 
 const EMPTY_MEDIA_STATE: CallMediaState = { participants: [], anyVideo: false };
+
+const getParticipantSlots = (
+    participants: Map<RoomMember, Set<string>>,
+): CallParticipantSlot[] =>
+    [...participants.entries()].flatMap(([member, devices]) => {
+        const deviceIds = devices.size > 0 ? [...devices] : [""];
+        return deviceIds.map((deviceId) => ({
+            userId: member.userId,
+            deviceId,
+        }));
+    });
+
+const getParticipantSlotKey = ({
+    userId,
+    deviceId,
+}: CallParticipantSlot): string => `${userId}\u0000${deviceId}`;
 
 /**
  * The global call panel, pinned at the bottom of the room list. It is shown
@@ -31,23 +61,63 @@ export const RoomListCallPanel: React.FC = (): JSX.Element | null => {
     const call = useActiveLocalCall(client);
 
     if (!call) return null;
-    return <RoomListCallPanelInner call={call} client={client} />;
+    return <RoomListCallPanelInner call={call} />;
 };
 
 interface InnerProps {
     call: Call;
-    client: ReturnType<typeof useMatrixClientContext>;
 }
 
-const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerProps): JSX.Element => {
-    const [mediaState, setMediaState] = useState<CallMediaState>(() => call.mediaState ?? EMPTY_MEDIA_STATE);
+const RoomListCallPanelInner: React.FC<InnerProps> = ({
+    call,
+}: InnerProps): JSX.Element => {
+    const [mediaState, setMediaState] = useState<CallMediaState>(
+        () => call.mediaState ?? EMPTY_MEDIA_STATE,
+    );
+    const [callParticipants, setCallParticipants] = useState<
+        Map<RoomMember, Set<string>>
+    >(() => call.participants);
+    const [participantOrder, setParticipantOrder] = useState<
+        CallParticipantSlot[]
+    >(() => getParticipantSlots(call.participants));
 
     useEffect(() => {
         setMediaState(call.mediaState ?? EMPTY_MEDIA_STATE);
-        const onMediaState = (state: CallMediaState): void => setMediaState(state);
+        const onMediaState = (state: CallMediaState): void =>
+            setMediaState(state);
         call.on(CallEvent.MediaState, onMediaState);
         return () => {
             call.off(CallEvent.MediaState, onMediaState);
+        };
+    }, [call]);
+
+    useEffect(() => {
+        setCallParticipants(call.participants);
+        setParticipantOrder(getParticipantSlots(call.participants));
+        const onParticipants = (
+            participants: Map<RoomMember, Set<string>>,
+        ): void => {
+            setCallParticipants(participants);
+            const nextSlots = getParticipantSlots(participants);
+            const nextSlotKeys = new Set(nextSlots.map(getParticipantSlotKey));
+            setParticipantOrder((current) => {
+                const currentSlotKeys = new Set(
+                    current.map(getParticipantSlotKey),
+                );
+                return [
+                    ...current.filter((slot) =>
+                        nextSlotKeys.has(getParticipantSlotKey(slot)),
+                    ),
+                    ...nextSlots.filter(
+                        (slot) =>
+                            !currentSlotKeys.has(getParticipantSlotKey(slot)),
+                    ),
+                ];
+            });
+        };
+        call.on(CallEvent.Participants, onParticipants);
+        return () => {
+            call.off(CallEvent.Participants, onParticipants);
         };
     }, [call]);
 
@@ -56,18 +126,30 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
     // placeholder for the single persisted iframe.
     const widgetId = call.widget.id;
     const roomId = call.roomId;
-    const isDockedNow = useCallback(() => ActiveWidgetStore.instance.isDocked(widgetId, roomId), [widgetId, roomId]);
+    const isDockedNow = useCallback(
+        () => ActiveWidgetStore.instance.isDocked(widgetId, roomId),
+        [widgetId, roomId],
+    );
     const [docked, setDocked] = useState<boolean>(isDockedNow);
     useEffect(() => {
         const update = (): void => setDocked(isDockedNow());
         update();
         ActiveWidgetStore.instance.on(ActiveWidgetStoreEvent.Dock, update);
         ActiveWidgetStore.instance.on(ActiveWidgetStoreEvent.Undock, update);
-        ActiveWidgetStore.instance.on(ActiveWidgetStoreEvent.Persistence, update);
+        ActiveWidgetStore.instance.on(
+            ActiveWidgetStoreEvent.Persistence,
+            update,
+        );
         return () => {
             ActiveWidgetStore.instance.off(ActiveWidgetStoreEvent.Dock, update);
-            ActiveWidgetStore.instance.off(ActiveWidgetStoreEvent.Undock, update);
-            ActiveWidgetStore.instance.off(ActiveWidgetStoreEvent.Persistence, update);
+            ActiveWidgetStore.instance.off(
+                ActiveWidgetStoreEvent.Undock,
+                update,
+            );
+            ActiveWidgetStore.instance.off(
+                ActiveWidgetStoreEvent.Persistence,
+                update,
+            );
         };
     }, [isDockedNow]);
 
@@ -110,7 +192,9 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
         movePersistedElement.current?.();
         const node = videoRef.current;
         if (!node || typeof ResizeObserver === "undefined") return;
-        const observer = new ResizeObserver(() => movePersistedElement.current?.());
+        const observer = new ResizeObserver(() =>
+            movePersistedElement.current?.(),
+        );
         observer.observe(node);
         return () => observer.disconnect();
     }, [showIframe]);
@@ -129,12 +213,12 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
         return () => window.clearTimeout(timer);
     }, [showIframe]);
 
-    const room = client.getRoom(roomId);
-
     // Give each feed a 16:9 slot, stacked (capped so the panel can't grow without
     // bound); the widget fills the region with the stacked feeds.
     const slots = Math.min(Math.max(feedCount, 1), 3);
-    const videoStyle: React.CSSProperties = { aspectRatio: `16 / ${9 * slots}` };
+    const videoStyle: React.CSSProperties = {
+        aspectRatio: `16 / ${9 * slots}`,
+    };
     const persistedStyle: React.CSSProperties = {
         opacity: iframeVisible ? 1 : 0,
         transition: "opacity 250ms ease-out",
@@ -144,7 +228,11 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
         <div className="mx_RoomListCallPanel">
             <div className="mx_RoomListCallPanel_media">
                 {showIframe && (
-                    <div className="mx_RoomListCallPanel_video" ref={videoRef} style={videoStyle}>
+                    <div
+                        className="mx_RoomListCallPanel_video"
+                        ref={videoRef}
+                        style={videoStyle}
+                    >
                         <PersistentApp
                             persistentWidgetId={widgetId}
                             persistentRoomId={roomId}
@@ -153,7 +241,11 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
                         />
                     </div>
                 )}
-                <CallAvatarRow participants={mediaState.participants} room={room} />
+                <CallAvatarRow
+                    participants={mediaState.participants}
+                    callParticipants={callParticipants}
+                    participantOrder={participantOrder}
+                />
             </div>
             <RoomListCallControls call={call} />
         </div>
