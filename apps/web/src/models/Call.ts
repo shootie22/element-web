@@ -90,6 +90,27 @@ export enum CallEvent {
     CallTypeChanged = "call_type_changed",
     DeviceMute = "device_mute",
     Deafen = "deafen",
+    MediaState = "media_state",
+}
+
+/**
+ * Per-participant speaking/media state, as reported by the call widget via the
+ * {@link ElementWidgetActions.CallMediaState} action.
+ */
+export interface CallMediaParticipant {
+    userId: string;
+    deviceId: string;
+    displayName: string;
+    speaking: boolean;
+    sharingCamera: boolean;
+    sharingScreen: boolean;
+    local: boolean;
+}
+
+export interface CallMediaState {
+    participants: CallMediaParticipant[];
+    /** Whether any participant is sharing their camera or screen. */
+    anyVideo: boolean;
 }
 
 interface CallEventHandlerMap {
@@ -103,6 +124,7 @@ interface CallEventHandlerMap {
     [CallEvent.CallTypeChanged]: (callType: CallType) => void;
     [CallEvent.DeviceMute]: () => void;
     [CallEvent.Deafen]: () => void;
+    [CallEvent.MediaState]: (mediaState: CallMediaState) => void;
 }
 
 /**
@@ -221,6 +243,20 @@ export abstract class Call extends TypedEventEmitter<CallEvent, CallEventHandler
             this._deafened = value;
             this.emit(CallEvent.Deafen);
         }
+    }
+
+    private _mediaState: CallMediaState = { participants: [], anyVideo: false };
+    /**
+     * Per-participant speaking/media state reported by the call widget. Used by
+     * the global call panel to render speaking indicators and decide whether to
+     * show the live video feed.
+     */
+    public get mediaState(): CallMediaState {
+        return this._mediaState;
+    }
+    protected set mediaState(value: CallMediaState) {
+        this._mediaState = value;
+        this.emit(CallEvent.MediaState, value);
     }
 
     protected constructor(
@@ -960,11 +996,11 @@ export class ElementCall extends Call {
         // existing promise so that listeners are registered exactly once.
         if (this.startPromise) return this.startPromise;
 
-        this.startPromise = this._startImpl(widgetGenerationParameters);
+        this.startPromise = this.startImpl(widgetGenerationParameters);
         return this.startPromise;
     }
 
-    private async _startImpl(widgetGenerationParameters: WidgetGenerationParameters): Promise<ClientWidgetApi> {
+    private async startImpl(widgetGenerationParameters: WidgetGenerationParameters): Promise<ClientWidgetApi> {
         // Some parameters may only be set once the user has chosen to interact with the call, regenerate the URL
         // at this point in case any of the parameters have changed.
         this.widgetGenerationParameters = { ...this.widgetGenerationParameters, ...widgetGenerationParameters };
@@ -979,6 +1015,7 @@ export class ElementCall extends Call {
         widgetApi.on(`action:${ElementWidgetActions.Close}`, this.onClose);
         widgetApi.on(`action:${ElementWidgetActions.DeviceMute}`, this.onDeviceMute);
         widgetApi.on(`action:${ElementWidgetActions.Deafen}`, this.onDeafen);
+        widgetApi.on(`action:${ElementWidgetActions.CallMediaState}`, this.onCallMediaState);
         return widgetApi;
     }
 
@@ -1007,7 +1044,10 @@ export class ElementCall extends Call {
             this.widgetApi.off(`action:${ElementWidgetActions.Close}`, this.onClose);
             this.widgetApi.off(`action:${ElementWidgetActions.DeviceMute}`, this.onDeviceMute);
             this.widgetApi.off(`action:${ElementWidgetActions.Deafen}`, this.onDeafen);
+            this.widgetApi.off(`action:${ElementWidgetActions.CallMediaState}`, this.onCallMediaState);
         }
+        // Clear media state so the global call panel stops showing stale participants.
+        this.mediaState = { participants: [], anyVideo: false };
         this.startPromise = null;
         super.close();
     }
@@ -1070,6 +1110,19 @@ export class ElementCall extends Call {
         this.widgetApi.transport.reply(ev.detail, {}); // ack
         const data = (ev.detail as any).data ?? ev.detail;
         if (typeof data.deafened === "boolean") this.deafened = data.deafened;
+    };
+
+    private readonly onCallMediaState = (ev: CustomEvent<IWidgetApiRequest>): void => {
+        ev.preventDefault();
+        if (!this.widgetApi) return;
+        this.widgetApi.transport.reply(ev.detail, {}); // ack
+        const data = (ev.detail as any).data ?? ev.detail;
+        if (Array.isArray(data.participants)) {
+            this.mediaState = {
+                participants: data.participants as CallMediaParticipant[],
+                anyVideo: !!data.anyVideo,
+            };
+        }
     };
 
     private readonly onJoin = (ev: CustomEvent<IWidgetApiRequest>): void => {

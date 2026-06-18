@@ -9,6 +9,62 @@
     background-color: var(--cpd-color-bg-canvas-default);
     height: 100%;
 
+    .mx_RoomListCallPanel {
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        border-block-start: 1px solid var(--cpd-color-border-interactive-secondary);
+        background: var(--cpd-color-bg-canvas-default);
+    }
+
+    /* The media region above the controls. Hosts either the avatar row or the
+       reparented live call iframe. Collapses to nothing when there is no media. */
+    .mx_RoomListCallPanel_media {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .mx_RoomListCallPanel_video {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background: var(--cpd-color-bg-subtle-secondary);
+        overflow: hidden;
+    }
+
+    .mx_CallAvatarRow {
+        display: flex;
+        align-items: center;
+        gap: var(--cpd-space-2x);
+        padding: var(--cpd-space-2x) var(--cpd-space-3x);
+        overflow-x: auto;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
+    .mx_CallAvatarRow_avatar {
+        flex-shrink: 0;
+        display: inline-flex;
+        border-radius: 50%;
+        box-shadow: 0 0 0 2px var(--cpd-color-border-interactive-secondary);
+        transition: box-shadow 120ms ease-out;
+    }
+
+    .mx_CallAvatarRow_avatar[data-speaking="true"] {
+        box-shadow:
+            0 0 0 2px var(--cpd-color-bg-accent-rest),
+            0 0 8px 2px var(--cpd-color-bg-accent-rest);
+    }
+
+    .mx_CallAvatarRow_overflow {
+        flex-shrink: 0;
+        font: var(--cpd-font-body-sm-medium);
+        color: var(--cpd-color-text-secondary);
+    }
+
     .mx_RoomListCallControls {
         display: flex;
         justify-content: space-between;

@@ -171,6 +171,17 @@ export class CallStore extends AsyncStoreWithClient<EmptyObject> {
                     this.calls.delete(room.roomId);
                     for (const [event, listener] of this.callListeners.get(call)!) call.off(event, listener);
                     this.callListeners.delete(call);
+                    // A destroyed call must never remain marked as connected, or
+                    // the global call panel would stay visible after it's gone.
+                    if (this.connectedCalls.has(call)) {
+                        this.connectedCalls = new Set([...this.connectedCalls].filter((c) => c !== call));
+                    }
+                    // Re-track the room so the next time the user joins a call here
+                    // a fresh Call is created and its connection is registered.
+                    // `checkDestroy` tears the Call down every time memberships hit
+                    // zero (i.e. every time you leave), so without this the room
+                    // becomes orphaned and the panel fails to reappear on rejoin.
+                    this.updateRoom(room);
                 };
 
                 call.on(CallEvent.ConnectionState, onConnectionState);

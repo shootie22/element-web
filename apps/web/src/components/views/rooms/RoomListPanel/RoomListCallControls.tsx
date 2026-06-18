@@ -19,38 +19,28 @@ import {
 import { IconButton } from "@vector-im/compound-web";
 
 import { _t } from "../../../../languageHandler";
-import { CallStore, CallStoreEvent } from "../../../../stores/CallStore";
 import { type Call, CallEvent } from "../../../../models/Call";
 import { useMatrixClientContext } from "../../../../contexts/MatrixClientContext";
 import defaultDispatcher from "../../../../dispatcher/dispatcher";
 import { Action } from "../../../../dispatcher/actions";
 import { type ViewRoomPayload } from "../../../../dispatcher/payloads/ViewRoomPayload";
 
-export const RoomListCallControls: React.FC = () => {
-    const client = useMatrixClientContext();
-    const [call, setCall] = useState<Call | null>(() => [...CallStore.instance.connectedCalls][0] ?? null);
-    const [audioEnabled, setAudioEnabled] = useState(true);
-    const [videoEnabled, setVideoEnabled] = useState(true);
-    const [deafened, setDeafened] = useState(false);
+interface Props {
+    /** The active connected call this control bar drives. */
+    call: Call;
+}
 
-    useEffect(() => {
-        const onConnectedCalls = (calls: Set<Call>): void => {
-            setCall([...calls][0] ?? null);
-        };
-        CallStore.instance.on(CallStoreEvent.ConnectedCalls, onConnectedCalls);
-        onConnectedCalls(CallStore.instance.connectedCalls);
-        return () => {
-            CallStore.instance.off(CallStoreEvent.ConnectedCalls, onConnectedCalls);
-        };
-    }, []);
+export const RoomListCallControls: React.FC<Props> = ({ call }: Props) => {
+    const client = useMatrixClientContext();
+    const [audioEnabled, setAudioEnabled] = useState(call.audioEnabled);
+    const [videoEnabled, setVideoEnabled] = useState(call.videoEnabled);
+    const [deafened, setDeafened] = useState(call.deafened);
 
     // Sync states from the Call model whenever the active call changes
     useEffect(() => {
-        if (call) {
-            setAudioEnabled(call.audioEnabled);
-            setVideoEnabled(call.videoEnabled);
-            setDeafened(call.deafened);
-        }
+        setAudioEnabled(call.audioEnabled);
+        setVideoEnabled(call.videoEnabled);
+        setDeafened(call.deafened);
     }, [call]);
 
     // Subscribe to device mute events from the active call
@@ -113,7 +103,7 @@ export const RoomListCallControls: React.FC = () => {
         if (!call) return;
         try {
             await call.disconnect();
-        } catch (e) {
+        } catch {
             // If disconnect fails (e.g. the widget iframe is already dead),
             // force the call to be destroyed so the UI updates immediately.
             call.destroy();

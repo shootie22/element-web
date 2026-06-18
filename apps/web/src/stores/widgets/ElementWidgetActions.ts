@@ -44,6 +44,14 @@ export enum ElementWidgetActions {
     // of this action so it does not throw errors.
     DeviceMute = "io.element.device_mute",
     Deafen = "io.element.deafen",
+    // Sent from the call widget to the host with per-participant speaking/media
+    // state, used to drive the global call panel. The data is:
+    // {
+    //   participants: Array<{ userId, deviceId, displayName, speaking,
+    //                         sharingCamera, sharingScreen, local }>,
+    //   anyVideo: boolean
+    // }
+    CallMediaState = "io.element.call_media_state",
 }
 
 export interface IHangupCallApiRequest extends IWidgetApiRequest {
