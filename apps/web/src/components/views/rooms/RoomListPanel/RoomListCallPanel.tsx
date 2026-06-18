@@ -82,13 +82,18 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
 
     const showIframe = feedCount > 0 && !docked;
 
-    // Tell the widget to render chrome-less feed-only output while we host it.
+    // Keep the widget in feed-only mode the whole time we might host it (i.e.
+    // whenever it isn't docked in its own room), not just once video appears.
+    // This ensures the chrome-less view is already active before the iframe
+    // becomes visible, avoiding a flash of the full widget UI. It flips back to
+    // the full UI only when docked (the user is viewing the call's own room).
     useEffect(() => {
-        void call.setFeedOnly(showIframe, includeSelf);
+        const feedOnly = !docked;
+        void call.setFeedOnly(feedOnly, includeSelf);
         return () => {
             void call.setFeedOnly(false, includeSelf);
         };
-    }, [call, showIframe, includeSelf]);
+    }, [call, docked, includeSelf]);
 
     // The single persisted iframe is repositioned over whichever placeholder is
     // mounted; call this whenever our media region appears or resizes.
@@ -114,7 +119,7 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
     return (
         <div className="mx_RoomListCallPanel">
             <div className="mx_RoomListCallPanel_media">
-                {showIframe ? (
+                {showIframe && (
                     <div className="mx_RoomListCallPanel_video" ref={videoRef} style={videoStyle}>
                         <PersistentApp
                             persistentWidgetId={widgetId}
@@ -122,9 +127,8 @@ const RoomListCallPanelInner: React.FC<InnerProps> = ({ call, client }: InnerPro
                             movePersistedElement={movePersistedElement}
                         />
                     </div>
-                ) : (
-                    <CallAvatarRow participants={mediaState.participants} room={room} />
                 )}
+                <CallAvatarRow participants={mediaState.participants} room={room} />
             </div>
             <RoomListCallControls call={call} />
         </div>
