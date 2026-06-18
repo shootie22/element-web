@@ -40,6 +40,25 @@ Use the `<sha>` that `upstream/develop`'s `pnpm-lock.yaml` currently uses.
   The fork uses a Linux/GitHub `electron-updater` flow (no-arg `updater.start()`), removed
   `electron-builder-squirrel-windows`, and added `electron-updater` — preserve these on conflict.
 
+## Release convention: always call out the upstream sync 🔄
+
+Whenever a release includes an upstream merge, **always say so** in the version-bump
+commit body and the GitHub release notes, prefixed with the 🔄 emoji. This is a
+standing convention, not a one-off.
+
+The messaging should make clear this build is **upstream + our enhancements** — i.e.
+at least as current as official Element, and often ahead of it. Include the upstream
+sync point (the `element-hq/element-web develop` commit and date we merged to) and the
+number of commits merged. Example:
+
+> 🔄 Synced with upstream: merged all 39 commits from element-hq/element-web develop
+> up to `90fb221a8e` (2026-06-18). This build is up to date with upstream plus our
+> custom enhancements — upstream + ours.
+
+Practical flow: put it in the annotated tag message, then create the release from the
+tag so the notes are reused verbatim (no `gh` needed — the GitHub REST API works with
+the token in the `origin` remote).
+
 ## Verification gates (current state)
 
 - **`pnpm lint:types`** is the primary gate. Note it is NOT clean on `main` — it already
