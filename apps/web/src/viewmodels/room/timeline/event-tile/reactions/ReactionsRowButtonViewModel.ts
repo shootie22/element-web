@@ -5,7 +5,7 @@
  * Please see LICENSE files in the repository root for full details.
  */
 
-import { EventType, type MatrixClient, type MatrixEvent, RelationType } from "matrix-js-sdk/src/matrix";
+import { type MatrixClient, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import {
     BaseViewModel,
     type ReactionsRowButtonViewSnapshot,
@@ -15,11 +15,10 @@ import {
 import { mediaFromMxc } from "../../../../../customisations/Media";
 import { _t } from "../../../../../languageHandler";
 import { formatList } from "../../../../../utils/FormattingUtils";
-import dis from "../../../../../dispatcher/dispatcher";
 import SettingsStore from "../../../../../settings/SettingsStore";
 import { ReactionsRowButtonTooltipViewModel } from "./ReactionsRowButtonTooltipViewModel";
 import { REACTION_SHORTCODE_KEY } from "./reactionShortcode";
-import { removeOwnReaction } from "./removeOwnReaction";
+import { toggleOwnReaction } from "./toggleOwnReaction";
 
 export interface ReactionsRowButtonViewModelProps {
     /**
@@ -251,18 +250,12 @@ export class ReactionsRowButtonViewModel
         const { client, mxEvent, myReactionEvent, content, disabled } = this.props;
         if (disabled) return;
 
-        if (myReactionEvent) {
-            removeOwnReaction(client, mxEvent.getRoomId()!, myReactionEvent);
-            return;
-        }
-
-        client.sendEvent(mxEvent.getRoomId()!, EventType.Reaction, {
-            "m.relates_to": {
-                rel_type: RelationType.Annotation,
-                event_id: mxEvent.getId()!,
-                key: content,
-            },
+        toggleOwnReaction({
+            client,
+            mxEvent,
+            reaction: content,
+            myReactionEvent,
+            canSelfRedact: true,
         });
-        dis.dispatch({ action: "message_sent" });
     };
 }

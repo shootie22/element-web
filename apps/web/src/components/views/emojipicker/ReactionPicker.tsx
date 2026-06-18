@@ -12,14 +12,11 @@ import {
     ClientEvent,
     type MatrixClient,
     type MatrixEvent,
-    EventType,
-    RelationType,
     type Relations,
     RelationsEvent,
     type Room,
     RoomStateEvent,
 } from "matrix-js-sdk/src/matrix";
-import { type ReactionEventContent } from "matrix-js-sdk/src/types";
 
 import EmojiPicker from "./EmojiPicker";
 import { type ICustomEmojiData } from "./Emoji";
@@ -30,9 +27,8 @@ import RoomContext from "../../../contexts/RoomContext";
 import { type FocusComposerPayload } from "../../../dispatcher/payloads/FocusComposerPayload";
 import { getFavoriteImagePackRoomIds, getImagePackEntries, isImagePackEventType } from "../../../image-packs";
 import * as recent from "../../../emojipicker/recent";
-import { REACTION_SHORTCODE_KEY } from "../../../viewmodels/room/timeline/event-tile/reactions/reactionShortcode";
 import { type ButtonEvent } from "../elements/AccessibleButton";
-import { removeOwnReaction } from "../../../viewmodels/room/timeline/event-tile/reactions/removeOwnReaction";
+import { toggleOwnReaction } from "../../../viewmodels/room/timeline/event-tile/reactions/toggleOwnReaction";
 
 interface IProps {
     mxEvent: MatrixEvent;
@@ -43,8 +39,6 @@ interface IProps {
 interface IState {
     selectedEmojis: Set<string>;
 }
-
-type CustomReactionEventContent = ReactionEventContent & Record<"shortcode" | "com.beeper.reaction.shortcode", string>;
 
 class ReactionPicker extends React.Component<IProps, IState> {
     public static contextType = RoomContext;
@@ -161,10 +155,16 @@ class ReactionPicker extends React.Component<IProps, IState> {
             this.props.onFinished();
         }
         const myReactions = this.getReactions();
-        if (myReactions.hasOwnProperty(reaction)) {
-            if (this.props.mxEvent.isRedacted() || !this.context.canSelfRedact) return false;
+        const bumpedRecent = toggleOwnReaction({
+            client: MatrixClientPeg.safeGet(),
+            mxEvent: this.props.mxEvent,
+            reaction,
+            shortcode,
+            myReactionEvent: myReactions[reaction],
+            canSelfRedact: this.context.canSelfRedact,
+        });
 
-            removeOwnReaction(MatrixClientPeg.safeGet(), this.props.mxEvent.getRoomId()!, myReactions[reaction]);
+        if (!bumpedRecent) {
             if (!keepOpen) {
                 dis.dispatch<FocusComposerPayload>({
                     action: Action.FocusAComposer,
@@ -173,31 +173,15 @@ class ReactionPicker extends React.Component<IProps, IState> {
             }
             // Tell the emoji picker not to bump this in the more frequently used list.
             return false;
-        } else {
-            const content: ReactionEventContent | CustomReactionEventContent = {
-                "m.relates_to": {
-                    rel_type: RelationType.Annotation,
-                    event_id: this.props.mxEvent.getId()!,
-                    key: reaction,
-                },
-            };
-            if (shortcode) {
-                const customContent = content as CustomReactionEventContent;
-                customContent[REACTION_SHORTCODE_KEY.name] = shortcode;
-                customContent[REACTION_SHORTCODE_KEY.altName] = shortcode;
-            }
-            MatrixClientPeg.safeGet().sendEvent(this.props.mxEvent.getRoomId()!, EventType.Reaction, {
-                ...content,
-            });
-            dis.dispatch({ action: "message_sent" });
-            if (!keepOpen) {
-                dis.dispatch<FocusComposerPayload>({
-                    action: Action.FocusAComposer,
-                    context: this.context.timelineRenderingType,
-                });
-            }
-            return true;
         }
+
+        if (!keepOpen) {
+            dis.dispatch<FocusComposerPayload>({
+                action: Action.FocusAComposer,
+                context: this.context.timelineRenderingType,
+            });
+        }
+        return true;
     };
 
     private isEmojiDisabled = (unicode: string): boolean => {

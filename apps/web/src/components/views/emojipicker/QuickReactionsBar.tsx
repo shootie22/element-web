@@ -6,8 +6,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import React, { useContext, useMemo } from "react";
-import { type MatrixEvent, type Relations, EventType, RelationType } from "matrix-js-sdk/src/matrix";
-import { type ReactionEventContent } from "matrix-js-sdk/src/types";
+import { type MatrixEvent, type Relations } from "matrix-js-sdk/src/matrix";
 
 import * as recent from "../../../emojipicker/recent";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
@@ -16,9 +15,8 @@ import { Action } from "../../../dispatcher/actions";
 import { type FocusComposerPayload } from "../../../dispatcher/payloads/FocusComposerPayload";
 import { getImagePackEntries } from "../../../image-packs";
 import AccessibleButton from "../elements/AccessibleButton";
-import { REACTION_SHORTCODE_KEY } from "../../../viewmodels/room/timeline/event-tile/reactions/reactionShortcode";
 import RoomContext from "../../../contexts/RoomContext";
-import { removeOwnReaction } from "../../../viewmodels/room/timeline/event-tile/reactions/removeOwnReaction";
+import { toggleOwnReaction } from "../../../viewmodels/room/timeline/event-tile/reactions/toggleOwnReaction";
 
 interface QuickReactionsBarProps {
     mxEvent: MatrixEvent;
@@ -27,13 +25,16 @@ interface QuickReactionsBarProps {
     onReaction?: () => void;
 }
 
-type CustomReactionEventContent = ReactionEventContent & Record<"shortcode" | "com.beeper.reaction.shortcode", string>;
-
 const QUICK_REACTION_COUNT = 5;
 
 const DEFAULT_QUICK_REACTIONS = ["👍", "😄", "❤️", "🎉", "👎"];
 
-export function QuickReactionsBar({ mxEvent, reactions, className, onReaction }: QuickReactionsBarProps): React.ReactNode {
+export function QuickReactionsBar({
+    mxEvent,
+    reactions,
+    className,
+    onReaction,
+}: QuickReactionsBarProps): React.ReactNode {
     const roomContext = useContext(RoomContext);
 
     const myReactions = useMemo(() => {
@@ -49,35 +50,18 @@ export function QuickReactionsBar({ mxEvent, reactions, className, onReaction }:
     }, [reactions]);
 
     const sendReaction = (reaction: string, shortcode?: string): void => {
-        if (myReactions.hasOwnProperty(reaction)) {
-            if (mxEvent.isRedacted() || !roomContext.canSelfRedact) return;
-            removeOwnReaction(MatrixClientPeg.safeGet(), mxEvent.getRoomId()!, myReactions[reaction]);
-            dis.dispatch<FocusComposerPayload>({
-                action: Action.FocusAComposer,
-                context: roomContext.timelineRenderingType,
-            });
-        } else {
-            const content: ReactionEventContent | CustomReactionEventContent = {
-                "m.relates_to": {
-                    rel_type: RelationType.Annotation,
-                    event_id: mxEvent.getId()!,
-                    key: reaction,
-                },
-            };
-            if (shortcode) {
-                const customContent = content as CustomReactionEventContent;
-                customContent[REACTION_SHORTCODE_KEY.name] = shortcode;
-                customContent[REACTION_SHORTCODE_KEY.altName] = shortcode;
-            }
-            MatrixClientPeg.safeGet().sendEvent(mxEvent.getRoomId()!, EventType.Reaction, {
-                ...content,
-            });
-            dis.dispatch({ action: "message_sent" });
-            dis.dispatch<FocusComposerPayload>({
-                action: Action.FocusAComposer,
-                context: roomContext.timelineRenderingType,
-            });
-        }
+        toggleOwnReaction({
+            client: MatrixClientPeg.safeGet(),
+            mxEvent,
+            reaction,
+            shortcode,
+            myReactionEvent: myReactions[reaction],
+            canSelfRedact: roomContext.canSelfRedact,
+        });
+        dis.dispatch<FocusComposerPayload>({
+            action: Action.FocusAComposer,
+            context: roomContext.timelineRenderingType,
+        });
         onReaction?.();
     };
 
@@ -151,11 +135,7 @@ export function QuickReactionsBar({ mxEvent, reactions, className, onReaction }:
             title={shortcode ?? reaction}
             style={buttonStyle}
         >
-            {imgSrc ? (
-                <img src={imgSrc} alt={shortcode ?? ""} style={imgStyle} />
-            ) : (
-                reaction
-            )}
+            {imgSrc ? <img src={imgSrc} alt={shortcode ?? ""} style={imgStyle} /> : reaction}
         </AccessibleButton>
     ));
 

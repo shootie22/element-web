@@ -12,6 +12,7 @@ import {
     type MatrixEvent,
     RelationType,
     type Room,
+    RoomEvent,
 } from "matrix-js-sdk/src/matrix";
 
 import {
@@ -85,6 +86,10 @@ describe("ReactionsRowButtonViewModel", () => {
             user: "@sender:example.org",
             content: { body: "Test message", msgtype: "m.text" },
         });
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
     });
 
     it("updates count with merge and does not touch tooltip props", () => {
@@ -242,6 +247,30 @@ describe("ReactionsRowButtonViewModel", () => {
         expect(client.sendEvent).not.toHaveBeenCalled();
     });
 
+    it("does not send duplicate redactions when removing the same reaction repeatedly", async () => {
+        jest.useFakeTimers();
+        const myReactionEvent = createReactionEvent("@me:example.org");
+        const vm = new ReactionsRowButtonViewModel(createProps({ myReactionEvent }));
+        let resolveRedaction!: () => void;
+        jest.spyOn(client, "redactEvent").mockReturnValue(
+            new Promise<void>((resolve) => {
+                resolveRedaction = resolve;
+            }),
+        );
+
+        vm.onClick();
+        vm.onClick();
+
+        expect(client.redactEvent).toHaveBeenCalledTimes(1);
+        expect(client.redactEvent).toHaveBeenCalledWith(room.roomId, myReactionEvent.getId());
+        expect(client.sendEvent).not.toHaveBeenCalled();
+
+        resolveRedaction();
+        await Promise.resolve();
+        jest.advanceTimersByTime(500);
+        jest.useRealTimers();
+    });
+
     it("cancels pending reaction local echo on click when myReactionEvent is not sent", () => {
         const myReactionEvent = createReactionEvent("@me:example.org");
         myReactionEvent.status = EventStatus.NOT_SENT;
@@ -251,6 +280,24 @@ describe("ReactionsRowButtonViewModel", () => {
 
         expect(client.cancelPendingEvent).toHaveBeenCalledWith(myReactionEvent);
         expect(client.redactEvent).not.toHaveBeenCalled();
+        expect(client.sendEvent).not.toHaveBeenCalled();
+    });
+
+    it("defers removing a sending reaction local echo until it can be redacted", () => {
+        const myReactionEvent = createReactionEvent("@me:example.org");
+        myReactionEvent.status = EventStatus.SENDING;
+        const vm = new ReactionsRowButtonViewModel(createProps({ myReactionEvent }));
+
+        vm.onClick();
+
+        expect(client.cancelPendingEvent).not.toHaveBeenCalled();
+        expect(client.redactEvent).not.toHaveBeenCalled();
+        expect(client.sendEvent).not.toHaveBeenCalled();
+
+        myReactionEvent.status = null;
+        room.emit(RoomEvent.LocalEchoUpdated, myReactionEvent, room);
+
+        expect(client.redactEvent).toHaveBeenCalledWith(room.roomId, myReactionEvent.getId());
         expect(client.sendEvent).not.toHaveBeenCalled();
     });
 
@@ -267,6 +314,33 @@ describe("ReactionsRowButtonViewModel", () => {
             },
         });
         expect(dis.dispatch).toHaveBeenCalledWith({ action: "message_sent" });
+    });
+
+    it("redacts a just-sent reaction instead of sending a duplicate when clicked again before send settles", async () => {
+        jest.useFakeTimers();
+        const vm = new ReactionsRowButtonViewModel(createProps());
+        let resolveSend!: (response: { event_id: string }) => void;
+        jest.spyOn(client, "sendEvent").mockReturnValue(
+            new Promise((resolve) => {
+                resolveSend = resolve;
+            }),
+        );
+        jest.spyOn(client, "redactEvent").mockResolvedValue({});
+
+        vm.onClick();
+        vm.onClick();
+
+        expect(client.sendEvent).toHaveBeenCalledTimes(1);
+        expect(client.redactEvent).not.toHaveBeenCalled();
+
+        resolveSend({ event_id: "$reaction-event" });
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(client.redactEvent).toHaveBeenCalledWith(room.roomId, "$reaction-event");
+        expect(client.sendEvent).toHaveBeenCalledTimes(1);
+        jest.advanceTimersByTime(500);
+        jest.useRealTimers();
     });
 
     it("does nothing on click when disabled", () => {
