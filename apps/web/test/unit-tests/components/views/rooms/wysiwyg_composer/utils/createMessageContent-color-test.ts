@@ -28,11 +28,11 @@ describe("createMessageContent with colored messages", () => {
     const originalGetValue = SettingsStore.getValue;
 
     function mockColoredMessageSettings(): void {
-        jest.spyOn(SettingsStore, "getValue").mockImplementation((key: string) => {
+        jest.spyOn(SettingsStore, "getValue").mockImplementation(((key: string): any => {
             if (key === "Tweaks.enableColoredMessages") return true;
             if (key === "MessageComposerInput.useMarkdown") return false;
-            return originalGetValue(key);
-        });
+            return originalGetValue(key as any);
+        }) as any);
     }
 
     beforeEach(() => {

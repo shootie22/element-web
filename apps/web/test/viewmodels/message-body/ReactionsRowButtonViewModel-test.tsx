@@ -253,8 +253,8 @@ describe("ReactionsRowButtonViewModel", () => {
         const vm = new ReactionsRowButtonViewModel(createProps({ myReactionEvent }));
         let resolveRedaction!: () => void;
         jest.spyOn(client, "redactEvent").mockReturnValue(
-            new Promise<void>((resolve) => {
-                resolveRedaction = resolve;
+            new Promise<{ event_id: string }>((resolve) => {
+                resolveRedaction = () => resolve({ event_id: "$redaction" });
             }),
         );
 
@@ -353,7 +353,7 @@ describe("ReactionsRowButtonViewModel", () => {
                 resolveSend = resolve;
             }),
         );
-        jest.spyOn(client, "redactEvent").mockResolvedValue({});
+        jest.spyOn(client, "redactEvent").mockResolvedValue({ event_id: "$redaction" });
 
         vm.onClick();
         vm.onClick();

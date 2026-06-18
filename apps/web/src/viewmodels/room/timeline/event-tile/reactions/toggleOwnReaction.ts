@@ -185,7 +185,11 @@ function getSentReactionEventId(response: SentReactionResponse): string | undefi
         return response.event_id;
     }
 
-    return response.getId();
+    if ("getId" in response && typeof response.getId === "function") {
+        return response.getId();
+    }
+
+    return undefined;
 }
 
 function finishSentReaction(
