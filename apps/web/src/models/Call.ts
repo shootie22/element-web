@@ -1176,10 +1176,49 @@ export class ElementCall extends Call {
         });
     };
 
+    /**
+     * Pulls the widget's current mic/camera/deafen state into this model.
+     *
+     * The widget pushes these spontaneously when they change, but its first
+     * pushes (as devices settle on join) can race the host attaching its action
+     * listeners or the panel mounting, and once state is stable the widget sends
+     * nothing more — so without this the model can stay stuck on its assumed
+     * defaults until the next manual toggle. Querying once on connect makes the
+     * initial state authoritative regardless of that timing.
+     *
+     * Both requests carry an empty payload, which the widget treats as a
+     * read-only query: it changes nothing and simply replies with its current
+     * state.
+     */
+    private readonly syncMuteStateFromWidget = async (): Promise<void> => {
+        const widgetApi = this.widgetApi;
+        if (!widgetApi) return;
+        try {
+            const resp = await widgetApi.transport.send<DeviceMuteState, DeviceMuteState>(
+                ElementWidgetActions.DeviceMute,
+                {},
+            );
+            if (typeof resp.audio_enabled === "boolean") this.audioEnabled = resp.audio_enabled;
+            if (typeof resp.video_enabled === "boolean") this.videoEnabled = resp.video_enabled;
+        } catch (e) {
+            logger.warn(`Failed to query device mute state from call widget in ${this.roomId}`, e);
+        }
+        try {
+            const resp = await widgetApi.transport.send<DeafenState, DeafenState>(ElementWidgetActions.Deafen, {});
+            if (typeof resp.deafened === "boolean") this.deafened = resp.deafened;
+        } catch (e) {
+            logger.warn(`Failed to query deafen state from call widget in ${this.roomId}`, e);
+        }
+    };
+
     private readonly onJoin = (ev: CustomEvent<IWidgetApiRequest>): void => {
         ev.preventDefault();
         this.widgetApi!.transport.reply(ev.detail, {}); // ack
         this.setConnected();
+        // Pull the widget's authoritative mic/camera/deafen state now that it has
+        // joined and its action handlers are live, rather than waiting to passively
+        // catch a spontaneous push that may already have been missed.
+        void this.syncMuteStateFromWidget();
     };
 
     private readonly onHangup = async (ev: CustomEvent<IWidgetApiRequest>): Promise<void> => {

@@ -71,23 +71,27 @@ export const RoomListCallControls: React.FC<Props> = ({ call }: Props) => {
         [call],
     );
 
+    // Each handler updates local state optimistically so the button responds
+    // instantly, then issues the command. The authoritative result flows back via
+    // the call's DeviceMute/Deafen events (which run syncFromCall); on failure the
+    // catch reconciles us back to the call's real state, so a button can never get
+    // stuck showing a change that didn't take.
     const onAudioClick = useCallback(() => {
         const next = !audioEnabled;
-        void setDeviceMute({ audio_enabled: next })
-            .catch(syncFromCall)
-            .finally(syncFromCall);
+        setAudioEnabled(next);
+        void setDeviceMute({ audio_enabled: next }).catch(syncFromCall);
     }, [audioEnabled, setDeviceMute, syncFromCall]);
 
     const onVideoClick = useCallback(() => {
         const next = !videoEnabled;
-        void setDeviceMute({ video_enabled: next })
-            .catch(syncFromCall)
-            .finally(syncFromCall);
-    }, [setDeviceMute, syncFromCall, videoEnabled]);
+        setVideoEnabled(next);
+        void setDeviceMute({ video_enabled: next }).catch(syncFromCall);
+    }, [videoEnabled, setDeviceMute, syncFromCall]);
 
     const onDeafenClick = useCallback(() => {
         const next = !deafened;
-        void call?.setDeafened(next).catch(syncFromCall).finally(syncFromCall);
+        setDeafened(next);
+        void call?.setDeafened(next).catch(syncFromCall);
     }, [call, deafened, syncFromCall]);
 
     const onNavigateToRoom = useCallback(() => {
