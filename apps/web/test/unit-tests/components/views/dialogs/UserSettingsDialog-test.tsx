@@ -112,21 +112,23 @@ describe("<UserSettingsDialog />", () => {
             show_labs_settings: true,
         });
         const { container } = render(getComponent());
-        expect(Array.from(container.querySelectorAll(".mx_TabbedView_tabLabel")).map((tab) => tab.textContent)).toEqual([
-            "Account",
-            "Sessions",
-            "Appearance",
-            "Notifications",
-            "Preferences",
-            "Emojis & Stickers",
-            "Keyboard",
-            "Sidebar",
-            "Security & Privacy",
-            "Encryption",
-            "Labs",
-            "Tweaks",
-            "Help & About",
-        ]);
+        expect(Array.from(container.querySelectorAll(".mx_TabbedView_tabLabel")).map((tab) => tab.textContent)).toEqual(
+            [
+                "Account",
+                "Sessions",
+                "Appearance",
+                "Notifications",
+                "Preferences",
+                "Emojis & Stickers",
+                "Keyboard",
+                "Sidebar",
+                "Security & Privacy",
+                "Encryption",
+                "Labs",
+                "Tweaks",
+                "Help & About",
+            ],
+        );
     });
 
     it("renders ignored users tab when feature_mjolnir is enabled", () => {

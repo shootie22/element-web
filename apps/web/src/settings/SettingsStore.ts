@@ -722,12 +722,7 @@ export default class SettingsStore {
         const showQuickReactions = SettingsStore.getValue("show_quick_reactions", null, true);
         if (typeof showQuickReactions === "boolean") {
             this.setValue("Tweaks.showQuickReactionsOnHover", null, SettingLevel.ACCOUNT, showQuickReactions);
-            this.setValue(
-                "Tweaks.showQuickReactionsOnContextMenu",
-                null,
-                SettingLevel.ACCOUNT,
-                showQuickReactions,
-            );
+            this.setValue("Tweaks.showQuickReactionsOnContextMenu", null, SettingLevel.ACCOUNT, showQuickReactions);
         }
 
         localStorage.setItem(MIGRATION_DONE_FLAG, "true");
