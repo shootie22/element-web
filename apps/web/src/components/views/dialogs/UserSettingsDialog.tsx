@@ -111,8 +111,11 @@ function titleForTabID(tabId: UserTab): React.ReactNode {
 export default function UserSettingsDialog(props: IProps): JSX.Element {
     const voipEnabled = useSettingValue(UIFeature.Voip);
     const mjolnirEnabled = useSettingValue("feature_mjolnir");
+    const developerMode = useSettingValue("developerMode");
 
     // Whether this platform (i.e. the desktop app) supports self-update, which gates the Update tab.
+    // In developer mode we also show it on any desktop build (even an unpackaged dev run, where
+    // canSelfUpdate is false) so the in-tab update simulator can be exercised.
     const [canUpdate, setCanUpdate] = useState(false);
     useEffect(() => {
         PlatformPeg.get()
@@ -120,6 +123,7 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
             .then(setCanUpdate)
             .catch(() => {});
     }, []);
+    const showUpdateTab = canUpdate || (developerMode && !!window.electron);
     // store these props in state as changing tabs back and forth should clear them
     const [showMsc4108QrCode, setShowMsc4108QrCode] = useState(props.showMsc4108QrCode);
     const [initialEncryptionState, setInitialEncryptionState] = useState(props.initialEncryptionState);
@@ -288,7 +292,7 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
             ),
         );
         // Pinned at the bottom: the desktop self-update experience.
-        if (canUpdate) {
+        if (showUpdateTab) {
             tabs.push(
                 new Tab(UserTab.Update, _td("update|tab_title"), <RestartIcon />, <UpdateUserSettingsTab />, undefined),
             );
