@@ -249,10 +249,20 @@ jobs:
                       exit 1
                   fi
 
+                  # Semver prerelease tags (anything with a hyphen, e.g. v1.12.40-pre.1) are
+                  # published as GitHub prereleases so the runtime updater — which fetches
+                  # releases/latest and skips draft/prerelease — does NOT offer them as an
+                  # automatic update. They still build full client artifacts for manual testing.
+                  prerelease_flag=""
+                  case "$RELEASE_TAG" in
+                      *-*) prerelease_flag="--prerelease" ;;
+                  esac
+
                   if ! gh release create "$RELEASE_TAG" release-assets/* \
                       --repo "$GITHUB_REPOSITORY" \
                       --verify-tag \
                       --title "$RELEASE_TAG" \
+                      $prerelease_flag \
                       --notes-file RELEASE_NOTES.md; then
                         echo "::error::GitHub denied release creation. Enable Settings > Actions > General > Workflow permissions > Read and write permissions, or add a RELEASE_TOKEN secret with Contents: read/write."
                         exit 1
