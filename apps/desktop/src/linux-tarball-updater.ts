@@ -41,6 +41,8 @@ interface VerifyManifestOptions {
 interface DownloadOptions {
     expectedSha512: string;
     expectedSize: number;
+    /** Called as bytes arrive, with the number of bytes transferred so far and the expected total. */
+    onProgress?: (transferred: number, total: number) => void;
 }
 
 export function normaliseVersion(version: string): string {
@@ -280,6 +282,7 @@ export function downloadAndVerifyFile(
             response.on("data", (chunk: Buffer) => {
                 bytes += chunk.length;
                 hash.update(chunk);
+                options.onProgress?.(bytes, options.expectedSize);
             });
             response.pipe(file);
             file.on("finish", () => {

@@ -53,6 +53,12 @@ type ElectronChannel =
     | "before-quit"
     | "check_updates"
     | "install_update"
+    | "start_update_download"
+    | "simulate_update"
+    | "update-available"
+    | "update-download-progress"
+    | "update-log"
+    | "update-error"
     | "ipcCall"
     | "ipcReply"
     | "loudNotification"
@@ -147,6 +153,16 @@ declare global {
         // Settings
         setSettingValue(settingName: string, value: any): Promise<void>;
         getSettingValue(settingName: string): Promise<any>;
+        // Updates
+        getUpdateInfo(): Promise<DesktopUpdateInfo>;
+    }
+
+    interface DesktopUpdateInfo {
+        currentVersion: string;
+        currentReleaseDate?: string;
+        latestVersion?: string;
+        latestReleaseDate?: string;
+        status: "available" | "downloaded" | "uptodate" | "unsupported" | "unknown";
     }
 
     interface DesktopCapturerSource {

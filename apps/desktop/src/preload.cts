@@ -19,6 +19,12 @@ const CHANNELS = [
     "before-quit",
     "check_updates",
     "install_update",
+    "start_update_download",
+    "simulate_update",
+    "update-available",
+    "update-download-progress",
+    "update-log",
+    "update-error",
     "ipcCall",
     "ipcReply",
     "loudNotification",
@@ -76,5 +82,8 @@ contextBridge.exposeInMainWorld("electron", {
     },
     async getSettingValue(settingName: string): Promise<any> {
         return ipcRenderer.invoke("getSettingValue", settingName);
+    },
+    async getUpdateInfo(): Promise<unknown> {
+        return ipcRenderer.invoke("get_update_info");
     },
 });
