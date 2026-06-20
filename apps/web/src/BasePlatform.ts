@@ -43,8 +43,24 @@ export enum UpdateCheckStatus {
     Checking = "CHECKING",
     Error = "ERROR",
     NotAvailable = "NOTAVAILABLE",
+    /** An update has been found but not yet downloaded; the user can choose to download it. */
+    Available = "AVAILABLE",
     Downloading = "DOWNLOADING",
     Ready = "READY",
+}
+
+export interface UpdateProgress {
+    /** Fraction downloaded, 0..1. */
+    percent: number;
+    transferred: number;
+    total: number;
+    bytesPerSecond?: number;
+}
+
+export interface UpdateLogEntry {
+    ts: number;
+    level: "info" | "warn" | "error";
+    message: string;
 }
 
 export interface UpdateStatus {
@@ -60,6 +76,19 @@ export interface UpdateStatus {
     releaseName?: string;
     releaseDate?: string | Date;
     releaseURL?: string;
+    /** Present while downloading, for the progress bar. */
+    progress?: UpdateProgress;
+    /** A single log line to append to the update log view. */
+    logLine?: UpdateLogEntry;
+}
+
+/** Current/latest version info shown in the Update settings tab. */
+export interface UpdateVersionInfo {
+    currentVersion: string;
+    currentReleaseDate?: string;
+    latestVersion?: string;
+    latestReleaseDate?: string;
+    status: "available" | "downloaded" | "uptodate" | "unsupported" | "unknown";
 }
 
 const UPDATE_DEFER_KEY = "mx_defer_update";
@@ -131,10 +160,30 @@ export default abstract class BasePlatform {
     }
 
     /**
+     * Begin downloading the update that was found by the last update check.
+     * Progress is reported via {@link Action.CheckUpdates} dispatches.
+     */
+    public startUpdateDownload(): void {}
+
+    /**
      * Update the currently running app to the latest available version
      * and replace this instance of the app with the new version.
      */
     public installUpdate(): void {}
+
+    /**
+     * Fetch current/latest version info for display in the Update settings tab.
+     * Returns null on platforms that don't support self-update.
+     */
+    public async getUpdateVersionInfo(): Promise<UpdateVersionInfo | null> {
+        return null;
+    }
+
+    /**
+     * Dev-only: drive a simulated update through the real update pipeline so the
+     * UI can be exercised without a real release. No-op where unsupported.
+     */
+    public simulateUpdate(_scenario: "success" | "slow" | "error" | "verify-fail"): void {}
 
     public async getPendingUpdate(): Promise<UpdateStatus | null> {
         return null;

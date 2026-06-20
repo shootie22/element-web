@@ -20,7 +20,7 @@ import React from "react";
 import { logger } from "matrix-js-sdk/src/logger";
 import { uniqueId } from "lodash";
 
-import BasePlatform, { UpdateCheckStatus, type UpdateStatus } from "../../BasePlatform";
+import BasePlatform, { UpdateCheckStatus, type UpdateStatus, type UpdateVersionInfo } from "../../BasePlatform";
 import type BaseEventIndexManager from "../../indexing/BaseEventIndexManager";
 import dis from "../../dispatcher/dispatcher";
 import SdkConfig from "../../SdkConfig";
@@ -76,7 +76,7 @@ function platformFriendlyName(): string {
 
 function getUpdateCheckStatus(status: boolean | string): UpdateStatus {
     if (status === true) {
-        return { status: UpdateCheckStatus.Downloading };
+        return { status: UpdateCheckStatus.Available };
     } else if (status === false) {
         return { status: UpdateCheckStatus.NotAvailable };
     } else {
@@ -98,6 +98,20 @@ export default class ElectronPlatform extends BasePlatform {
     private config!: IConfigOptions;
     private supportedSettings?: Record<string, boolean>;
     private clientStartedPromiseWithResolvers = Promise.withResolvers<void>();
+    private currentUpdateStatus: UpdateCheckStatus = UpdateCheckStatus.NotAvailable;
+
+    /**
+     * Dispatch an update status change, preserving the last known status when a
+     * partial update (e.g. a log line or progress tick) carries no new status.
+     */
+    private dispatchUpdate(partial: Partial<UpdateStatus>): void {
+        if (partial.status) this.currentUpdateStatus = partial.status;
+        dis.dispatch<CheckUpdatesPayload>({
+            action: Action.CheckUpdates,
+            ...partial,
+            status: this.currentUpdateStatus,
+        });
+    }
 
     public constructor() {
         super();
@@ -114,9 +128,39 @@ export default class ElectronPlatform extends BasePlatform {
             or the error if one is encountered
          */
         this.electron.on("check_updates", (event, status) => {
-            dis.dispatch<CheckUpdatesPayload>({
-                action: Action.CheckUpdates,
-                ...getUpdateCheckStatus(status),
+            this.dispatchUpdate(getUpdateCheckStatus(status));
+        });
+
+        // An update was found but not yet downloaded; carries release metadata.
+        this.electron.on(
+            "update-available",
+            (ev, { releaseNotes, releaseName, releaseDate, updateURL }: DesktopUpdate) => {
+                this.dispatchUpdate({
+                    status: UpdateCheckStatus.Available,
+                    releaseNotes,
+                    releaseName,
+                    releaseDate,
+                    releaseURL: updateURL,
+                });
+            },
+        );
+
+        // Download progress ticks (percent is 0..1).
+        this.electron.on("update-download-progress", (ev, progress: UpdateStatus["progress"]) => {
+            this.dispatchUpdate({ status: UpdateCheckStatus.Downloading, progress });
+        });
+
+        // Streamed log lines for the Log dropdown.
+        this.electron.on("update-log", (ev, logLine: UpdateStatus["logLine"]) => {
+            this.dispatchUpdate({ logLine });
+        });
+
+        // A mid-flow download/verify failure.
+        this.electron.on("update-error", (ev, { phase, message }: { phase: string; message: string }) => {
+            this.dispatchUpdate({
+                status: UpdateCheckStatus.Error,
+                detail: message,
+                logLine: { ts: Date.now(), level: "error", message: `${phase}: ${message}` },
             });
         });
 
@@ -258,8 +302,7 @@ export default class ElectronPlatform extends BasePlatform {
         ev: Event,
         { releaseNotes, releaseName, releaseDate, updateURL }: DesktopUpdate,
     ): Promise<void> => {
-        dis.dispatch<CheckUpdatesPayload>({
-            action: Action.CheckUpdates,
+        this.dispatchUpdate({
             status: UpdateCheckStatus.Ready,
             releaseNotes,
             releaseName,
@@ -412,6 +455,23 @@ export default class ElectronPlatform extends BasePlatform {
     public startUpdateCheck(): void {
         super.startUpdateCheck();
         this.electron.send("check_updates");
+    }
+
+    public startUpdateDownload(): void {
+        this.dispatchUpdate({ status: UpdateCheckStatus.Downloading });
+        this.electron.send("start_update_download");
+    }
+
+    public async getUpdateVersionInfo(): Promise<UpdateVersionInfo | null> {
+        try {
+            return (await this.electron.getUpdateInfo()) as UpdateVersionInfo;
+        } catch {
+            return null;
+        }
+    }
+
+    public simulateUpdate(scenario: "success" | "slow" | "error" | "verify-fail"): void {
+        this.electron.send("simulate_update", { mode: "events", scenario });
     }
 
     public installUpdate(): void {

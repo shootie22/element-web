@@ -22,4 +22,5 @@ export enum UserTab {
     Tweaks = "USER_TWEAKS_TAB",
     Help = "USER_HELP_TAB",
     SessionManager = "USER_SESSION_MANAGER_TAB",
+    Update = "USER_UPDATE_TAB",
 }

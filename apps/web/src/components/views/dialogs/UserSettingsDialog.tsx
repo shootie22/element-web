@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
 
 import { ClientEvent, type MatrixEvent } from "matrix-js-sdk/src/matrix";
 import { Toast } from "@vector-im/compound-web";
-import React, { type JSX, useState } from "react";
+import React, { type JSX, useEffect, useState } from "react";
 import UserProfileIcon from "@vector-im/compound-design-tokens/assets/web/icons/user-profile";
 import DevicesIcon from "@vector-im/compound-design-tokens/assets/web/icons/devices";
 import VisibilityOnIcon from "@vector-im/compound-design-tokens/assets/web/icons/visibility-on";
@@ -24,6 +24,7 @@ import LabsIcon from "@vector-im/compound-design-tokens/assets/web/icons/labs";
 import BlockIcon from "@vector-im/compound-design-tokens/assets/web/icons/block";
 import HelpIcon from "@vector-im/compound-design-tokens/assets/web/icons/help";
 import SettingsIcon from "@vector-im/compound-design-tokens/assets/web/icons/settings";
+import RestartIcon from "@vector-im/compound-design-tokens/assets/web/icons/restart";
 import { StickerIcon } from "@vector-im/compound-design-tokens/assets/web/icons";
 
 import TabbedView, { Tab, useActiveTabWithDefault } from "../../structures/TabbedView";
@@ -39,6 +40,8 @@ import VoiceUserSettingsTab from "../settings/tabs/user/VoiceUserSettingsTab";
 import HelpUserSettingsTab from "../settings/tabs/user/HelpUserSettingsTab";
 import MjolnirUserSettingsTab from "../settings/tabs/user/MjolnirUserSettingsTab";
 import TweaksUserSettingsTab from "../settings/tabs/user/TweaksUserSettingsTab";
+import UpdateUserSettingsTab from "../settings/tabs/user/UpdateUserSettingsTab";
+import PlatformPeg from "../../../PlatformPeg";
 import { UIFeature } from "../../../settings/UIFeature";
 import BaseDialog from "./BaseDialog";
 import SidebarUserSettingsTab from "../settings/tabs/user/SidebarUserSettingsTab";
@@ -100,12 +103,23 @@ function titleForTabID(tabId: UserTab): React.ReactNode {
             return _t("settings|tweaks|dialog_title", undefined, subs);
         case UserTab.Help:
             return _t("setting|help_about|dialog_title", undefined, subs);
+        case UserTab.Update:
+            return _t("update|tab_title");
     }
 }
 
 export default function UserSettingsDialog(props: IProps): JSX.Element {
     const voipEnabled = useSettingValue(UIFeature.Voip);
     const mjolnirEnabled = useSettingValue("feature_mjolnir");
+
+    // Whether this platform (i.e. the desktop app) supports self-update, which gates the Update tab.
+    const [canUpdate, setCanUpdate] = useState(false);
+    useEffect(() => {
+        PlatformPeg.get()
+            ?.canSelfUpdate()
+            .then(setCanUpdate)
+            .catch(() => {});
+    }, []);
     // store these props in state as changing tabs back and forth should clear them
     const [showMsc4108QrCode, setShowMsc4108QrCode] = useState(props.showMsc4108QrCode);
     const [initialEncryptionState, setInitialEncryptionState] = useState(props.initialEncryptionState);
@@ -273,6 +287,12 @@ export default function UserSettingsDialog(props: IProps): JSX.Element {
                 "UserSettingsHelpAbout",
             ),
         );
+        // Pinned at the bottom: the desktop self-update experience.
+        if (canUpdate) {
+            tabs.push(
+                new Tab(UserTab.Update, _td("update|tab_title"), <RestartIcon />, <UpdateUserSettingsTab />, undefined),
+            );
+        }
 
         return tabs as NonEmptyArray<Tab<UserTab>>;
     };
